@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="forge_ember">#FF6A1A</color>
+    <color name="forge_charcoal">#18181B</color>
+    <color name="forge_bg_light">#FAFAFA</color>
+    <color name="forge_bg_dark">#0E0E10</color>
+    <color name="window_bg">@color/forge_bg_light</color>
+</resources>

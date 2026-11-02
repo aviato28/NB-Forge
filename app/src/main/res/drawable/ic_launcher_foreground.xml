@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icon B (anvil + spark) from docs/brand/icons/icon-b.svg, scaled to sit inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.72"
+        android:scaleY="0.72">
+        <path
+            android:fillColor="#FF6A1A"
+            android:pathData="M26,41H80Q80,53 69,53H65L67,60H73V68H35V60H41L43,53H41Q29,53 26,41Z" />
+        <path
+            android:fillColor="#FF6A1A"
+            android:pathData="M70,24L71.7,28.3L76,30L71.7,31.7L70,36L68.3,31.7L64,30L68.3,28.3Z" />
+    </group>
+</vector>
