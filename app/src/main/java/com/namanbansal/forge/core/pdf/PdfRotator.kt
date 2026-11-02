@@ -21,6 +21,7 @@ object PdfRotator {
      * @param rotations page index (0-based) -> clockwise degrees to ADD to the page's current rotation. Zero entries are skipped.
      * @param checkCancelled called between pages; throw (CancellationException) to abort.
      * @param onProgress 0..1
+     * @param protection re-applied to the saved copy when the input was password protected
      * @return number of pages whose rotation changed
      */
     fun rotate(
@@ -29,6 +30,7 @@ object PdfRotator {
         rotations: Map<Int, Int>,
         checkCancelled: () -> Unit = {},
         onProgress: (Float) -> Unit = {},
+        protection: PdfProtection? = null,
     ): Int {
         val bad = rotations.entries.firstOrNull { it.value % 90 != 0 }
         if (bad != null) throw ToolException("Pages can only be rotated in steps of 90 degrees.")
@@ -49,6 +51,7 @@ object PdfRotator {
                     if (index % 8 == 0 || index == total) onProgress(index.toFloat() / total * 0.9f)
                 }
                 checkCancelled()
+                protection?.applyTo(doc)
                 doc.save(out)
                 onProgress(1f)
             }

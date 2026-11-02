@@ -28,7 +28,13 @@ import java.io.OutputStream
 enum class ToolPhase { Pick, Options, Running, Result, Failed }
 
 /** What a tool's [ToolViewModel.execute] returns; the base class turns it into a [ToolResult]. */
-class ToolOutcome(val output: SavedOutput, val headline: String, val detail: String? = null)
+class ToolOutcome(
+    val output: SavedOutput,
+    val headline: String,
+    val detail: String? = null,
+    /** Every file produced (Split saves many); [output] is the primary one. */
+    val outputs: List<SavedOutput> = listOf(output),
+)
 
 /** Everything the result screen shows. */
 data class ToolResult(
@@ -39,6 +45,7 @@ data class ToolResult(
     val afterSize: Long,
     val headline: String,
     val detail: String?,
+    val outputs: List<SavedOutput> = listOf(output),
 ) {
     val kind: FileKind get() = FileKind.fromMime(output.mime)
     /** Bytes saved (positive) or added (negative); null if either size is unknown. */
@@ -55,7 +62,7 @@ class RunScope internal constructor(private val vm: ToolViewModel) {
 
     /** Stores a new file in Downloads/Forge named `<primary input>_<action>.<ext>`. */
     suspend fun save(action: String, ext: String, mime: String, write: suspend (OutputStream) -> Unit): SavedOutput =
-        vm.saver.save(vm.primaryInputName(), action, ext, mime, write)
+        vm.saver.save(vm.primaryInputName(), action, ext, mime, write).also { vm.noteSaved(it) }
 }
 
 /**
@@ -97,6 +104,23 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
 
     private var runJob: Job? = null
     private var inputJob: Job? = null
+    private val savedThisRun = java.util.concurrent.CopyOnWriteArrayList<SavedOutput>()
+
+    private val persistedStates = mutableListOf<PersistedState<*>>()
+    private var restoringInputs = false
+    /** True when the current inputs were restored after process death (so option state saved with them should be kept). */
+    protected var stateRestored = false
+        private set
+
+    /** Option state that survives process death; reset whenever the user picks new files. */
+    protected fun <T : Any> persisted(key: String, default: T, encode: (T) -> Any = { it }, decode: (Any) -> T? = { null }): PersistedState<T> =
+        PersistedState(saved, key, default, encode, decode).also { persistedStates += it }
+    protected fun persistedInt(key: String, default: Int) = persisted(key, default, decode = { (it as? Int) })
+    protected fun persistedBool(key: String, default: Boolean) = persisted(key, default, decode = { (it as? Boolean) })
+    protected fun persistedString(key: String, default: String) = persisted(key, default, decode = { (it as? String) })
+    /** A set of ints (selected pages...), stored as an IntArray. */
+    protected fun persistedIntSet(key: String, default: Set<Int> = emptySet()) =
+        persisted(key, default, encode = { it.toIntArray() }, decode = { (it as? IntArray)?.toSet() })
 
     init {
         // Deferred (non-immediate Main) so the subclass constructor has finished: toolCode and the
@@ -108,7 +132,10 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
                 applyFiles(handed)
             } else {
                 val restored = saved.get<ArrayList<String>>(KEY_INPUTS)?.takeIf { it.isNotEmpty() }
-                if (restored != null) applyFiles(restored.map { FileResolver.resolve(app, Uri.parse(it)) })
+                if (restored != null) {
+                    restoringInputs = true
+                    try { applyFiles(restored.map { FileResolver.resolve(app, Uri.parse(it)) }) } finally { restoringInputs = false }
+                }
             }
         }
     }
@@ -141,6 +168,8 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
         _loading.value = true
         try {
             onInputsReset()
+            stateRestored = restoringInputs
+            if (!restoringInputs) persistedStates.forEach { it.reset() }
             _inputs.value = files
             saved[KEY_INPUTS] = ArrayList(files.map { it.uri.toString() })
             _error.value = null
@@ -165,10 +194,20 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
     /** Open/inspect the new inputs. Throw [ToolException] to reject them with a friendly message. */
     protected open suspend fun onInputsReady(files: List<PickedFile>) {}
 
+    /**
+     * For tools that edit their own list of inputs after picking (Merge: add, remove, reorder): replaces the shown inputs
+     * and remembers them across process death. Does not touch option state or re-run [onInputsReady].
+     */
+    protected fun replaceInputs(files: List<PickedFile>) {
+        _inputs.value = files
+        if (files.isEmpty()) saved.remove<ArrayList<String>>(KEY_INPUTS) else saved[KEY_INPUTS] = ArrayList(files.map { it.uri.toString() })
+    }
+
     /** Back to the picker (the "Change" action). */
     fun changeFiles() {
         inputJob?.cancel()
         onInputsReset()
+        persistedStates.forEach { it.reset() }
         _inputs.value = emptyList()
         saved.remove<ArrayList<String>>(KEY_INPUTS)
         _phase.value = ToolPhase.Pick
@@ -185,6 +224,7 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
         if (files.isEmpty()) return
         _error.value = null
         _progress.value = null
+        savedThisRun.clear()
         _phase.value = ToolPhase.Running
         runJob = viewModelScope.launch(Dispatchers.Default, start = CoroutineStart.DEFAULT) {
             try {
@@ -195,30 +235,46 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
                     inputName = first.name,
                     toolCode = toolCode,
                     beforeSize = files.sumOf { it.size.coerceAtLeast(0) }.takeIf { files.all { f -> f.size >= 0 } } ?: -1L,
-                    afterSize = outcome.output.size,
+                    afterSize = outcome.outputs.sumOf { it.size },
                     headline = outcome.headline,
                     detail = outcome.detail,
+                    outputs = outcome.outputs,
                 )
                 runCatching {
-                    app.recents.add(
-                        RecentEntry(
-                            name = outcome.output.displayName, toolCode = toolCode, beforeSize = result.beforeSize,
-                            afterSize = result.afterSize, timestamp = System.currentTimeMillis(),
-                            uri = outcome.output.uri.toString(), mime = outcome.output.mime,
-                        ),
-                    )
+                    // A many-file result (Split) adds only its first few files so Recent is not flooded.
+                    outcome.outputs.take(MAX_RECENTS_PER_RUN).forEachIndexed { i, o ->
+                        app.recents.add(
+                            RecentEntry(
+                                name = o.displayName, toolCode = toolCode, beforeSize = if (i == 0) result.beforeSize else -1L,
+                                afterSize = o.size, timestamp = System.currentTimeMillis(),
+                                uri = o.uri.toString(), mime = o.mime,
+                            ),
+                        )
+                    }
                 }
                 _result.value = result
                 _phase.value = ToolPhase.Result
             } catch (e: CancellationException) {
+                discardSavedThisRun()
                 _phase.value = ToolPhase.Options
                 notify("Cancelled")
                 throw e
             } catch (t: Throwable) {
+                discardSavedThisRun()
                 _error.value = t.friendlyMessage()
                 _phase.value = ToolPhase.Failed
             }
         }
+    }
+
+    internal fun noteSaved(output: SavedOutput) { savedThisRun += output }
+
+    /** A run that fails or is cancelled after saving some files (Split) must not leave half a result behind. */
+    private suspend fun discardSavedThisRun() {
+        val files = savedThisRun.toList()
+        savedThisRun.clear()
+        if (files.isEmpty()) return
+        withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { files.forEach { runCatching { saver.delete(it.uri) } } }
     }
 
     /** Cooperative cancel: the running coroutine stops at its next [RunScope.checkCancelled]. */
@@ -245,5 +301,6 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
 
     companion object {
         private const val KEY_INPUTS = "forge.inputs"
+        private const val MAX_RECENTS_PER_RUN = 3
     }
 }

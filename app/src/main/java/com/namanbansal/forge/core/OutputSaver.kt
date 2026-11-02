@@ -76,6 +76,9 @@ class OutputSaver(context: Context) {
         }
     }
 
+    /** Removes a file this saver created (used to roll back a half-finished multi-file run). */
+    fun delete(uri: Uri) { resolver.delete(uri, null, null) }
+
     /** Copies [source] into a user-chosen destination (the "Save as" action). */
     suspend fun copyTo(source: Uri, destination: Uri) = withContext(Dispatchers.IO) {
         val input = resolver.openInputStream(source) ?: throw IOException("Could not read the file")

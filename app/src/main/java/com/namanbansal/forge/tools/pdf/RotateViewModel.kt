@@ -71,6 +71,7 @@ class RotateViewModel(application: Application, saved: SavedStateHandle) : PdfTo
                 source = src.file, out = out, rotations = steps,
                 checkCancelled = { ctx.ensureActive() },
                 onProgress = { scope.progress(it) },
+                protection = src.protection,
             )
         }
         return ToolOutcome(saved, headline = "Rotated successfully", detail = "${pagesLabel(changed)} rotated")

@@ -13,8 +13,12 @@ import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
 
-/** A PDF ready for processing and rendering: a local, unencrypted file. */
-class PdfSource(val file: File, val pageCount: Int, val wasEncrypted: Boolean)
+/**
+ * A PDF ready for processing and rendering: a local, unencrypted file.
+ * When the original was password protected, [protection] remembers how, so tools can write the result with the same
+ * password and permissions ([PdfProtection]); it is null for ordinary PDFs.
+ */
+class PdfSource(val file: File, val pageCount: Int, val wasEncrypted: Boolean, val protection: PdfProtection? = null)
 
 sealed interface PdfOpenResult {
     class Ready(val source: PdfSource) : PdfOpenResult
@@ -64,6 +68,7 @@ object PdfLoader {
                 val pages = doc.numberOfPages
                 if (pages <= 0) return@withContext PdfOpenResult.Unreadable("This PDF has no pages.")
                 if (!doc.isEncrypted) return@withContext PdfOpenResult.Ready(PdfSource(file, pages, false))
+                val protection = PdfProtection(password.orEmpty(), doc.currentAccessPermission.permissionBytes)
                 doc.isAllSecurityToBeRemoved = true
                 dir.mkdirs()
                 val plain = File(dir, "dec-${UUID.randomUUID()}.pdf")
@@ -73,7 +78,7 @@ object PdfLoader {
                     plain.delete()
                     throw t
                 }
-                PdfOpenResult.Ready(PdfSource(plain, pages, true))
+                PdfOpenResult.Ready(PdfSource(plain, pages, true, protection))
             }
         } catch (_: InvalidPasswordException) {
             if (password.isNullOrEmpty()) PdfOpenResult.NeedsPassword else PdfOpenResult.WrongPassword
