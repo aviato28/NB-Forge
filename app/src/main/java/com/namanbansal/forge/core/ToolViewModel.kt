@@ -238,7 +238,6 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
         runJob?.cancel()
         inputJob?.cancel()
         onInputsReset()
-        super.onCleared()
     }
 
     /** Shared helper so subclasses can switch context for blocking work. */

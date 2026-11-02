@@ -252,9 +252,9 @@ private fun PinEditGrid(codes: List<String>, onCommit: (List<String>) -> Unit, o
         fun slot(i: Int) = Offset((i % cols) * (wPx + gPx), (i / cols) * (hPx + gPx))
 
         Box(Modifier.fillMaxWidth().size(width = maxWidth, height = cellH * rows + gap * (rows - 1))) {
-            order.forEach { code ->
+            order.mapNotNull { ToolRegistry.get(it) }.forEach { tool ->
+                val code = tool.code
                 key(code) {
-                    val tool = ToolRegistry.get(code) ?: return@key
                     val index = order.indexOf(code)
                     val isDragged = dragging == code
                     val slotDp = DpOffsetOf(slot(index), density)

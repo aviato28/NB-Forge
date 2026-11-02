@@ -63,6 +63,12 @@ class RotateScreenTest {
         assertTrue("condition not reached in time", until())
     }
 
+    @Test fun screenCreatesItsViewModelThroughTheDefaultFactory() {
+        // Same path as the real nav graph: no vm argument, so viewModel() must build RotateViewModel(Application, SavedStateHandle).
+        compose.setContent { ForgeTheme { RotateScreen(ToolHost(tool, onBack = {})) } }
+        compose.onNodeWithText("Choose a PDF to rotate").assertExists()
+    }
+
     @Test fun pickStateShowsChooseButton() {
         val vm = RotateViewModel(app, SavedStateHandle())
         compose.setContent { ForgeTheme { RotateScreen(ToolHost(tool, onBack = {}), vm) } }
