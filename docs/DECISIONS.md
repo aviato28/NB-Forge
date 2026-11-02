@@ -55,3 +55,12 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 - Distribution = **project website + in-app updater only**. Play Store is the very last step (~6+ months out); do not design for it now.
 - Website: GitHub Pages from this repo (planned phase), "Download for Android" → latest release APK.
 - NB branding: owner has no assets yet. Placeholder "Forge by Naman Bansal"; an NB mark can be designed alongside the website.
+
+## Hosting & updates — aligned with nbansal28.com (2026-11-02)
+- Main site repo `aviato28/nbansal28-site` (Cloudflare Worker + static assets). Products live on subdomains (penumbra., crewbrew., afterglow., lifeos.nbansal28.com), each a folder in that repo, plus an F-PLN card on the home page.
+- Forge will be **forge.nbansal28.com** (site work = later phase, not now).
+- Follow Penumbra's update contract: `GET /update/latest.json?channel=stable|beta` →
+  `{version, versionCode, channel, notes, publishedAt, apk, size, sha256}`; `/download/apk` for the website button.
+  Tag format `v0.1.{N}` where N = versionCode. Stable = GitHub "latest" release, beta = newest incl. prereleases.
+- Phase 0 app: `UpdateSource` interface. Implementation now = GitHub Releases API on aviato28/NB-Forge (public, no token), mapped into the same schema. Later swap to forge.nbansal28.com endpoint (one-line change, ships via an update).
+- About screen links to https://nbansal28.com.
