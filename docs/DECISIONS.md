@@ -64,3 +64,7 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
   Tag format `v0.1.{N}` where N = versionCode. Stable = GitHub "latest" release, beta = newest incl. prereleases.
 - Phase 0 app: `UpdateSource` interface. Implementation now = GitHub Releases API on aviato28/NB-Forge (public, no token), mapped into the same schema. Later swap to forge.nbansal28.com endpoint (one-line change, ships via an update).
 - About screen links to https://nbansal28.com.
+
+## Workflow (2026-11-02)
+- Owner has authorised Claude to open PRs, merge to `main` and publish releases autonomously.
+- Signing secrets are configured in GitHub. First release: v0.1.104.
