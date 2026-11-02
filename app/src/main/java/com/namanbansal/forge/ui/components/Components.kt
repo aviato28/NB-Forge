@@ -184,7 +184,7 @@ fun ForgeButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
     Row(
         modifier.height(52.dp).clip(ForgeShapes.Button).background(if (enabled) bg else c.border)
             .let { if (secondary) it.border(1.dp, c.border, ForgeShapes.Button) else it }
-            .let { if (enabled) it.clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick) else it }
+            .clickable(enabled = enabled, interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,

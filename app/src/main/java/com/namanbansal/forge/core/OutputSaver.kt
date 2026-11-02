@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.io.FilterOutputStream
 import java.io.OutputStream
 
 /** A file written to `Downloads/Forge/`. */
@@ -42,9 +43,10 @@ class OutputSaver(context: Context) {
             ?: throw IOException("Could not create a file in Downloads/Forge")
         try {
             val out = resolver.openOutputStream(uri, "w") ?: throw IOException("Could not open the output file")
-            out.use { write(it) }
+            val counting = CountingOutputStream(out)
+            counting.use { write(it) }
             resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
-            SavedOutput(uri, name, sizeOf(uri), mime)
+            SavedOutput(uri, name, counting.count, mime)
         } catch (t: Throwable) {
             runCatching { resolver.delete(uri, null, null) }
             throw t
@@ -61,12 +63,6 @@ class OutputSaver(context: Context) {
         )?.use { it.count > 0 } ?: false
     } catch (_: Exception) {
         false
-    }
-
-    private fun sizeOf(uri: Uri): Long = try {
-        resolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L
-    } catch (_: Exception) {
-        -1L
     }
 
     /** True if [uri] still points at a readable file (used to grey out stale Recent entries). */
@@ -91,4 +87,14 @@ class OutputSaver(context: Context) {
         const val RELATIVE_PATH = "Download/Forge/"
         const val FOLDER_LABEL = "Downloads/Forge"
     }
+}
+
+/** Counts bytes written, so the saved size is exact without asking the provider. */
+private class CountingOutputStream(out: OutputStream) : FilterOutputStream(out) {
+    var count = 0L
+        private set
+
+    override fun write(b: Int) { out.write(b); count++ }
+
+    override fun write(b: ByteArray, off: Int, len: Int) { out.write(b, off, len); count += len }
 }
