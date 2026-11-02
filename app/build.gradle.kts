@@ -49,6 +49,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true // Robolectric needs merged resources/manifest
+            isReturnDefaultValues = true
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -71,7 +78,16 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
+    implementation(libs.pdfbox.android)
     debugImplementation(libs.compose.ui.tooling)
 
+    debugImplementation(libs.compose.ui.test.manifest)
+
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
 }

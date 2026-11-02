@@ -1,5 +1,6 @@
 package com.namanbansal.forge.tools
 
+import com.namanbansal.forge.core.FileKind
 import com.namanbansal.forge.ui.icons.ForgeIcons
 
 /**
@@ -9,7 +10,39 @@ import com.namanbansal.forge.ui.icons.ForgeIcons
 object ToolRegistry {
 
     /** Codes of tools that have a real implementation. Everything else shows the "Coming soon" screen. */
-    private val AVAILABLE: Set<String> = emptySet()
+    private val AVAILABLE: Set<String> = setOf("P4")
+
+    /**
+     * Unambiguous labels for tiles and chips where [ToolDef.name] alone is not enough
+     * ("Compress" exists for PDF, image and video). Tools not listed use their name.
+     * A unit test guarantees every resulting label is unique.
+     */
+    private val SHORT_LABELS: Map<String, String> = mapOf(
+        "P1" to "Merge PDF", "P2" to "Split PDF", "P4" to "Rotate PDF", "P7" to "Crop PDF", "P8" to "Booklet",
+        "P9" to "Compress PDF", "P10" to "PDF grayscale", "P11" to "Flatten PDF", "P12" to "Repair PDF",
+        "P13" to "Sanitise PDF", "P14" to "Linearise PDF", "P15" to "Edit PDF text", "P16" to "Add to PDF",
+        "P17" to "Annotate PDF", "P18" to "Whiteout", "P19" to "Redact PDF", "P20" to "Watermark PDF",
+        "P21" to "Page numbers", "P22" to "PDF bookmarks", "P23" to "PDF metadata", "P24" to "PDF links",
+        "P27" to "Sign PDF", "P28" to "Digital sign", "P29" to "Protect PDF", "P30" to "Unlock PDF",
+        "P33" to "PDF → text", "P35" to "Office → PDF", "P37" to "OCR PDF", "P38" to "PDF assets",
+        "P39" to "Compare PDFs", "P40" to "PDF viewer", "P41" to "PDF batch",
+        "I1" to "Resize image", "I2" to "Compress image", "I3" to "Convert image", "I4" to "Remove background",
+        "I6" to "Colour picker", "I7" to "Upscale image", "I10" to "Text overlay", "I12" to "Annotate image",
+        "V1" to "Trim video", "V2" to "Compress video", "V3" to "Convert video", "V8" to "Video speed", "V9" to "Mute video",
+        "D3" to "Protractor", "D8" to "QR scanner", "F1" to "Zip files",
+    )
+
+    /** File kinds a tool can take as input (drives "Open with" and "Next" suggestions). Defaults by category. */
+    private val ACCEPTS_OVERRIDES: Map<String, Set<FileKind>> = mapOf(
+        "P32" to setOf(FileKind.IMAGE), "P35" to emptySet(), "P43" to emptySet(),
+    )
+
+    private fun acceptsFor(code: String, category: Category): Set<FileKind> = ACCEPTS_OVERRIDES[code] ?: when (category) {
+        Category.PDF -> setOf(FileKind.PDF)
+        Category.IMAGE -> setOf(FileKind.IMAGE)
+        Category.VIDEO -> setOf(FileKind.VIDEO)
+        else -> emptySet()
+    }
 
     private fun tool(
         code: String,
@@ -27,6 +60,8 @@ object ToolRegistry {
         description = description,
         keywords = keywords,
         icon = icon,
+        shortLabel = SHORT_LABELS[code] ?: name,
+        accepts = acceptsFor(code, category),
         status = if (code in AVAILABLE) ToolStatus.Available else ToolStatus.ComingSoon,
     )
 
@@ -135,4 +170,11 @@ object ToolRegistry {
     }
 
     val DEFAULT_PINS = listOf("P9", "P1", "P43", "D1")
+
+    /** Hard cap on pinned tools. */
+    const val MAX_PINS = 8
+
+    /** Available tools that can take every one of [kinds] (e.g. a shared PDF), in registry order. */
+    fun availableFor(kinds: Set<FileKind>, tools: List<ToolDef> = all): List<ToolDef> =
+        tools.filter { t -> t.status == ToolStatus.Available && kinds.isNotEmpty() && t.accepts.containsAll(kinds) }
 }

@@ -1,6 +1,7 @@
 package com.namanbansal.forge.tools
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.namanbansal.forge.core.FileKind
 
 enum class Category(val title: String) {
     PDF("PDF"),
@@ -37,5 +38,9 @@ data class ToolDef(
     val description: String,
     val keywords: List<String>,
     val icon: ImageVector,
+    /** Unambiguous label for pinned tiles and chips ("Compress PDF"); equals [name] when that is already clear. */
+    val shortLabel: String,
+    /** Kinds of file this tool takes as input; empty for tools that do not start from a file. */
+    val accepts: Set<FileKind>,
     val status: ToolStatus,
 )

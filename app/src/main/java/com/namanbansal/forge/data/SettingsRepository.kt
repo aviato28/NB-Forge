@@ -57,9 +57,27 @@ class SettingsRepository(context: Context) {
 
     suspend fun setTheme(mode: ThemeMode) = store.edit { it[Keys.THEME] = mode.name }
 
-    suspend fun togglePin(code: String) = store.edit { p ->
-        val pins = p[Keys.PINS].toList() ?: ToolRegistry.DEFAULT_PINS
-        p[Keys.PINS] = (if (code in pins) pins - code else pins + code).joinToString("\n")
+    /** Outcome of [togglePin]. */
+    enum class PinResult { Pinned, Unpinned, LimitReached }
+
+    suspend fun togglePin(code: String): PinResult {
+        var result = PinResult.Unpinned
+        store.edit { p ->
+            val pins = p[Keys.PINS].toList() ?: ToolRegistry.DEFAULT_PINS
+            val next = Pins.toggle(pins, code)
+            result = when {
+                next == null -> PinResult.LimitReached
+                code in next -> PinResult.Pinned
+                else -> PinResult.Unpinned
+            }
+            if (next != null) p[Keys.PINS] = next.joinToString("\n")
+        }
+        return result
+    }
+
+    /** Persist a new pin order (unknown codes dropped, duplicates removed, capped at [ToolRegistry.MAX_PINS]). */
+    suspend fun setPins(order: List<String>) = store.edit { p ->
+        p[Keys.PINS] = order.filter { ToolRegistry.get(it) != null }.distinct().take(ToolRegistry.MAX_PINS).joinToString("\n")
     }
 
     suspend fun addRecentSearch(query: String) {
@@ -82,5 +100,23 @@ class SettingsRepository(context: Context) {
 
     companion object {
         const val MAX_RECENT_SEARCHES = 8
+    }
+}
+
+/** Pure pin-list rules, kept separate from storage so they are unit-testable. */
+object Pins {
+    /** Toggle [code]; returns null when pinning would exceed [ToolRegistry.MAX_PINS]. */
+    fun toggle(pins: List<String>, code: String): List<String>? = when {
+        code in pins -> pins - code
+        pins.size >= ToolRegistry.MAX_PINS -> null
+        else -> pins + code
+    }
+
+    /** Move the item at [from] to [to] (both clamped to the list). */
+    fun move(pins: List<String>, from: Int, to: Int): List<String> {
+        if (from !in pins.indices) return pins
+        val target = to.coerceIn(0, pins.lastIndex)
+        if (target == from) return pins
+        return pins.toMutableList().apply { add(target, removeAt(from)) }
     }
 }

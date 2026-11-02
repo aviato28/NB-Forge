@@ -120,4 +120,10 @@ object ForgeIcons {
     val Refresh by lazy { line("refresh", "M20 12a8 8 0 1 1-2.5-5.8M20 4v4h-4") }
     val Code by lazy { line("code", "M8 7l-5 5 5 5M16 7l5 5-5 5") }
     val Wand by lazy { line("wand", "M4 20L15 9M14 4v2M18 8h2M18.5 4.5l-1.4 1.4M10 5.5l1 1") }
+    val Share by lazy { line("share", circle(6f, 12f, 2.5f), circle(18f, 6f, 2.5f), circle(18f, 18f, 2.5f), "M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6") }
+    val Trash by lazy { line("trash", "M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6") }
+    val More by lazy { line("more", "M5 12h.01M12 12h.01M19 12h.01") }
+    val Grip by lazy { line("grip", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01") }
+    val RotateLeft by lazy { line("rotate-left", "M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4") }
+    val Rotate180 by lazy { line("rotate-180", "M4 12a8 8 0 0 1 14-5.3M18 4v3.5h-3.5M20 12a8 8 0 0 1-14 5.3M6 20v-3.5h3.5") }
 }

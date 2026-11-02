@@ -28,6 +28,8 @@ object ForgeType {
     val Label = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 16.sp)
     val Small = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp)
     val Tiny = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp)
+    /** Home brand header: bold FORGE wordmark. */
+    val Brand = TextStyle(fontFamily = Inter, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, lineHeight = 24.sp, letterSpacing = 2.sp)
     val Wordmark = TextStyle(fontFamily = Inter, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, letterSpacing = 0.08.em)
 }
 

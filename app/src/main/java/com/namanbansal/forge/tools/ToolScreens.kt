@@ -1,9 +1,18 @@
 package com.namanbansal.forge.tools
 
 import androidx.compose.runtime.Composable
+import com.namanbansal.forge.core.PickedFile
+import com.namanbansal.forge.tools.pdf.RotateScreen
 
-/** Context a tool screen gets from the host. */
-class ToolHost(val tool: ToolDef, val onBack: () -> Unit)
+/**
+ * Context a tool screen gets from the host: its [tool], how to leave, and how to open another tool
+ * with files already loaded (used by the result screen's "Next" chips).
+ */
+class ToolHost(
+    val tool: ToolDef,
+    val onBack: () -> Unit,
+    val onOpenTool: (code: String, files: List<PickedFile>) -> Unit = { _, _ -> },
+)
 
 /**
  * code -> screen for every implemented tool. A tool is only routed here when its code is also
@@ -11,6 +20,6 @@ class ToolHost(val tool: ToolDef, val onBack: () -> Unit)
  */
 object ToolScreens {
     val screens: Map<String, @Composable (ToolHost) -> Unit> = mapOf(
-        // "P1" to { host -> MergeScreen(host) },
+        "P4" to { host -> RotateScreen(host) },
     )
 }

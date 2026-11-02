@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.namanbansal.forge.tools.SearchHit
+import com.namanbansal.forge.tools.ToolRegistry
 import com.namanbansal.forge.tools.ToolSearch
 import com.namanbansal.forge.ui.components.EmptyState
 import com.namanbansal.forge.ui.components.ForgeCard
@@ -87,7 +88,7 @@ fun SearchScreen(
                 Icon(ForgeIcons.Back, "Back", tint = c.text2, modifier = Modifier.size(20.dp))
             }
             Box(Modifier.weight(1f).padding(horizontal = 4.dp), contentAlignment = Alignment.CenterStart) {
-                if (query.isEmpty()) Text("Search 80+ tools…", style = ForgeType.Body, color = c.text2)
+                if (query.isEmpty()) Text("Search ${ToolRegistry.all.size} tools…", style = ForgeType.Body, color = c.text2)
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
