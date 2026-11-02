@@ -97,7 +97,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Icon(ForgeIcons.Search, null, tint = c.text2, modifier = Modifier.size(20.dp))
-                Text("Search 90+ tools…", style = ForgeType.Body, color = c.text2)
+                Text("Search 80+ tools…", style = ForgeType.Body, color = c.text2)
             }
         }
         item {

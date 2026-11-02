@@ -87,7 +87,7 @@ fun SearchScreen(
                 Icon(ForgeIcons.Back, "Back", tint = c.text2, modifier = Modifier.size(20.dp))
             }
             Box(Modifier.weight(1f).padding(horizontal = 4.dp), contentAlignment = Alignment.CenterStart) {
-                if (query.isEmpty()) Text("Search 90+ tools…", style = ForgeType.Body, color = c.text2)
+                if (query.isEmpty()) Text("Search 80+ tools…", style = ForgeType.Body, color = c.text2)
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
