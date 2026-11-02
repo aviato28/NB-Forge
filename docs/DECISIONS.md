@@ -38,7 +38,15 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 
 ## In-app updater (Phase 0 — built first, it is the delivery channel)
 - CI (GitHub Actions) builds a **signed release APK** on push to main, bumps versionCode, publishes a GitHub Release with the APK attached.
-- APKs are published to a **separate public releases repo** (source repo stays private). App calls the unauthenticated `releases/latest` API. **No token shipped inside the app** — any token in an APK can be extracted.
+- Repo `aviato28/NB-Forge` is **public** → APKs are published as GitHub Releases on **this same repo**. App calls the unauthenticated `releases/latest` API. **No token shipped inside the app** — any token in an APK can be extracted.
 - App: Settings → "Check for updates" + silent check on launch (max once/day). Shows changelog, downloads APK, hands off to Android `PackageInstaller`. User grants "Install unknown apps" once; Android still shows a confirm tap per update (no silent installs without device-owner).
 - Signing keystore stored as a GitHub Actions secret + offline backup. Losing it = users must uninstall to update.
 - Build flavours: `github` (with updater) and `play` (updater stripped — Play policy forbids self-updating).
+
+## Confirmed 2026-11-02 (round 2)
+- App icon: **B — Anvil** (charcoal #18181B tile, ember anvil + spark)
+- Look approved as mocked.
+- Naman Bansal branding to be incorporated (details pending from owner; placeholder "by Naman Bansal" in splash/About/website footer).
+- Single repo for source + releases.
+- applicationId: `com.namanbansal.forge` (permanent once on Play).
+- Releases cut on push to `main`; dev branches get build-only CI.
