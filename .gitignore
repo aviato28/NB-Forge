@@ -1,0 +1,21 @@
+# Gradle / build
+.gradle/
+build/
+/app/build/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Local config & secrets (repo is PUBLIC - never commit signing material)
+local.properties
+keystore.properties
+*.jks
+*.keystore
+*.p12
+SECRETS.txt
