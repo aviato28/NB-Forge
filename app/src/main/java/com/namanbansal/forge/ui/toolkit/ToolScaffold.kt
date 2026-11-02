@@ -331,7 +331,7 @@ fun ResultView(
         Spacer(Modifier.height(20.dp))
         Text(result.headline, style = ForgeType.BodyMedium.copy(fontWeight = FontWeight.SemiBold), color = c.text2)
         Spacer(Modifier.height(6.dp))
-        val changed = result.beforeSize >= 0 && result.afterSize >= 0 && result.beforeSize != result.afterSize
+        val changed = result.outputs.size == 1 && result.beforeSize >= 0 && result.afterSize >= 0 && result.beforeSize != result.afterSize
         if (changed) {
             Text(
                 "${formatBytes(result.beforeSize)} → ${formatBytes(result.afterSize)}",
@@ -420,6 +420,7 @@ fun ResultView(
 }
 
 private fun savingsChip(r: ToolResult): String? {
+    if (r.outputs.size > 1) return null // parts are not a smaller version of one file
     val saved = r.savedBytes ?: return null
     if (saved <= 0 || r.beforeSize <= 0) return null
     return "Saved ${formatBytes(saved)} (${(saved * 100 / r.beforeSize)}% smaller)"

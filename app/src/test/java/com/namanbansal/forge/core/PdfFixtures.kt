@@ -42,13 +42,15 @@ object PdfFixtures {
     ): File {
         PDDocument().use { doc ->
             for (i in 1..pages) {
-                val page = PDPage(PDRectangle(PDRectangle.A4.width, if (uniqueHeights) 300f + i else PDRectangle.A4.height))
+                val height = if (uniqueHeights) 300f + i else PDRectangle.A4.height
+                val page = PDPage(PDRectangle(PDRectangle.A4.width, height))
                 doc.addPage(page)
+                val top = height - 70f // text sits near the top of the page whatever its height
                 PDPageContentStream(doc, page).use { cs ->
-                    cs.beginText(); cs.setFont(PDType1Font.HELVETICA_BOLD, 28f); cs.newLineAtOffset(48f, 260f + i)
+                    cs.beginText(); cs.setFont(PDType1Font.HELVETICA_BOLD, 28f); cs.newLineAtOffset(48f, top)
                     cs.showText("Page $i"); cs.endText()
-                    cs.beginText(); cs.setFont(PDType1Font.HELVETICA, 12f); cs.newLineAtOffset(48f, 236f + i); cs.showText(title); cs.endText()
-                    var y = 210f + i
+                    cs.beginText(); cs.setFont(PDType1Font.HELVETICA, 12f); cs.newLineAtOffset(48f, top - 24f); cs.showText(title); cs.endText()
+                    var y = top - 50f
                     for (line in body(i)) {
                         cs.beginText(); cs.setFont(PDType1Font.HELVETICA, 11f); cs.newLineAtOffset(48f, y); cs.showText(line); cs.endText()
                         y -= 18f

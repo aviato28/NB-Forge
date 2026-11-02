@@ -25,6 +25,8 @@ class PageManagerViewModel(application: Application, saved: SavedStateHandle) : 
 
     override val toolCode = "P3"
 
+    // Survives process death; reset automatically when the user picks another file.
+    private val savedEditor = persisted("pm.state", IntArray(0), decode = { it as? IntArray })
     private var editor = PageEditor(0)
     private val _state = MutableStateFlow(editor.state())
     val state: StateFlow<EditorState> = _state.asStateFlow()
@@ -34,20 +36,19 @@ class PageManagerViewModel(application: Application, saved: SavedStateHandle) : 
 
     override fun onPdfReady(source: PdfSource) {
         editor = PageEditor(source.pageCount)
-        if (stateRestored) saved.get<IntArray>(KEY)?.let { editor.restore(it) }
+        if (stateRestored) editor.restore(savedEditor.value)
         publish()
     }
 
     override fun onInputsReset() {
         editor = PageEditor(0)
         _state.value = editor.state()
-        saved.remove<IntArray>(KEY)
         super.onInputsReset()
     }
 
     private fun publish() {
         _state.value = editor.state()
-        saved[KEY] = editor.encode()
+        savedEditor.value = editor.encode()
     }
 
     fun toggle(id: Int) { editor.toggle(id); publish() }
@@ -97,5 +98,4 @@ class PageManagerViewModel(application: Application, saved: SavedStateHandle) : 
         return ToolOutcome(saved, headline = if (onlySelected) "Pages extracted" else "Saved successfully", detail = pagesLabel(specs.size))
     }
 
-    private companion object { const val KEY = "pm.state" }
 }

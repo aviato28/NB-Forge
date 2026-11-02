@@ -65,7 +65,7 @@ class RunScope internal constructor(private val vm: ToolViewModel) {
 
     /** Stores a new file in Downloads/Forge named `<primary input>_<action>.<ext>`. */
     suspend fun save(action: String, ext: String, mime: String, write: suspend (OutputStream) -> Unit): SavedOutput =
-        vm.saver.save(vm.primaryInputName(), action, ext, mime, write).also { vm.noteSaved(it) }
+        vm.saver.save(vm.primaryInputName(), action, ext, mime, onSaved = { vm.noteSaved(it) }, write = write)
 }
 
 /**
@@ -278,7 +278,7 @@ abstract class ToolViewModel(application: Application, protected val saved: Save
         val files = savedThisRun.toList()
         savedThisRun.clear()
         if (files.isEmpty()) return
-        withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { files.forEach { runCatching { saver.delete(it.uri) } } }
+        files.forEach { runCatching { saver.delete(it.uri) } } // short blocking deletes, no suspension: safe while cancelled
     }
 
     /** Cooperative cancel: the running coroutine stops at its next [RunScope.checkCancelled]. */

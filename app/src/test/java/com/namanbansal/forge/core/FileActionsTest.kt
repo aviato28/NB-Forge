@@ -25,6 +25,19 @@ class FileActionsTest {
         assertTrue(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
     }
 
+    @Test fun shareMultipleSendsEveryUriWithReadGrant() {
+        val uris = (1..3).map { "content://media/external/downloads/$it".toUri() }
+        val chooser = FileActions.shareMultipleIntent(uris, "application/pdf", "3 files")
+        val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+        assertEquals(Intent.ACTION_SEND_MULTIPLE, send.action)
+        assertEquals("application/pdf", send.type)
+        assertEquals(uris, send.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM))
+        assertEquals(3, send.clipData!!.itemCount) // the grant needs every uri in the ClipData
+        assertTrue(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        assertFalse(FileActions.shareMultiple(app, emptyList(), "application/pdf", "none"))
+    }
+
     @Test fun openWithNoHandlerReturnsFalseInsteadOfCrashing() {
         val app = ApplicationProvider.getApplicationContext<android.app.Application>()
         val noApps = object : android.content.ContextWrapper(app) {

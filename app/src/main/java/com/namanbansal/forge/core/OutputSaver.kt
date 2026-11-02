@@ -30,6 +30,7 @@ class OutputSaver(context: Context) {
         action: String,
         ext: String,
         mime: String,
+        onSaved: (SavedOutput) -> Unit = {},
         write: suspend (OutputStream) -> Unit,
     ): SavedOutput = withContext(Dispatchers.IO) {
         val name = OutputNaming.build(originalName, action, ext) { exists(it) }
@@ -46,7 +47,9 @@ class OutputSaver(context: Context) {
             val counting = CountingOutputStream(out)
             counting.use { write(it) }
             resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
-            SavedOutput(uri, name, counting.count, mime)
+            // Reported from inside the IO block: a cancellation arriving right now would otherwise drop the result
+            // and leave a finished file nobody knows about.
+            SavedOutput(uri, name, counting.count, mime).also(onSaved)
         } catch (t: Throwable) {
             runCatching { resolver.delete(uri, null, null) }
             throw t

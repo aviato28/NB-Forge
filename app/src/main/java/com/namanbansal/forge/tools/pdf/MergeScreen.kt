@@ -112,14 +112,14 @@ private fun MergeRow(item: MergeItem, number: Int, dragging: Boolean, handle: Mo
     val c = ForgeTheme.colors
     val failed = item.status is MergeStatus.Failed
     ForgeCard(Modifier.fillMaxWidth().let { if (dragging) it.border(1.5.dp, c.accent, com.namanbansal.forge.ui.theme.ForgeShapes.Card) else it }) {
-        Row(Modifier.padding(start = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 handle.size(48.dp).semantics { contentDescription = "Drag to reorder ${item.file.name}" },
                 contentAlignment = Alignment.Center,
             ) { Icon(ForgeIcons.Grip, null, tint = c.text2, modifier = Modifier.size(22.dp)) }
             Cover(item)
             Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+            Column(Modifier.weight(1f)) {
                 Text("$number · ${item.file.name}", style = ForgeType.Item, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val (text, color) = when (val s = item.status) {
                     MergeStatus.Opening -> "Opening…" to c.text2

@@ -227,7 +227,7 @@ private fun ZoomablePages(
     var pendingList by remember { mutableStateOf<IntArray?>(null) }
     val byPage = remember(hits) { hits.withIndex().groupBy({ it.value.page }, { it }) }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(if (invert) Color(0xFF0E0E10) else c.surface2)) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(if (invert) Color(0xFF050506) else c.surface2)) {
         val viewportW = constraints.maxWidth
         val viewportH = constraints.maxHeight
         val pageWidthPx = (viewportW * zoom).roundToInt().coerceAtLeast(1)
@@ -323,7 +323,7 @@ private fun PageView(
     val heightDp = with(density) { (widthPx / aspect).toDp() }
     val filter = if (invert) ColorFilter.colorMatrix(INVERT) else null
     Box(
-        Modifier.fillMaxWidth().height(heightDp).background(if (invert) Color(0xFF1A1A1D) else Color.White)
+        Modifier.fillMaxWidth().height(heightDp).background(if (invert) Color(0xFF16161A) else Color.White)
             .semantics { contentDescription = "Page ${index + 1}" },
     ) {
         val bmp = shown
@@ -348,10 +348,11 @@ private fun PageView(
 
 private const val MAX_RENDER_WIDTH = 2400
 
+/** Inverts colours but keeps a soft range (white page -> dark grey, black text -> off-white) so pages stay distinct from the background. */
 private val INVERT = ColorMatrix(floatArrayOf(
-    -1f, 0f, 0f, 0f, 255f,
-    0f, -1f, 0f, 0f, 255f,
-    0f, 0f, -1f, 0f, 255f,
+    -0.835f, 0f, 0f, 0f, 235f,
+    0f, -0.835f, 0f, 0f, 235f,
+    0f, 0f, -0.835f, 0f, 235f,
     0f, 0f, 0f, 1f, 0f,
 ))
 

@@ -62,7 +62,11 @@ class FakeMediaProvider : ContentProvider() {
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         val row = rows[idOf(uri)] ?: throw java.io.FileNotFoundException("gone")
-        return ParcelFileDescriptor.open(row.file, ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE)
+        val writing = mode.contains('w')
+        return ParcelFileDescriptor.open(
+            row.file,
+            if (writing) ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE else ParcelFileDescriptor.MODE_READ_ONLY,
+        )
     }
 }
 
