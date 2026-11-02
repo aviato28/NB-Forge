@@ -78,3 +78,18 @@ That's it: search, category lists, pins, the `tool/{code}` route, the "Open with
 `core/`: `FileKind`, `PickedFile`/`FileResolver`, `OutputNaming`/`OutputSaver`, `FileActions` (share/open),
 `RecentFilesStore`, `ToolViewModel`, `NextSuggestions`, `IncomingIntents`, `core/pdf/` (`PdfLoader`, `PdfThumbnails`, `PdfToolViewModel`).
 `ui/toolkit/`: `ToolScaffold`, `PasswordDialog`, `OpenWithSheet`, `rememberFilePicker`, `ForgeSnackbarHost`/`rememberSnack`.
+
+## Added in Batch 2
+
+- `core/pdf/PdfAssembler` builds any new PDF from pages of existing ones (order, duplicates, turns, blanks): Extract, Split, Page manager and Insert all use it. `PdfMerger` (PDFBox merger, temp-file mode) backs Merge.
+- `core/pdf/PageRanges` parses `1-3, 5, 8-10`; `PageEditor` is the Page manager's undo/redo page-index model.
+- Passwords: `PdfLoader` decrypts into a working copy and records a `PdfProtection`; every tool writes its output through it (`PdfSource.protection`, `PdfProtection.applyTo`). Mixed sources use `PdfProtection.forAll`.
+- Option state that should survive process death: `persistedInt/Bool/String/IntSet/persisted(...)` in `ToolViewModel` (reset when new files are picked, kept after a restore: check `stateRestored`).
+- Many outputs: return `ToolOutcome(outputs = ..., archive = zip)`; the result screen offers Share all / Share ZIP and rolls back saved files if a run fails or is cancelled.
+- UI: `PageThumb` / `PageSelectGrid`, `ReorderableGrid` / `ReorderableColumn` (drag to reorder), `ForgeTextField`, `Stepper`, `ToggleRow`, `InfoNote`, `OptionChip`.
+
+## Screenshots
+
+`./gradlew recordRoborazziDebug --tests '*ScreenshotTest'` writes light/dark PNGs of every screen to `docs/screenshots/`
+(Roborazzi, Robolectric native graphics, 411x891dp). Plain `testDebugUnitTest` renders the same screens but writes nothing.
+Look at the PNGs after UI changes. Robolectric's PdfRenderer draws nothing, so tests swap in `PdfBoxRasterizer`.
