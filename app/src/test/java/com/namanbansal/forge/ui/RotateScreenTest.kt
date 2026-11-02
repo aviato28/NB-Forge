@@ -139,7 +139,7 @@ class RotateScreenTest {
         compose.waitForIdle()
         compose.onNodeWithText("Password needed").assertDoesNotExist()
         compose.onNodeWithText("2 of 2 selected").assertExists()
-        compose.onNodeWithText("The saved copy won't have the password.").assertExists()
+        compose.onNodeWithText("The saved copy keeps the password.").assertExists()
     }
 
     @Test fun endToEndRotateSavesResultAndRecordsRecent() {

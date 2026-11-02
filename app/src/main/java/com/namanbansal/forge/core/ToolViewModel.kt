@@ -34,6 +34,8 @@ class ToolOutcome(
     val detail: String? = null,
     /** Every file produced (Split saves many); [output] is the primary one. */
     val outputs: List<SavedOutput> = listOf(output),
+    /** Optional ZIP of [outputs] (Split's "also save as ZIP"). */
+    val archive: SavedOutput? = null,
 )
 
 /** Everything the result screen shows. */
@@ -46,6 +48,7 @@ data class ToolResult(
     val headline: String,
     val detail: String?,
     val outputs: List<SavedOutput> = listOf(output),
+    val archive: SavedOutput? = null,
 ) {
     val kind: FileKind get() = FileKind.fromMime(output.mime)
     /** Bytes saved (positive) or added (negative); null if either size is unknown. */
@@ -70,7 +73,7 @@ class RunScope internal constructor(private val vm: ToolViewModel) {
  * running with progress + cancel, error with retry, result) and records finished outputs to Recent.
  * A tool subclass only supplies [toolCode], reacts to new inputs in [onInputsReady] and does its work in [execute].
  */
-abstract class ToolViewModel(application: Application, private val saved: SavedStateHandle) : AndroidViewModel(application) {
+abstract class ToolViewModel(application: Application, protected val saved: SavedStateHandle) : AndroidViewModel(application) {
 
     /** Registry code of the tool, e.g. "P4". */
     abstract val toolCode: String
@@ -239,6 +242,7 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
                     headline = outcome.headline,
                     detail = outcome.detail,
                     outputs = outcome.outputs,
+                    archive = outcome.archive,
                 )
                 runCatching {
                     // A many-file result (Split) adds only its first few files so Recent is not flooded.
@@ -284,7 +288,7 @@ abstract class ToolViewModel(application: Application, private val saved: SavedS
     fun retry() = start()
 
     /** Failed/Result -> back to Options with inputs kept. */
-    fun backToOptions() {
+    open fun backToOptions() {
         _error.value = null
         _result.value = null
         if (_inputs.value.isNotEmpty()) _phase.value = ToolPhase.Options else _phase.value = ToolPhase.Pick

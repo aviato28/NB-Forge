@@ -11,41 +11,47 @@ import com.namanbansal.forge.core.pdf.PdfSource
 import com.namanbansal.forge.core.pdf.PdfToolViewModel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 
 /** P4 Rotate: which pages are selected and how far each has been turned (raw clockwise degrees, may exceed 360). */
 class RotateViewModel(application: Application, saved: SavedStateHandle) : PdfToolViewModel(application, saved) {
 
     override val toolCode = "P4"
 
-    private val _selected = MutableStateFlow<Set<Int>>(emptySet())
-    val selected: StateFlow<Set<Int>> = _selected.asStateFlow()
-
-    private val _rotations = MutableStateFlow<Map<Int, Int>>(emptyMap())
-    val rotations: StateFlow<Map<Int, Int>> = _rotations.asStateFlow()
+    // Both survive process death (SavedStateHandle): selection as ints, rotations as flat (page, degrees) pairs.
+    private val selectedState = persistedIntSet("rotate.selected")
+    private val rotationsState = persisted<Map<Int, Int>>(
+        "rotate.rotations", emptyMap(),
+        encode = { m -> m.flatMap { listOf(it.key, it.value) }.toIntArray() },
+        decode = { a -> (a as? IntArray)?.toList()?.chunked(2)?.filter { it.size == 2 }?.associate { it[0] to it[1] } },
+    )
+    val selected: StateFlow<Set<Int>> = selectedState.flow
+    val rotations: StateFlow<Map<Int, Int>> = rotationsState.flow
 
     private var pageCount = 0
 
     override fun onPdfReady(source: PdfSource) {
         pageCount = source.pageCount
-        _selected.value = (0 until pageCount).toSet() // default: whole document, so "rotate + save" is two taps
-        _rotations.value = emptyMap()
+        if (stateRestored) {
+            selectedState.value = selectedState.value.filter { it in 0 until pageCount }.toSet()
+            rotationsState.value = rotationsState.value.filterKeys { it in 0 until pageCount }
+        } else {
+            selectedState.value = (0 until pageCount).toSet() // default: whole document, so "rotate + save" is two taps
+            rotationsState.value = emptyMap()
+        }
     }
 
-    fun togglePage(index: Int) = _selected.update { if (index in it) it - index else it + index }
+    fun togglePage(index: Int) = selectedState.update { if (index in it) it - index else it + index }
 
-    fun selectAll() { _selected.value = (0 until pageCount).toSet() }
+    fun selectAll() { selectedState.value = (0 until pageCount).toSet() }
 
-    fun selectNone() { _selected.value = emptySet() }
+    fun selectNone() { selectedState.value = emptySet() }
 
     /** Turn every selected page by [degrees] clockwise (negative = anticlockwise). */
     fun rotateSelected(degrees: Int) {
-        val sel = _selected.value
+        val sel = selectedState.value
         if (sel.isEmpty()) return
-        _rotations.update { current ->
+        rotationsState.update { current ->
             val next = current.toMutableMap()
             for (i in sel) {
                 val v = (next[i] ?: 0) + degrees
@@ -55,14 +61,14 @@ class RotateViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         }
     }
 
-    fun resetRotations() { _rotations.value = emptyMap() }
+    fun resetRotations() { rotationsState.value = emptyMap() }
 
     /** Number of pages whose net rotation is non-zero. */
-    fun changedCount(rotations: Map<Int, Int> = _rotations.value): Int = rotations.count { PdfRotator.normalize(it.value) != 0 }
+    fun changedCount(rotations: Map<Int, Int> = rotationsState.value): Int = rotations.count { PdfRotator.normalize(it.value) != 0 }
 
     override suspend fun execute(scope: RunScope): ToolOutcome {
         val src = source.value ?: throw ToolException("Open a PDF first.")
-        val steps = _rotations.value.filter { PdfRotator.normalize(it.value) != 0 }.mapValues { PdfRotator.normalize(it.value) }
+        val steps = rotationsState.value.filter { PdfRotator.normalize(it.value) != 0 }.mapValues { PdfRotator.normalize(it.value) }
         if (steps.isEmpty()) throw ToolException("Rotate at least one page first.")
         var changed = 0
         val saved = scope.save("rotated", "pdf", "application/pdf") { out ->

@@ -36,6 +36,9 @@ abstract class PdfToolViewModel(application: Application, saved: SavedStateHandl
     private val workFiles = mutableListOf<File>()
     private var lockedCopy: File? = null
 
+    /** How much memory the page-bitmap cache may use; the viewer asks for more than a thumbnail grid needs. */
+    protected open val thumbnailCacheBytes: Int get() = PdfThumbnails.defaultCacheBytes()
+
     /** Called on the main thread once the document is open (also after a successful password). */
     protected open fun onPdfReady(source: PdfSource) {}
 
@@ -55,7 +58,7 @@ abstract class PdfToolViewModel(application: Application, saved: SavedStateHandl
                 if (result.source.file != copy) workFiles += result.source.file
                 lockedCopy = null
                 _passwordPrompt.value = null
-                val thumbs = try { PdfThumbnails(result.source.file) } catch (_: Exception) {
+                val thumbs = try { PdfThumbnails(result.source.file, cacheBytes = thumbnailCacheBytes) } catch (_: Exception) {
                     throw ToolException("This PDF can't be displayed on your device.")
                 }
                 _thumbnails.value = thumbs

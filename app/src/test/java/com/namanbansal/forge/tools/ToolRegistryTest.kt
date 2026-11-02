@@ -31,10 +31,10 @@ class ToolRegistryTest {
         assertEquals(ToolRegistry.DEFAULT_PINS.size, ToolRegistry.DEFAULT_PINS.map { ToolRegistry.get(it)!!.shortLabel }.toSet().size)
     }
 
-    @Test fun rotateIsTheOnlyAvailableToolForPdfs() {
+    @Test fun availableToolsAreTheOrganiseSetPlusViewer() {
         val available = ToolRegistry.all.filter { it.status == ToolStatus.Available }
-        assertEquals(listOf("P4"), available.map { it.code })
-        assertEquals(listOf("P4"), ToolRegistry.availableFor(setOf(FileKind.PDF)).map { it.code })
+        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P40"), available.map { it.code })
+        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P40"), ToolRegistry.availableFor(setOf(FileKind.PDF)).map { it.code })
         assertTrue(ToolRegistry.availableFor(setOf(FileKind.IMAGE)).isEmpty())
         assertTrue(ToolRegistry.availableFor(emptySet()).isEmpty())
         assertTrue(ToolRegistry.availableFor(setOf(FileKind.PDF, FileKind.IMAGE)).isEmpty()) // mixed: no tool takes both
@@ -47,7 +47,21 @@ class ToolRegistryTest {
         val next = NextSuggestions.forOutput(FileKind.PDF, currentToolCode = pdfAvail[0].code, tools = pdfAvail)
         assertEquals(pdfAvail.subList(1, 4).map { it.code }, next.map { it.code })
         assertTrue(NextSuggestions.forOutput(FileKind.IMAGE, "x", pdfAvail).isEmpty())
-        assertTrue(NextSuggestions.forOutput(FileKind.PDF, "P4").isEmpty()) // only Rotate exists today
+    }
+
+    @Test fun nextSuggestionsFollowThePreferredFlowsAndLightUpAsToolsShip() {
+        fun codes(from: String) = NextSuggestions.forOutput(FileKind.PDF, from).map { it.code }
+        // Merge: Compress / Watermark / Protect do not exist yet, so the next best available steps show.
+        assertEquals(listOf("P40", "P2", "P3", "P4"), codes("P1"))
+        assertTrue("P1" in codes("P2"))                       // Split -> Merge
+        assertEquals("P1", codes("P2").first())
+        assertTrue(codes("P4").first() == "P3")               // Rotate -> Page manager
+        assertTrue(codes("P40").containsAll(listOf("P3", "P1")))
+        assertTrue("P4" !in codes("P4"))
+        assertTrue(codes("P5").first() == "P1")
+        // With Compress / Watermark / Protect available, Merge suggests them first.
+        val all = ToolRegistry.all.map { if (it.code in setOf("P9", "P20", "P29")) it.copy(status = ToolStatus.Available) else it }
+        assertEquals(listOf("P9", "P20", "P29"), NextSuggestions.forOutput(FileKind.PDF, "P1", all).take(3).map { it.code })
     }
 
     @Test fun toolCountMatchesRegistry() {

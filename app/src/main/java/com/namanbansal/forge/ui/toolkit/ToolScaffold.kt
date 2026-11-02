@@ -96,6 +96,7 @@ data class PickSpec(
  * @param actionHint small line above the button explaining why it is disabled (or what will happen)
  * @param inputSubtitle second line of the input file card (e.g. "12 pages · 4.2 MB")
  * @param dialogs tool-specific dialogs (e.g. [PasswordDialog]); composed at the top level
+ * @param showInputCard false when the tool draws its own list of picked files
  * @param optionsReady false while the tool is still preparing options (e.g. waiting for a password); shows a spinner
  */
 @Composable
@@ -112,6 +113,8 @@ fun ToolScaffold(
     actionHint: String? = null,
     inputSubtitle: (List<PickedFile>) -> String = { files -> files.firstOrNull()?.let { formatBytes(it.size) }.orEmpty() },
     optionsReady: Boolean = true,
+    /** False for tools that show their own list of inputs (Merge). */
+    showInputCard: Boolean = true,
     dialogs: @Composable () -> Unit = {},
     options: @Composable ColumnScope.() -> Unit,
 ) {
@@ -139,7 +142,7 @@ fun ToolScaffold(
                 ToolPhase.Pick -> PickView(pick, loading, onChoose = launchPicker)
                 ToolPhase.Options -> OptionsView(
                     inputs = inputs, subtitle = inputSubtitle(inputs), ready = optionsReady && !loading,
-                    actionLabel = actionLabel, actionEnabled = actionEnabled, actionHint = actionHint,
+                    actionLabel = actionLabel, actionEnabled = actionEnabled, actionHint = actionHint, showInputCard = showInputCard,
                     onChange = { launchPicker() }, onAction = vm::start, content = options,
                 )
                 ToolPhase.Running -> RunningView(progress, onCancel = vm::cancel)
@@ -189,14 +192,17 @@ private fun OptionsView(
     actionLabel: String,
     actionEnabled: Boolean,
     actionHint: String?,
+    showInputCard: Boolean,
     onChange: () -> Unit,
     onAction: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = ForgeTheme.colors
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        InputCard(inputs, subtitle, onChange)
-        Spacer(Modifier.height(12.dp))
+        if (showInputCard) {
+            InputCard(inputs, subtitle, onChange)
+            Spacer(Modifier.height(12.dp))
+        }
         if (ready) {
             Column(Modifier.weight(1f).fillMaxWidth(), content = content)
         } else {
@@ -344,33 +350,62 @@ fun ResultView(
             )
         }
         Spacer(Modifier.height(24.dp))
+        val many = result.outputs.size > 1
         ForgeCard(Modifier.fillMaxWidth()) {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                IconBox(ForgeIcons.FileText)
+                IconBox(if (many) ForgeIcons.Copy else ForgeIcons.FileText)
                 Column(Modifier.weight(1f)) {
-                    Text(out.displayName, style = ForgeType.Item, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(if (many) "${result.outputs.size} files" else out.displayName, style = ForgeType.Item, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text("${formatBytes(result.afterSize)} · ${OutputSaver.FOLDER_LABEL}", style = ForgeType.Small, color = c.text2)
                 }
             }
+            if (many) {
+                val c2 = ForgeTheme.colors
+                result.outputs.take(4).forEach { o ->
+                    Text(o.displayName, style = ForgeType.Small, color = c2.text2, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 68.dp, end = 12.dp, bottom = 4.dp))
+                }
+                if (result.outputs.size > 4) Text("+ ${result.outputs.size - 4} more", style = ForgeType.Small, color = c2.text2, modifier = Modifier.padding(start = 68.dp, bottom = 10.dp))
+                else Spacer(Modifier.height(6.dp))
+            }
         }
         Spacer(Modifier.height(8.dp))
-        ForgeButton(
-            "Share", icon = ForgeIcons.Share, modifier = Modifier.fillMaxWidth(),
-            onClick = { if (!FileActions.share(context, out.uri, out.mime, out.displayName)) snack("No app available to share this file") },
-        )
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeButton("Save as", icon = ForgeIcons.Download, secondary = true, modifier = Modifier.weight(1f), onClick = { saveAs.launch(out.displayName) })
+        if (many) {
             ForgeButton(
-                "Open", icon = ForgeIcons.Open, secondary = true, modifier = Modifier.weight(1f),
-                onClick = { if (!FileActions.open(context, out.uri, out.mime)) snack("No app found to open this file") },
+                "Share all", icon = ForgeIcons.Share, modifier = Modifier.fillMaxWidth(),
+                onClick = { if (!FileActions.shareMultiple(context, result.outputs.map { it.uri }, out.mime, "${result.outputs.size} files from Forge")) snack("No app available to share these files") },
             )
+            result.archive?.let { zip ->
+                Spacer(Modifier.height(8.dp))
+                ForgeButton(
+                    "Share ZIP (${zip.displayName})", icon = ForgeIcons.Archive, secondary = true, modifier = Modifier.fillMaxWidth(),
+                    onClick = { if (!FileActions.share(context, zip.uri, zip.mime, zip.displayName)) snack("No app available to share this file") },
+                )
+            }
+        } else {
+            ForgeButton(
+                "Share", icon = ForgeIcons.Share, modifier = Modifier.fillMaxWidth(),
+                onClick = { if (!FileActions.share(context, out.uri, out.mime, out.displayName)) snack("No app available to share this file") },
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ForgeButton("Save as", icon = ForgeIcons.Download, secondary = true, modifier = Modifier.weight(1f), onClick = { saveAs.launch(out.displayName) })
+                ForgeButton(
+                    "Open", icon = ForgeIcons.Open, secondary = true, modifier = Modifier.weight(1f),
+                    onClick = { if (!FileActions.open(context, out.uri, out.mime)) snack("No app found to open this file") },
+                )
+            }
         }
         if (next.isNotEmpty()) {
             Column(Modifier.fillMaxWidth()) {
                 GroupLabel("Next", Modifier.padding(top = 24.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    next.forEach { t -> NextChip(t) { onOpenTool(t.code, listOf(PickedFile(out.uri, out.displayName, out.size, out.mime))) } }
+                    next.forEach { t ->
+                        NextChip(t) {
+                            // Tools that take several files get the whole result; the rest get the first file.
+                            val files = (if (t.code in NextSuggestions.MULTI_INPUT) result.outputs else listOf(out)).map { PickedFile(it.uri, it.displayName, it.size, it.mime) }
+                            onOpenTool(t.code, files)
+                        }
+                    }
                 }
             }
         }

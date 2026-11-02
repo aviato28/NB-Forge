@@ -124,6 +124,12 @@ object ForgeIcons {
     val Trash by lazy { line("trash", "M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6") }
     val More by lazy { line("more", "M5 12h.01M12 12h.01M19 12h.01") }
     val Grip by lazy { line("grip", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01") }
+    val Minus by lazy { line("minus", "M5 12h14") }
+    val Undo by lazy { line("undo", "M9 14L4 9l5-5", "M4 9h10a6 6 0 0 1 0 12h-3") }
+    val Redo by lazy { line("redo", "M15 14l5-5-5-5", "M20 9H10a6 6 0 0 0 0 12h3") }
+    val Moon by lazy { line("moon", "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z") }
+    val ChevronUp by lazy { line("chev-up", "M6 15l6-6 6 6") }
+    val ChevronDown by lazy { line("chev-down", "M6 9l6 6 6-6") }
     val RotateLeft by lazy { line("rotate-left", "M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4") }
     val Rotate180 by lazy { line("rotate-180", "M4 12a8 8 0 0 1 14-5.3M18 4v3.5h-3.5M20 12a8 8 0 0 1-14 5.3M6 20v-3.5h3.5") }
 }

@@ -92,6 +92,7 @@ fun ForgeRoot(
     app: ForgeApp,
     settings: Settings,
     incoming: List<PickedFile> = emptyList(),
+    incomingIsView: Boolean = false,
     onIncomingHandled: () -> Unit = {},
 ) {
     val nav = rememberNavController()
@@ -181,7 +182,15 @@ fun ForgeRoot(
     }
     }
 
-    if (incoming.isNotEmpty()) {
+    // "Open with" on a single PDF goes straight to the viewer; anything else asks what to do.
+    val direct = incomingIsView && incoming.size == 1 && incoming.first().kind == com.namanbansal.forge.core.FileKind.PDF
+    LaunchedEffect(incoming, direct) {
+        if (direct) {
+            onIncomingHandled()
+            openToolWith("P40", incoming)
+        }
+    }
+    if (incoming.isNotEmpty() && !direct) {
         OpenWithSheet(
             files = incoming,
             onDismiss = onIncomingHandled,

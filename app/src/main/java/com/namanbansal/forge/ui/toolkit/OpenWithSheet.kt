@@ -38,7 +38,8 @@ fun OpenWithSheet(
     files: List<PickedFile>,
     onPick: (ToolDef) -> Unit,
     onDismiss: () -> Unit,
-    tools: List<ToolDef> = ToolRegistry.availableFor(files.map { it.kind }.toSet()),
+    tools: List<ToolDef> = ToolRegistry.availableFor(files.map { it.kind }.toSet())
+        .filter { files.size == 1 || it.code in com.namanbansal.forge.core.NextSuggestions.MULTI_INPUT }, // several files: only tools that take several
 ) {
     val c = ForgeTheme.colors
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)

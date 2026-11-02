@@ -24,6 +24,8 @@ import com.namanbansal.forge.ui.theme.ForgeTheme as T
 class MainActivity : ComponentActivity() {
     /** Files another app sent us; shown in the "What do you want to do?" sheet until handled. */
     private val incoming = mutableStateOf<List<PickedFile>>(emptyList())
+    /** True when the files came from "Open with" (ACTION_VIEW): a single PDF then opens straight in the viewer. */
+    private val incomingIsView = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -45,7 +47,7 @@ class MainActivity : ComponentActivity() {
                         else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
                     )
                 }
-                ForgeRoot(app = app, settings = settings, incoming = incoming.value, onIncomingHandled = { incoming.value = emptyList() })
+                ForgeRoot(app = app, settings = settings, incoming = incoming.value, incomingIsView = incomingIsView.value, onIncomingHandled = { incoming.value = emptyList() })
             }
         }
     }
@@ -62,7 +64,10 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             // Read name/size right away while the sender's temporary read grant is certainly alive.
             val files = IncomingIntents.accept(uris.map { FileResolver.resolve(this@MainActivity, it) })
-            if (files.isNotEmpty()) incoming.value = files
+            if (files.isNotEmpty()) {
+                incomingIsView.value = intent?.action == Intent.ACTION_VIEW
+                incoming.value = files
+            }
         }
     }
 

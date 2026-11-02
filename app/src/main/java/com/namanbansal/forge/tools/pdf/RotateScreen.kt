@@ -53,6 +53,8 @@ import com.namanbansal.forge.tools.ToolHost
 import com.namanbansal.forge.ui.icons.ForgeIcons
 import com.namanbansal.forge.ui.theme.ForgeTheme
 import com.namanbansal.forge.ui.theme.ForgeType
+import com.namanbansal.forge.ui.components.InfoNote
+import com.namanbansal.forge.ui.toolkit.PageSelectGrid
 import com.namanbansal.forge.ui.toolkit.PasswordDialog
 import com.namanbansal.forge.ui.toolkit.PickSpec
 import com.namanbansal.forge.ui.toolkit.ToolScaffold
@@ -97,7 +99,7 @@ fun RotateScreen(host: ToolHost, vm: RotateViewModel = viewModel()) {
                 thumbnails = t,
                 selected = selected,
                 rotations = rotations,
-                encryptedNote = s.wasEncrypted,
+                protectionNote = s.protection?.note,
                 onToggle = vm::togglePage,
                 onAll = vm::selectAll,
                 onNone = vm::selectNone,
@@ -115,7 +117,7 @@ private fun ColumnScope.RotateOptions(
     thumbnails: PdfThumbnails,
     selected: Set<Int>,
     rotations: Map<Int, Int>,
-    encryptedNote: Boolean,
+    protectionNote: String?,
     onToggle: (Int) -> Unit,
     onAll: () -> Unit,
     onNone: () -> Unit,
@@ -132,20 +134,8 @@ private fun ColumnScope.RotateOptions(
         )
         SelectChip(if (allSelected) "None" else "All", onClick = if (allSelected) onNone else onAll)
     }
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        modifier = Modifier.weight(1f).fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(bottom = 8.dp),
-    ) {
-        items((0 until pageCount).toList(), key = { it }) { index ->
-            PageCell(index, thumbnails, selected = index in selected, rotation = rotations[index] ?: 0, onClick = { onToggle(index) })
-        }
-    }
-    if (encryptedNote) {
-        Text("The saved copy won't have the password.", style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(vertical = 4.dp))
-    }
+    PageSelectGrid(pageCount, thumbnails, selected, onToggle, Modifier.weight(1f), rotations)
+    if (protectionNote != null) InfoNote(protectionNote, Modifier.padding(bottom = 8.dp))
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(c.surface).border(1.dp, c.border, RoundedCornerShape(20.dp)).padding(vertical = 4.dp),
     ) {
@@ -179,56 +169,5 @@ private fun RotateAction(icon: ImageVector, label: String, description: String, 
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
         Text(label, style = ForgeType.Tiny, color = tint)
-    }
-}
-
-/** One page tile: thumbnail (rotated live), selection ring + check, page number. */
-@Composable
-private fun PageCell(index: Int, thumbnails: PdfThumbnails, selected: Boolean, rotation: Int, onClick: () -> Unit) {
-    val c = ForgeTheme.colors
-    val bitmap by produceState(initialValue = thumbnails.peek(index), index, thumbnails) {
-        if (value == null) value = thumbnails.get(index)
-    }
-    val angle by animateFloatAsState(rotation.toFloat(), tween(220), label = "pageRotation")
-    val turns = ((rotation % 360) + 360) % 360
-    Column(
-        Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).semantics {
-            contentDescription = "Page ${index + 1}" + if (turns != 0) ", rotated $turns degrees" else ""
-            stateDescription = if (selected) "Selected" else "Not selected"
-        },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(
-            Modifier.fillMaxWidth().aspectRatio(0.75f).clip(RoundedCornerShape(8.dp)).background(c.surface2)
-                .border(if (selected) 2.dp else 1.dp, if (selected) c.accent else c.border, RoundedCornerShape(8.dp)),
-        ) {
-            val bmp = bitmap
-            if (bmp != null) {
-                val image = remember(bmp) { bmp.asImageBitmap() }
-                Canvas(Modifier.fillMaxSize().padding(3.dp)) {
-                    val rad = Math.toRadians(angle.toDouble())
-                    val ac = abs(cos(rad)).toFloat()
-                    val asn = abs(sin(rad)).toFloat()
-                    val bw = image.width.toFloat()
-                    val bh = image.height.toFloat()
-                    val fit = min(size.width / (bw * ac + bh * asn), size.height / (bw * asn + bh * ac))
-                    withTransform({
-                        translate(size.width / 2f, size.height / 2f)
-                        rotate(angle, Offset.Zero)
-                        scale(fit, fit, Offset.Zero)
-                    }) {
-                        drawImage(image, topLeft = Offset(-bw / 2f, -bh / 2f))
-                    }
-                }
-            }
-            if (selected) {
-                Box(
-                    Modifier.align(Alignment.TopEnd).padding(5.dp).size(20.dp).clip(CircleShape).background(c.accent),
-                    contentAlignment = Alignment.Center,
-                ) { Icon(ForgeIcons.Check, null, tint = Color.White, modifier = Modifier.size(14.dp)) }
-            }
-        }
-        Text("${index + 1}", style = ForgeType.Tiny, color = c.text2)
     }
 }
