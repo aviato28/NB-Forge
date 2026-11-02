@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forge - Brand and UI mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@page{size:297mm 210mm;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--acc:#FF6A1A;--accd:#E0560C}
+.light{--bg:#FAFAFA;--sf:#FFFFFF;--sf2:#F2F2F3;--bd:#E6E6E8;--tx:#111113;--tx2:#6B6B73;--tint:#FFF1E8;--pg:#F2F2F3;--pgl:#DADADF}
+.dark{--bg:#0E0E10;--sf:#18181B;--sf2:#222226;--bd:#2C2C31;--tx:#F4F4F5;--tx2:#9A9AA3;--tint:#3A2216;--pg:#2E2E33;--pgl:#46464D}
+html,body{background:#d8d8dc}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tx);-webkit-font-smoothing:antialiased}
+.page{width:297mm;height:209mm;overflow:hidden;position:relative;background:var(--bg);color:var(--tx);padding:32px 56px;break-after:page;page-break-after:always;margin:0 auto 16px;display:flex;flex-direction:column}
+.page:last-child{break-after:auto;page-break-after:auto}
+@media print{html,body{background:none}.page{margin:0}}
+.ph{display:flex;align-items:baseline;gap:16px;margin-bottom:16px;flex:none}
+.ph .n{color:var(--acc);font-weight:700;font-size:13px;letter-spacing:.06em}
+.ph h2{font-size:26px;font-weight:800;letter-spacing:-.01em}
+.ph p{font-size:13px;color:var(--tx2);margin-left:auto}
+.wm{font-weight:800;letter-spacing:.08em;line-height:1}
+.lock{display:inline-flex;align-items:center;gap:12px}
+.row{display:flex}.center{display:flex;align-items:center;justify-content:center}
+.acc{color:var(--acc)}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px}
+/* phones */
+.phones{flex:1;min-height:0;display:flex;justify-content:center;align-items:flex-start;gap:40px}
+.fig{display:flex;flex-direction:column;align-items:center;gap:8px}
+.cap{font-size:12px;color:var(--tx2);font-weight:500}.cap b{color:var(--acc);font-weight:700;margin-right:6px}
+.phone{width:360px;height:760px;border-radius:40px;background:#0A0A0B;padding:8px;flex:none;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.screen{width:100%;height:100%;border-radius:32px;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.sb{height:32px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:12px;font-weight:600;flex:none}
+.sb .r{display:flex;gap:6px;align-items:center}
+.body{flex:1;min-height:0;padding:0 16px;display:flex;flex-direction:column;overflow:hidden}
+.gest{height:24px;flex:none;display:flex;align-items:center;justify-content:center}
+.gest i{width:112px;height:4px;border-radius:2px;background:var(--tx);opacity:.8}
+.nav{height:60px;flex:none;display:flex;border-top:1px solid var(--bd);background:var(--sf)}
+.nav div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:500;color:var(--tx2)}
+.nav div.on{color:var(--acc);font-weight:600}
+.top{display:flex;justify-content:space-between;align-items:center;height:44px;flex:none;margin-bottom:12px}
+.ib{width:36px;height:36px;border-radius:18px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--tx)}
+.search{height:52px;border-radius:18px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;gap:12px;padding:0 16px;color:var(--tx2);font-size:15px;flex:none}
+.search.f{border:1.5px solid var(--acc);color:var(--tx)}
+.caret{display:inline-block;width:2px;height:20px;background:var(--acc);vertical-align:middle;margin-left:1px}
+.sh{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:700;margin:16px 0 8px;flex:none}
+.sh a{font-size:12px;color:var(--acc);font-weight:600}
+.tiles{display:flex;gap:8px;flex:none}
+.tile{width:72px;height:72px;border-radius:20px;background:var(--sf);border:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:4px;font-size:10.5px;font-weight:600;text-align:center;line-height:1.2}
+.tile svg{color:var(--acc);flex:none}
+.rec{display:flex;align-items:center;gap:12px;padding:8px 12px;margin-bottom:8px;flex:none}
+.ibox{width:40px;height:40px;border-radius:14px;background:var(--tint);color:var(--acc);display:flex;align-items:center;justify-content:center;flex:none}
+.rec .t{flex:1;min-width:0}.rec b{display:block;font-size:14px;font-weight:600}.rec small{display:block;font-size:12px;color:var(--tx2);margin-top:1px}
+.rec em{font-style:normal;font-size:11px;color:var(--tx2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none}
+.cat{display:flex;align-items:center;gap:10px;padding:10px 12px;height:56px}
+.cat b{display:block;font-size:14px;font-weight:600}.cat small{font-size:12px;color:var(--tx2)}
+.cat .ibox{width:36px;height:36px;border-radius:12px}
+.tbar{display:flex;align-items:center;height:48px;flex:none;font-size:17px;font-weight:700;gap:8px}
+.tbar .sp{flex:1}.tbar .l{font-size:14px;color:var(--acc);font-weight:600}
+.btn{height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:15px;background:var(--acc);color:#fff;flex:none}
+.btn.sec{background:var(--sf2);color:var(--tx);border:1px solid var(--bd)}
+.btn.big{height:56px;font-size:16px}
+.chip{height:32px;border-radius:14px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;background:var(--sf2);color:var(--tx);border:1px solid var(--bd)}
+.chip.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.chip.t{background:var(--tint);color:var(--acc);border-color:transparent}
+.tag{font-size:11px;font-weight:600;color:var(--tx2);background:var(--sf2);border-radius:14px;padding:3px 9px}
+.res{display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:8px;flex:none}
+.res .t{flex:1}.res b{font-size:15px;font-weight:500}.res b i{font-style:normal;color:var(--acc);font-weight:700}
+.res small{display:block;font-size:12px;color:var(--tx2);margin-top:1px}
+.grp{padding:0 12px;flex:none}
+.grp .r{display:flex;align-items:center;gap:12px;height:38px;font-size:14px;font-weight:500;border-bottom:1px solid var(--bd)}
+.grp .r:last-child{border-bottom:0}
+.grp .r svg:first-child{color:var(--acc)}.grp .r span{flex:1}.grp .r svg:last-child{color:var(--tx2)}
+.seg{display:flex;background:var(--sf2);padding:4px;border-radius:14px;gap:2px;flex:none}
+.seg div{flex:1;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--tx2)}
+.seg div.on{background:var(--acc);color:#fff}
+.lbl{font-size:12px;font-weight:600;color:var(--tx2);margin:16px 0 8px;flex:none}
+.bar{height:8px;border-radius:4px;background:var(--sf2);overflow:hidden}.bar i{display:block;height:100%;border-radius:4px}
+.sw{width:40px;height:24px;border-radius:12px;background:var(--bd);position:relative;flex:none}.sw::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:10px;background:#fff}
+.sw.on{background:var(--acc)}.sw.on::after{left:18px}
+.th{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--tx2);font-weight:600}
+.pgr{width:100%;height:124px;border-radius:8px;background:var(--pg);border:1px solid var(--bd);padding:10px;display:flex;flex-direction:column;gap:6px;position:relative}
+.pgr i{display:block;height:4px;border-radius:2px;background:var(--pgl)}
+.pgr.sel{box-shadow:0 0 0 2px var(--acc);border-color:var(--acc)}
+.pgr .ck{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:10px;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 10px}
+.tool{display:flex;justify-content:space-around;padding:10px 8px;margin:auto 0 12px;flex:none}
+.tool div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--tx2);width:64px}
+.tool div.d{color:#E5484D}
+.key{height:48px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600}
+/* brand */
+.tile-box{border-radius:20px;border:1px solid var(--bd);display:flex;align-items:flex-end;justify-content:center;gap:24px;padding:16px;height:224px}
+.sub{font-size:13px;color:var(--tx2);line-height:1.45}
+.swatch{width:84px}.swatch i{display:block;height:48px;border-radius:14px;border:1px solid rgba(128,128,128,.25)}
+.swatch b{display:block;font-size:11px;font-weight:600;margin-top:6px}.swatch small{font-size:10.5px;color:var(--tx2)}
+.browser{width:1100px;border-radius:16px;border:1px solid #E6E6E8;background:#FAFAFA;overflow:hidden;color:#111113;flex:none}
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+const P={
+search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+settings:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+home:'<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>',
+folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+filetext:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+merge:'<rect x="3" y="3" width="12" height="12" rx="2"/><rect x="9" y="9" width="12" height="12" rx="2"/>',
+compress:'<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/>',
+scan:'<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M4 12h16"/>',
+level:'<rect x="2" y="8" width="20" height="8" rx="4"/><circle cx="12" cy="12" r="2"/>',
+image:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/>',
+video:'<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/>',
+phone:'<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+calc:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/>',
+check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+rotate:'<path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v4h-4"/>',
+trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+extract:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M12 17v-6M9.5 13.5L12 11l2.5 2.5"/>',
+share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/>',
+download:'<path d="M12 3v12M7 10l5 5 5-5M5 20h14"/>',
+open:'<path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
+chev:'<path d="M9 6l6 6-6 6"/>',back:'<path d="M15 6l-6 6 6 6"/>',
+down:'<path d="M6 9l6 6 6-6"/>',
+lock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+swap:'<path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>',
+swapv:'<path d="M8 3L4 7l4 4M4 7h12M16 21l4-4-4-4M20 17H8"/>',
+flash:'<path d="M13 3L5 13h6l-1 8 8-10h-6z"/>',
+x:'<path d="M6 6l12 12M18 6L6 18"/>',
+clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+pen:'<path d="M4 20l1-4L16 5a2.1 2.1 0 0 1 3 3L8 19z"/>',
+type:'<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+layers:'<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>',
+hash:'<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
+split:'<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8 7.5L20 18M8 16.5L20 6"/>',
+grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+qr:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M20 18v3h-3"/>',
+backsp:'<path d="M21 5H9l-6 7 6 7h12z"/><path d="M13 9.5l5 5M18 9.5l-5 5"/>',
+user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+lockc:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'
+};
+const ic=(n,s=20,sw=1.75)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${P[n]}</svg>`;
+/* app icons */
+const A_SH=f=>`<rect x="27" y="31" width="12" height="48" rx="2.5" fill="${f}"/><rect x="27" y="31" width="34" height="12" rx="2.5" fill="${f}"/><rect x="27" y="51" width="24" height="11" rx="2.5" fill="${f}"/><path d="M70 26L73.1 33.9L81 37L73.1 40.1L70 48L66.9 40.1L59 37L66.9 33.9Z" fill="${f}"/>`;
+const svg108=(s,inner)=>`<svg width="${s}" height="${s}" viewBox="0 0 108 108" style="flex:none;display:block">${inner}</svg>`;
+const iconA=(s,inv)=>svg108(s,`<rect width="108" height="108" rx="24" fill="${inv?'#fff':'#FF6A1A'}"/>${A_SH(inv?'#FF6A1A':'#fff')}`);
+const iconB=s=>svg108(s,`<rect width="108" height="108" rx="24" fill="#18181B"/><path d="M26 41H80Q80 53 69 53H65L67 60H73V68H35V60H41L43 53H41Q29 53 26 41Z" fill="#FF6A1A"/><path d="M70 24L71.7 28.3L76 30L71.7 31.7L70 36L68.3 31.7L64 30L68.3 28.3Z" fill="#FF6A1A"/>`);
+const iconC=s=>svg108(s,`<rect width="108" height="108" rx="24" fill="#FF6A1A"/><path d="M54 28Q54 54 80 54Q54 54 54 80Q54 54 28 54Q54 54 54 28Z" fill="#fff"/><path d="M77 24Q77 31 84 31Q77 31 77 38Q77 31 70 31Q77 31 77 24Z" fill="#fff"/>`);
+const lockup=(s,fs)=>`<span class="lock" style="gap:${s/4}px">${iconA(s)}<span class="wm" style="font-size:${fs}px">FORGE</span></span>`;
+
+/* phone shell */
+const batt='<svg width="22" height="12" viewBox="0 0 22 12" fill="none"><rect x=".6" y=".6" width="18" height="10.8" rx="3" stroke="currentColor" stroke-width="1.2" opacity=".6"/><rect x="2.2" y="2.2" width="12" height="7.6" rx="1.6" fill="currentColor"/><rect x="19.6" y="4" width="1.8" height="4" rx=".9" fill="currentColor" opacity=".6"/></svg>';
+const sig='<svg width="14" height="12" viewBox="0 0 14 12" fill="currentColor"><rect x="0" y="8" width="2.5" height="4" rx="1"/><rect x="4" y="5" width="2.5" height="7" rx="1"/><rect x="8" y="2.5" width="2.5" height="9.5" rx="1"/><rect x="12" y="0" width="2" height="12" rx="1" opacity=".35"/></svg>';
+function phone(theme,body,nav,z,style=''){
+  const items=[['home','Home'],['folder','Files'],['settings','Settings']];
+  const navH=nav?`<div class="nav">${items.map(([i,l])=>`<div class="${l===nav?'on':''}">${ic(i,22)}${l}</div>`).join('')}</div>`:'';
+  return `<div class="phone ${theme}" style="${z?`zoom:${z};`:''}${style}"><div class="screen"><div class="sb"><span>9:41</span><span class="r">${sig}${batt}</span></div>${body}${navH}<div class="gest"><i></i></div></div></div>`;
+}
+const fig=(cap,k,html)=>`<div class="fig">${html}<div class="cap"><b>${k}</b>${cap}</div></div>`;
+const tbar=(t,r='')=>`<div class="tbar"><span style="margin-left:-6px;display:flex">${ic('back',24)}</span><span>${t}</span><span class="sp"></span>${r}</div>`;
+
+/* screens */
+function home(theme,z){
+  const pin=[['compress','Compress PDF'],['merge','Merge PDF'],['scan','Scan'],['level','Level']];
+  const cats=[['filetext','PDF',43],['image','Image',11],['video','Video',7],['phone','Device',10],['calc','Utilities',12],['folder','Files',1]];
+  const body=`<div class="body">
+  <div class="top"><span class="lock" style="gap:8px">${iconA(26)}<span class="wm" style="font-size:15px">FORGE</span></span><span class="ib">${ic('user',18)}</span></div>
+  <div class="search">${ic('search',20)}Search 90+ tools…</div>
+  <div class="sh">Pinned<a>Edit</a></div>
+  <div class="tiles">${pin.map(([i,n])=>`<div class="tile">${ic(i,24)}<span>${n}</span></div>`).join('')}</div>
+  <div class="sh">Recent<a>See all</a></div>
+  <div class="card rec"><div class="ibox">${ic('filetext',20)}</div><div class="t"><b>invoice_oct.pdf</b><small>Compressed 4.2 MB → 680 KB</small></div><em>2m</em></div>
+  <div class="card rec"><div class="ibox">${ic('merge',20)}</div><div class="t"><b>contract_final.pdf</b><small>Merged 3 files · 2.4 MB</small></div><em>1h</em></div>
+  <div class="sh" style="margin-top:8px">All tools</div>
+  <div class="grid2">${cats.map(([i,n,c])=>`<div class="card cat"><div class="ibox">${ic(i,20)}</div><div><b>${n}</b><small>${c} ${c==1?'tool':'tools'}</small></div></div>`).join('')}</div>
+  <div style="flex:1"></div></div>`;
+  return phone(theme,body,'Home',z);
+}
+const hl=(t)=>`<i>${t.slice(0,4)}</i>${t.slice(4)}`;
+function searchScreen(z){
+  const r=[['compress','Compress PDF','PDF','Reduce file size'],['image','Compress image','Image','JPG, PNG, WebP'],['video','Compress video','Video','Smaller MP4 files'],['compass','Compass','Device','Heading and bearing']];
+  const body=`<div class="body"><div style="height:12px;flex:none"></div>
+  <div class="search f">${ic('search',20)}<span style="flex:1;font-weight:500">comp<span class="caret"></span></span><span style="display:flex">${ic('x',18)}</span></div>
+  <div class="lbl" style="margin-top:20px">4 results</div>
+  ${r.map(([i,n,t,s])=>`<div class="card res"><div class="ibox">${ic(i,20)}</div><div class="t"><b>${hl(n)}</b><small>${s}</small></div><span class="tag">${t}</span></div>`).join('')}
+  <div class="lbl" style="margin-top:16px">Recent searches</div>
+  <div class="grp card"><div class="r">${ic('clock',18)}<span>merge pdf</span>${ic('chev',16)}</div><div class="r">${ic('clock',18)}<span>qr code</span>${ic('chev',16)}</div><div class="r">${ic('clock',18)}<span>resize image</span>${ic('chev',16)}</div></div>
+  <div style="flex:1"></div></div>`;
+  return phone('light',body,null,z);
+}
+function pdfCat(z){
+  const S=[['Organise',9,[['merge','Merge PDF'],['split','Split PDF']]],['Optimise',4,[['compress','Compress PDF'],['lockc','Repair PDF']]],['Edit',12,[['drop','Add watermark'],['hash','Page numbers']]],['Sign',5,[['pen','Sign PDF'],['lock','Protect with password']]],['Convert',13,[['image','Images to PDF'],['extract','PDF to images']]]];
+  const body=`<div class="body">${tbar('PDF','<span class="tag">43 tools</span>')}
+  ${S.map(([n,c,rows],k)=>`<div class="sh" style="margin:${k?14:6}px 0 6px"><span>${n}</span><a style="color:var(--tx2);font-weight:500">${c} tools</a></div><div class="grp card">${rows.map(([i,t])=>`<div class="r">${ic(i,20)}<span>${t}</span>${ic('chev',16)}</div>`).join('')}</div>`).join('')}
+  <div style="flex:1"></div></div>`;
+  return phone('light',body,'Home',z);
+}
+function compress(theme,z){
+  const body=`<div class="body">${tbar('Compress PDF')}
+  <div class="card rec" style="padding:12px;margin:4px 0 0"><div class="ibox" style="width:44px;height:44px">${ic('filetext',22)}</div><div class="t"><b>invoice_oct.pdf</b><small>12 pages · 4.2 MB</small></div><span class="acc" style="font-size:13px;font-weight:600">Change</span></div>
+  <div class="lbl" style="margin-top:20px">Quality preset</div>
+  <div class="seg"><div>Screen</div><div class="on">Ebook</div><div>Print</div><div>Custom</div></div>
+  <div class="sub" style="margin-top:8px;font-size:12px">Ebook · balanced size and clarity, 150 dpi images.</div>
+  <div class="card" style="padding:16px;margin-top:20px;flex:none">
+    <div style="font-size:12px;font-weight:600;color:var(--tx2)">Estimated output</div>
+    <div style="font-size:28px;font-weight:800;margin:4px 0 14px;letter-spacing:-.01em">≈ 680 KB <span class="acc" style="font-size:16px;font-weight:700">(-84%)</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:4px"><span>Original</span><span>4.2 MB</span></div><div class="bar"><i style="width:100%;background:var(--pgl)"></i></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin:10px 0 4px"><span>Compressed</span><span>680 KB</span></div><div class="bar"><i style="width:16%;background:var(--acc)"></i></div></div>
+  <div class="card" style="margin-top:12px;padding:0 16px;flex:none"><div class="grp" style="padding:0"><div class="r" style="height:48px"><span>Strip metadata</span><div class="sw on"></div></div><div class="r" style="height:48px"><span>Convert to grayscale</span><div class="sw"></div></div></div></div>
+  <div style="flex:1"></div><div class="btn big">Compress</div><div style="height:12px;flex:none"></div></div>`;
+  return phone(theme,body,null,z);
+}
+function pageGrid(z){
+  const W=[[60,100,88,100,70,94],[100,82,100,60,90,100],[70,100,100,86,100,56]];
+  const th=n=>`<div class="th"><div class="pgr ${n==4?'sel':''}">${n==4?`<span class="ck">${ic('check',14,2.5)}</span>`:''}<i style="width:45%;height:6px;background:var(--tx2);opacity:.45;margin-bottom:4px"></i>${W[n%3].map(w=>`<i style="width:${w}%"></i>`).join('')}</div>${n}</div>`;
+  const body=`<div class="body">${tbar('Page manager','<span class="l">Done</span>')}
+  <div class="sub" style="font-size:12px;margin:0 0 12px">invoice_oct.pdf · 12 pages · 1 selected</div>
+  <div class="pgrid">${[1,2,3,4,5,6,7,8,9].map(th).join('')}</div>
+  <div style="flex:1"></div>
+  <div class="card tool"><div>${ic('rotate',22)}Rotate</div><div class="d">${ic('trash',22)}Delete</div><div>${ic('copy',22)}Duplicate</div><div>${ic('extract',22)}Extract</div></div></div>`;
+  return phone('dark',body,null,z);
+}
+function result(z){
+  const body=`<div class="body"><div style="height:48px;flex:none"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;flex:none">
+   <div style="width:96px;height:96px;border-radius:48px;background:var(--tint);display:flex;align-items:center;justify-content:center;margin-top:8px"><div style="width:60px;height:60px;border-radius:30px;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center">${ic('check',32,2.5)}</div></div>
+   <div style="font-size:15px;font-weight:600;color:var(--tx2);margin-top:20px">Compressed successfully</div>
+   <div style="font-size:30px;font-weight:800;letter-spacing:-.02em;margin-top:6px">4.2 MB → <span class="acc">680 KB</span></div>
+   <div class="chip t" style="margin-top:12px">Saved 3.5 MB · 84% smaller</div></div>
+  <div class="card rec" style="margin-top:28px;padding:12px"><div class="ibox">${ic('filetext',20)}</div><div class="t"><b>invoice_oct_compressed.pdf</b><small>12 pages · 680 KB</small></div></div>
+  <div class="btn" style="margin-top:8px">${ic('share',20)}Share</div>
+  <div style="display:flex;gap:8px;margin-top:8px;flex:none"><div class="btn sec" style="flex:1">${ic('download',20)}Save</div><div class="btn sec" style="flex:1">${ic('open',20)}Open</div></div>
+  <div class="lbl" style="margin-top:28px">Next</div>
+  <div style="display:flex;gap:8px;flex:none"><span class="chip">${ic('drop',16)}Watermark</span><span class="chip">${ic('lock',16)}Protect</span><span class="chip">${ic('merge',16)}Merge</span></div>
+  <div style="flex:1"></div></div>`;
+  return phone('light',body,null,z);
+}
+function level(z){
+  const R=(d)=>`<div style="position:absolute;left:50%;top:50%;width:${d}px;height:${d}px;margin:${-d/2}px 0 0 ${-d/2}px;border-radius:50%;border:1px solid var(--bd)"></div>`;
+  const body=`<div class="body">${tbar('Spirit level','<span class="ib" style="width:32px;height:32px">'+ic('lock',16)+'</span>')}
+  <div style="display:flex;justify-content:center;margin-top:16px;flex:none"><div style="position:relative;width:264px;height:264px;border-radius:50%;background:var(--sf);border:2px solid var(--bd)">
+   ${R(176)}${R(88)}<div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--bd)"></div><div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--bd)"></div>
+   <div style="position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;border:2px solid var(--tx2);opacity:.6"></div>
+   <div style="position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-32px 0 0 -10px;border-radius:50%;background:var(--acc)"></div></div></div>
+  <div style="text-align:center;margin-top:20px;flex:none"><div style="font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1">0.4°</div><div class="chip t" style="margin-top:12px">Almost level</div></div>
+  <div style="display:flex;gap:8px;margin-top:20px;flex:none"><div class="card" style="flex:1;padding:12px 16px"><div style="font-size:12px;font-weight:600;color:var(--tx2)">X axis</div><div style="font-size:20px;font-weight:700;margin-top:2px">0.3°</div></div><div class="card" style="flex:1;padding:12px 16px"><div style="font-size:12px;font-weight:600;color:var(--tx2)">Y axis</div><div style="font-size:20px;font-weight:700;margin-top:2px">-0.3°</div></div></div>
+  <div style="flex:1"></div><div class="btn sec big">${ic('level',20)}Calibrate</div><div style="height:12px;flex:none"></div></div>`;
+  return phone('dark',body,null,z);
+}
+function qrPattern(){
+  let s=7,out='';const n=21,c=9;const f=(x,y)=>{const inF=(ox,oy)=>x>=ox&&x<ox+7&&y>=oy&&y<oy+7;
+    for(const [ox,oy] of [[0,0],[14,0],[0,14]])if(inF(ox,oy)){const dx=x-ox,dy=y-oy;return dx==0||dx==6||dy==0||dy==6||(dx>=2&&dx<=4&&dy>=2&&dy<=4)}
+    if((x==7||x==13)&&y<8||(y==7||y==13)&&x<8||(y==7&&x>12)||(x==7&&y>12))return false;
+    return ((x*7+y*13+x*y*3)%5)<2};
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(f(x,y))out+=`<rect x="${x*c}" y="${y*c}" width="${c-1}" height="${c-1}" rx="1.5"/>`;
+  return `<svg width="${n*c}" height="${n*c}" viewBox="0 0 ${n*c} ${n*c}" fill="#5A5A62">${out}</svg>`;
+}
+function qr(z){
+  const br=(r)=>`<svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#FF6A1A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;${r}"><path d="M3 30V16a13 13 0 0 1 13-13h14"/></svg>`;
+  const body=`<div class="body" style="padding:0">
+   <div style="flex:1;min-height:0;background:#26262A;position:relative;display:flex;align-items:center;justify-content:center">
+     <div style="position:absolute;top:8px;left:16px;right:16px;display:flex;justify-content:space-between"><span class="ib" style="background:rgba(0,0,0,.4);border-color:transparent;color:#fff">${ic('x',18)}</span><span class="ib" style="background:rgba(0,0,0,.4);border-color:transparent;color:#fff">${ic('flash',18)}</span></div>
+     <div style="position:relative;width:232px;height:232px;display:flex;align-items:center;justify-content:center">${qrPattern().replace('width="189" height="189"','width="150" height="150"')}
+       ${br('left:0;top:0')}${br('right:0;top:0;transform:scaleX(-1)')}${br('left:0;bottom:0;transform:scaleY(-1)')}${br('right:0;bottom:0;transform:scale(-1,-1)')}</div>
+     <div style="position:absolute;bottom:16px;font-size:12px;font-weight:600;color:#C9C9CF">Point the camera at a QR code</div></div>
+   <div style="background:var(--sf);border-radius:24px 24px 0 0;padding:12px 16px 12px;flex:none;border-top:1px solid var(--bd)">
+     <div style="width:36px;height:4px;border-radius:2px;background:var(--bd);margin:0 auto 14px"></div>
+     <div style="display:flex;gap:12px;align-items:center"><div class="ibox">${ic('qr',20)}</div><div style="min-width:0"><div style="font-size:12px;font-weight:600;color:var(--tx2)">QR code · Website</div><div style="font-size:15px;font-weight:600;margin-top:2px">https://forge-tools.app/get</div></div></div>
+     <div style="display:flex;gap:8px;margin-top:16px"><div class="btn" style="flex:1">${ic('open',20)}Open</div><div class="btn sec" style="flex:1">${ic('copy',20)}Copy</div></div></div></div>`;
+  return phone('dark',body,null,z);
+}
+function unit(z){
+  const ch=['Length','Weight','Temp','Volume','Area','Speed','Time','Data'];
+  const body=`<div class="body">${tbar('Unit converter')}
+  <div style="display:flex;flex-wrap:wrap;gap:8px;flex:none;margin-top:4px">${ch.map((c,i)=>`<span class="chip ${i==0?'on':''}">${c}</span>`).join('')}</div>
+  <div class="card" style="padding:14px 16px;margin-top:16px;flex:none"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--tx2)"><span>From</span><span style="display:flex;align-items:center;gap:4px;color:var(--tx)">Kilometres ${ic('down',14)}</span></div><div style="font-size:44px;font-weight:800;letter-spacing:-.02em;margin-top:6px;line-height:1.1">10 <span style="font-size:22px;color:var(--tx2);font-weight:600">km</span></div></div>
+  <div style="display:flex;justify-content:center;margin:8px 0;flex:none"><div style="width:40px;height:40px;border-radius:20px;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center">${ic('swapv',20)}</div></div>
+  <div class="card" style="padding:14px 16px;flex:none;background:var(--tint);border-color:transparent"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--tx2)"><span>To</span><span style="display:flex;align-items:center;gap:4px;color:var(--tx)">Miles ${ic('down',14)}</span></div><div style="font-size:44px;font-weight:800;letter-spacing:-.02em;margin-top:6px;line-height:1.1;color:var(--acc)">6.214 <span style="font-size:22px;font-weight:600">mi</span></div></div>
+  <div style="flex:1"></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;flex:none">${['7','8','9','4','5','6','1','2','3','.','0','⌫'].map(k=>`<div class="key">${k=='⌫'?ic('backsp',22):k}</div>`).join('')}</div></div>`;
+  return phone('dark',body,null,z);
+}
+/* pages */
+const pageHead=(n,t,s)=>`<div class="ph"><span class="n">${n}</span><h2>${t}</h2><p>${s}</p></div>`;
+const Z=0.8;
+const pages=[];
+
+pages.push(`<section class="page light" style="padding:0;flex-direction:row">
+  <div style="flex:1;padding:64px 64px 56px;display:flex;flex-direction:column">
+    <div class="row" style="align-items:center;gap:16px">${iconA(72)}<span style="font-size:13px;font-weight:600;color:var(--tx2);letter-spacing:.06em">BRAND AND UI MOCKUPS · v0.1</span></div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+      <div class="wm" style="font-size:190px;letter-spacing:.02em;margin-left:-8px">FORGE</div>
+      <div style="width:96px;height:8px;border-radius:4px;background:var(--acc);margin:32px 0 28px"></div>
+      <div style="font-size:44px;font-weight:600;letter-spacing:-.01em">Every tool. One app<span class="acc">.</span></div>
+    </div>
+    <div class="sub" style="font-size:14px;max-width:720px"><b style="color:var(--tx)">Direction:</b> minimal, flat and private, with Ember Orange on a neutral canvas, Inter type, light and dark themes, and icon A (a geometric F with an ember spark).</div>
+  </div>
+  <div style="width:280px;background:var(--acc);display:flex;align-items:center;justify-content:center;flex:none">
+    <svg width="160" height="160" viewBox="0 0 108 108"><path d="M54 14Q54 54 94 54Q54 54 54 94Q54 54 14 54Q54 54 54 14Z" fill="#fff"/></svg></div></section>`);
+
+const concept=(k,name,why,fn)=>`<div style="width:320px"><div style="display:flex;align-items:baseline;gap:10px"><span class="acc" style="font-size:28px;font-weight:800">${k}</span><b style="font-size:17px">${name}</b></div><div class="sub" style="margin:4px 0 12px;height:38px">${why}</div>
+  <div class="tile-box light" style="background:#FAFAFA;margin-bottom:16px">${fn(192)}${fn(48)}</div>
+  <div class="tile-box dark" style="background:#0E0E10">${fn(192)}${fn(48)}</div></div>`;
+pages.push(`<section class="page light">${pageHead('01','Brand · App icon concepts','Adaptive-icon style, 108 dp grid, shown at 192 px and 48 px on light and dark')}
+  <div class="row" style="justify-content:space-between;margin-top:8px">
+  ${concept('A','Forged F','Geometric F whose top bar ends in a small ember spark. Simple, ownable, scales down well.',iconA)}
+  ${concept('B','Anvil','Charcoal tile with an ember anvil. Literal forge metaphor; reads as heavier and more tool-like.',iconB)}
+  ${concept('C','Spark','Abstract four-point spark on ember. Bold and friendly, but less tied to the name.',iconC)}</div>
+  <div class="sub" style="margin-top:auto;padding-top:12px;text-align:center">Recommended: <b class="acc">A</b> - the letterform carries the name, and the spark adds the ember story.</div></section>`);
+
+const sw=(c,n,h)=>`<div class="swatch"><i style="background:${c}"></i><b>${n}</b><small>${h}</small></div>`;
+pages.push(`<section class="page light">${pageHead('02','Brand · Identity system','Wordmark lockup, palette and type scale')}
+  <div class="row" style="gap:48px;flex:1;min-height:0">
+   <div style="width:560px">
+     <div class="lbl" style="margin-top:0">Wordmark lockup</div>
+     <div class="row" style="gap:16px"><div class="center" style="flex:1;height:112px;border-radius:20px;background:#fff;border:1px solid var(--bd)">${lockup(44,32)}</div><div class="center" style="flex:1;height:112px;border-radius:20px;background:#0E0E10;color:#F4F4F5">${lockup(44,32)}</div></div>
+     <div class="lbl" style="margin-top:24px">Accent</div>
+     <div class="row" style="gap:8px;color:var(--tx)">${sw('#FF6A1A','Ember','#FF6A1A')}${sw('#E0560C','Pressed','#E0560C')}${sw('#FFF1E8','Tint light','#FFF1E8')}${sw('#3A2216','Tint dark','#3A2216')}</div>
+     <div class="lbl" style="margin-top:20px">Light theme</div>
+     <div class="row" style="gap:8px">${sw('#FAFAFA','Background','#FAFAFA')}${sw('#FFFFFF','Surface','#FFFFFF')}${sw('#F2F2F3','Surface 2','#F2F2F3')}${sw('#E6E6E8','Border','#E6E6E8')}${sw('#111113','Text','#111113')}${sw('#6B6B73','Text 2','#6B6B73')}</div>
+     <div class="lbl" style="margin-top:20px">Dark theme</div>
+     <div class="row" style="gap:8px">${sw('#0E0E10','Background','#0E0E10')}${sw('#18181B','Surface','#18181B')}${sw('#222226','Surface 2','#222226')}${sw('#2C2C31','Border','#2C2C31')}${sw('#F4F4F5','Text','#F4F4F5')}${sw('#9A9AA3','Text 2','#9A9AA3')}</div>
+   </div>
+   <div style="flex:1">
+     <div class="lbl" style="margin-top:0">Type scale · Inter</div>
+     <div class="card" style="padding:8px 24px">
+       ${[['Display · 32 / 800','<span style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.2">Every tool. One app.</span>'],['Title · 22 / 700','<span style="font-size:22px;font-weight:700">Compress PDF</span>'],['Body · 15 / 400','<span style="font-size:15px;font-weight:400;line-height:1.45">Shrink large files for email without leaving your phone.</span>'],['Label · 13 / 600','<span style="font-size:13px;font-weight:600">PINNED · RECENT · ALL TOOLS</span>']].map(([m,s],i,a)=>`<div style="padding:16px 0;${i<a.length-1?'border-bottom:1px solid var(--bd)':''}"><div style="font-size:11px;color:var(--tx2);font-weight:600;margin-bottom:6px">${m}</div>${s}</div>`).join('')}</div>
+     <div class="lbl" style="margin-top:24px">Shape</div>
+     <div class="row" style="gap:12px;align-items:flex-end">
+       <div class="card center" style="width:112px;height:72px;font-size:12px;font-weight:600;color:var(--tx2)">Card 20</div>
+       <div class="center" style="width:112px;height:52px;border-radius:14px;background:var(--acc);color:#fff;font-size:12px;font-weight:600">Button 14</div>
+       <div class="center" style="flex:1;height:52px;border-radius:18px;background:#fff;border:1px solid var(--bd);color:var(--tx2);font-size:12px;font-weight:600">Search 18</div></div>
+     <div class="row" style="gap:16px;margin-top:20px;color:var(--tx2);align-items:center;font-size:12px">${['search','compress','merge','scan','level','qr'].map(i=>ic(i,26)).join('')}<span>Line icons · 1.75 stroke, round caps</span></div>
+   </div></div></section>`);
+
+pages.push(`<section class="page light">${pageHead('03','Home · light and dark','Pinned tools, recent files and the category grid')}
+  <div class="phones" style="gap:64px">${fig('Home · light','a',home('light',Z))}${fig('Home · dark','b',home('dark',Z))}</div></section>`);
+
+pages.push(`<section class="page light">${pageHead('04','Search and category','Live search with highlighted matches, and the PDF category list')}
+  <div class="phones" style="gap:64px">${fig('Search · "comp"','a',searchScreen(Z))}${fig('PDF category','b',pdfCat(Z))}</div></section>`);
+
+pages.push(`<section class="page light">${pageHead('05','PDF tools','Compress, page manager and result')}
+  <div class="phones">${fig('Compress PDF','a',compress('light',Z))}${fig('Page manager','b',pageGrid(Z))}${fig('Result','c',result(Z))}</div></section>`);
+
+pages.push(`<section class="page dark">${pageHead('06','Device tools','Spirit level, QR scanner and unit converter in the dark theme')}
+  <div class="phones">${fig('Spirit level','a',level(Z))}${fig('QR scanner','b',qr(Z))}${fig('Unit converter','c',unit(Z))}</div></section>`);
+
+const web=`<div class="browser light">
+  <div style="height:44px;background:#F2F2F3;border-bottom:1px solid #E6E6E8;display:flex;align-items:center;padding:0 16px;gap:8px"><i style="width:12px;height:12px;border-radius:6px;background:#D0D0D4"></i><i style="width:12px;height:12px;border-radius:6px;background:#D0D0D4"></i><i style="width:12px;height:12px;border-radius:6px;background:#D0D0D4"></i>
+   <div style="margin:0 auto;width:420px;height:28px;border-radius:14px;background:#fff;border:1px solid #E6E6E8;font-size:12px;color:#6B6B73;display:flex;align-items:center;justify-content:center;gap:6px">${ic('lock',12)}forge-tools.app</div><span style="width:52px"></span></div>
+  <div style="height:560px;background:#FAFAFA;position:relative;overflow:hidden">
+   <div style="height:72px;padding:0 48px;display:flex;align-items:center;justify-content:space-between">${lockup(32,22)}
+     <div style="display:flex;gap:32px;font-size:14px;font-weight:500;color:#6B6B73;align-items:center"><span>Tools</span><span>Privacy</span><span>Changelog</span><span style="background:#111113;color:#fff;padding:10px 18px;border-radius:14px;font-weight:600">Download</span></div></div>
+   <div style="display:flex;padding:0 48px;height:488px">
+    <div style="width:560px;padding-top:40px;flex:none">
+      <span class="chip t" style="height:32px">${ic('lockc',16)}Private, offline-first</span>
+      <div style="font-size:68px;font-weight:800;letter-spacing:-.03em;line-height:1.02;margin-top:20px">Every tool.<br>One <span style="color:#FF6A1A">app.</span></div>
+      <div style="font-size:18px;color:#6B6B73;line-height:1.5;margin-top:20px;max-width:470px">90+ PDF, image, video and phone tools. Private, offline-first, no ads.</div>
+      <div style="display:flex;gap:12px;margin-top:32px"><div class="btn" style="height:56px;padding:0 24px;font-size:16px">${ic('download',22)}Download for Android</div><div class="btn sec" style="height:56px;padding:0 24px;font-size:16px;background:#fff">Browse tools</div></div>
+      <div style="display:flex;gap:40px;margin-top:36px">${[['90+','tools'],['0','ads'],['100%','offline']].map(([a,b])=>`<div><div style="font-size:24px;font-weight:800">${a}</div><div style="font-size:12px;color:#6B6B73;font-weight:500">${b}</div></div>`).join('')}</div></div>
+    <div style="flex:1;position:relative;display:flex;justify-content:center">
+      <div style="position:absolute;top:40px;left:50%;width:400px;height:400px;margin-left:-190px;border-radius:50%;background:#FFF1E8"></div>
+      <div style="position:relative;margin-top:40px">${home('light',0.86)}</div></div></div></div></div>`;
+const feat=`<div style="width:1024px;height:500px;background:#FF6A1A;position:relative;overflow:hidden;color:#fff;flex:none;display:flex">
+  <div style="padding:72px;display:flex;flex-direction:column;justify-content:center;gap:28px">${iconA(120,true)}
+   <div class="wm" style="font-size:112px;letter-spacing:.04em;margin-left:-4px">FORGE</div>
+   <div style="font-size:36px;font-weight:500;opacity:.95">Every tool. One app.</div></div>
+  <div style="position:absolute;right:56px;top:64px">${home('dark',0.9)}</div></div>`;
+pages.push(`<section class="page light" style="padding-top:24px;padding-bottom:16px">${pageHead('07','Website and store','Landing hero and Play Store feature graphic (1024 × 500)')}
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0">
+   <div style="zoom:.62">${web}</div>
+   <div class="cap" style="margin-bottom:4px"><b>a</b>Website hero · 1100 px wide, scaled</div>
+   <div style="zoom:.52">${feat}</div>
+   <div class="cap"><b>b</b>Feature graphic · 1024 × 500, scaled</div></div></section>`);
+
+document.getElementById('root').innerHTML=pages.join('');
+</script>
+</body></html>
