@@ -43,9 +43,12 @@ object ToolSearch {
         return SearchHit(tool, total, highlights)
     }
 
-    /** Indices of [needle] chars appearing in order in [hay], or null. Requires >= 2 chars to avoid noise. */
+    /**
+     * Indices of [needle] chars appearing in order in [hay], or null. Typo-tolerance only: needs >= 4 chars and the
+     * letters must sit close together, otherwise short queries ("rot") match unrelated names ("Currency converter").
+     */
     private fun subsequence(hay: String, needle: String): List<Int>? {
-        if (needle.length < 2) return null
+        if (needle.length < 4) return null
         val out = ArrayList<Int>(needle.length)
         var from = 0
         for (ch in needle) {
@@ -54,6 +57,7 @@ object ToolSearch {
             out += i
             from = i + 1
         }
+        if (out.last() - out.first() + 1 > needle.length + 3) return null
         return out
     }
 }

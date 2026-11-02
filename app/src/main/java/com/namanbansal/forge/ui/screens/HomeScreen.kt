@@ -215,12 +215,13 @@ private fun PinTile(tool: ToolDef, editing: Boolean, modifier: Modifier, onClick
             )
         }
         if (editing && onUnpin != null) {
+            // 48dp touch target (kept inside the tile so it stays hittable); the visible badge stays a small corner dot.
             Box(
-                Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).size(32.dp).clip(CircleShape)
+                Modifier.align(Alignment.TopEnd).size(48.dp)
                     .combinedClickable(onClick = onUnpin).semantics { contentDescription = "Unpin ${tool.shortLabel}" },
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.TopEnd,
             ) {
-                Box(Modifier.size(20.dp).clip(CircleShape).background(c.accent), contentAlignment = Alignment.Center) {
+                Box(Modifier.padding(top = 2.dp, end = 2.dp).size(20.dp).clip(CircleShape).background(c.accent), contentAlignment = Alignment.Center) {
                     Icon(ForgeIcons.Close, null, tint = Color.White, modifier = Modifier.size(12.dp))
                 }
             }

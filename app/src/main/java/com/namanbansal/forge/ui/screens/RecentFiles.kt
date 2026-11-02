@@ -61,7 +61,7 @@ fun RecentRow(item: RecentItem, showDivider: Boolean, onRemove: () -> Unit) {
             IconBox(ForgeIcons.FileText, size = 40.dp)
             Column(Modifier.weight(1f)) {
                 Text(e.name, style = ForgeType.Item, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                val sizes = if (e.beforeSize >= 0 && e.afterSize >= 0 && e.beforeSize != e.afterSize) "${formatBytes(e.beforeSize)} → ${formatBytes(e.afterSize)}" else formatBytes(e.afterSize)
+                val sizes = formatBytes(e.afterSize) // the before -> after story lives on the result screen; here the row must fit one line
                 Text(
                     if (item.exists) "$toolLabel · $sizes · ${relativeTime(e.timestamp)}" else "No longer on this device · ${relativeTime(e.timestamp)}",
                     style = ForgeType.Small, color = c.text2, maxLines = 1, overflow = TextOverflow.Ellipsis,
