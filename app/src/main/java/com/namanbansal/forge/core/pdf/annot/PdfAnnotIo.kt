@@ -15,7 +15,12 @@ import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor
 import com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
+import com.tom_roush.pdfbox.pdmodel.graphics.blend.BlendMode
+import com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationText
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup
@@ -192,9 +197,66 @@ object PdfAnnotIo {
         construct(doc, PDAnnotation.createAnnotation(d))
     }
 
-    private fun construct(doc: PDDocument, m: PDAnnotation) {
+    /** Four corners of one text-markup box in user space, in the order QuadPoints are written: top-left, top-right, bottom-left, bottom-right. */
+    private class Quad(val p: List<Pair<Float, Float>>)
+
+    private fun quadsOf(qp: FloatArray, raw: Boolean): List<Quad> = (0 until qp.size / 8).map { k ->
+        if (raw) return@map Quad((0..3).map { qp[k * 8 + it * 2] to qp[k * 8 + it * 2 + 1] })
+        val xs = (0..3).map { qp[k * 8 + it * 2] }; val ys = (0..3).map { qp[k * 8 + it * 2 + 1] }
+        // other apps order the corners differently: rebuild an axis-aligned box in user space
+        Quad(listOf(xs.min() to ys.max(), xs.max() to ys.max(), xs.min() to ys.min(), xs.max() to ys.min()))
+    }
+
+    /**
+     * Our own appearance stream for Highlight / Underline / StrikeOut: a form with the annotation's rectangle as its box, drawn in
+     * page coordinates. (PDFBox's generated one pads and shrinks the boxes, which shows in other viewers.) Highlights use the
+     * Multiply blend so the text stays readable; opacity comes from /CA.
+     */
+    private fun markupAppearance(doc: PDDocument, ann: PDAnnotation, sub: String, color: Int, opacity: Float, quads: List<Quad>, rect: PDRectangle) {
+        val ap = PDAppearanceStream(doc)
+        ap.bBox = rect
+        ap.resources = com.tom_roush.pdfbox.pdmodel.PDResources()
+        PDPageContentStream(doc, ap).use { cs ->
+            val gs = PDExtendedGraphicsState()
+            gs.strokingAlphaConstant = opacity; gs.nonStrokingAlphaConstant = opacity
+            if (sub == PDAnnotationTextMarkup.SUB_TYPE_HIGHLIGHT) gs.blendMode = BlendMode.MULTIPLY
+            cs.setGraphicsStateParameters(gs)
+            val r = ((color shr 16) and 0xFF) / 255f; val g = ((color shr 8) and 0xFF) / 255f; val b = (color and 0xFF) / 255f
+            cs.setNonStrokingColor(r, g, b); cs.setStrokingColor(r, g, b)
+            for (q in quads) {
+                val (tl, tr, bl, br) = q.p
+                val h = kotlin.math.hypot(tl.first - bl.first, tl.second - bl.second).coerceAtLeast(0.01f)
+                val ux = (tl.first - bl.first) / h; val uy = (tl.second - bl.second) / h // "up" in the box
+                when (sub) {
+                    PDAnnotationTextMarkup.SUB_TYPE_HIGHLIGHT -> {
+                        cs.moveTo(tl.first, tl.second); cs.lineTo(tr.first, tr.second); cs.lineTo(br.first, br.second); cs.lineTo(bl.first, bl.second); cs.closePath(); cs.fill()
+                    }
+                    PDAnnotationTextMarkup.SUB_TYPE_UNDERLINE -> {
+                        val lw = (h * 0.09f).coerceAtLeast(0.8f); val o = lw / 2 + h * 0.02f
+                        cs.setLineWidth(lw)
+                        cs.moveTo(bl.first + ux * o, bl.second + uy * o); cs.lineTo(br.first + ux * o, br.second + uy * o); cs.stroke()
+                    }
+                    else -> {
+                        val lw = (h * 0.08f).coerceAtLeast(0.8f)
+                        cs.setLineWidth(lw)
+                        cs.moveTo((tl.first + bl.first) / 2, (tl.second + bl.second) / 2); cs.lineTo((tr.first + br.first) / 2, (tr.second + br.second) / 2); cs.stroke()
+                    }
+                }
+            }
+        }
+        val dict = PDAppearanceDictionary()
+        dict.setNormalAppearance(ap)
+        ann.appearance = dict
+    }
+
+    /** [ownQuads]: the quads were written by [build] in displayed order, so their corners can be used as they are. */
+    private fun construct(doc: PDDocument, m: PDAnnotation, ownQuads: Boolean = false) {
         try {
-            if (subtype(m.cosObject) == INK) PDInkAppearanceHandler(m, doc).generateAppearanceStreams() else m.constructAppearances(doc)
+            val sub = subtype(m.cosObject)
+            if (m is PDAnnotationTextMarkup && sub != null) {
+                val qp = m.quadPoints ?: return
+                markupAppearance(doc, m, sub, colorOf(m, AnnotPalette.YELLOW), m.constantOpacity, quadsOf(qp, ownQuads), m.rectangle ?: return)
+            } else if (sub == INK) PDInkAppearanceHandler(m, doc).generateAppearanceStreams() else m.constructAppearances(doc)
         } catch (_: Exception) { /* the annotation is still valid, viewers that draw from its dictionary show it */ }
     }
 
@@ -257,7 +319,7 @@ object PdfAnnotIo {
         if (a.text.isNotEmpty()) ann.contents = a.text
         ann.isPrinted = true
         ann.subject = when (a.type) { AnnotType.HIGHLIGHT -> "Highlight"; AnnotType.UNDERLINE -> "Underline"; AnnotType.STRIKEOUT -> "Strikeout"; AnnotType.INK -> if (a.isHighlighterInk) "Highlighter" else "Pen"; AnnotType.NOTE -> "Note" }
-        construct(doc, ann)
+        construct(doc, ann, ownQuads = true)
         if (a.type == AnnotType.NOTE) ann.rectangle = rect // the icon handler resizes it; keep the size the user sees
         return ann
     }

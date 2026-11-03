@@ -273,7 +273,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                         HitList(hits, current, Modifier.heightIn(max = 240.dp)) { i -> vm.openHit(i) }
                     }
                     Fade(barsOn) {
-                      Column(Modifier.fillMaxWidth().background(c.bg.copy(alpha = 0.96f)).border(1.dp, c.border.copy(alpha = 0.6f)).navigationBarsPadding()) {
+                      Column(Modifier.fillMaxWidth().background(c.bg).border(1.dp, c.border.copy(alpha = 0.6f)).navigationBarsPadding()) {
                         if (annotating) {
                             val sel = annots.firstOrNull { it.id == selectedId }
                             if (sel != null) SelectionBar(sel, vm.annotate::recolorSelected, vm.annotate::deleteSelected, vm.annotate::editSelectedNote)

@@ -133,12 +133,12 @@ fun AnnotateToolbar(
 ) {
     val c = ForgeTheme.colors
     Column(Modifier.fillMaxWidth().semantics { contentDescription = "Annotate tools" }) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
             for (t in AnnotTool.entries) {
                 val on = t == tool
                 Column(
-                    Modifier.widthIn(min = 56.dp).heightIn(min = 52.dp).clip(RoundedCornerShape(12.dp)).background(if (on) c.tint else Color.Transparent)
-                        .clickable(role = Role.RadioButton) { onTool(t) }.padding(horizontal = 6.dp, vertical = 4.dp)
+                    Modifier.widthIn(min = 48.dp).heightIn(min = 52.dp).clip(RoundedCornerShape(12.dp)).background(if (on) c.tint else Color.Transparent)
+                        .clickable(role = Role.RadioButton) { onTool(t) }.padding(horizontal = 3.dp, vertical = 4.dp)
                         .semantics { contentDescription = t.label; selected = on },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
