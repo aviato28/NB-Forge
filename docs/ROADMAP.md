@@ -34,7 +34,15 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
   - [x] Selected-annotation bar, note editor sheet, unsaved-changes dialog, Save dot + snackbar
   - [x] P17 Available (opens viewer in Annotate), Compose tests, screenshots (light+dark) incl. saved-page render
   - [x] Final: full gradle check + CI green
-- [ ] Edit: add text, image, shapes (P16), whiteout (P18), true redaction (P19)
+- [ ] Edit: add text, image, shapes (P16), whiteout (P18), true redaction (P19) — Round 2C checklist:
+  - [x] core: edit model + undo/redo + pending store (`core/pdf/edit/EditModel`), field-label fix (tooltip / humanised name)
+  - [x] core: `EditIo` writes text / image / shapes / whiteout into the page content stream + render tests
+  - [x] core: `Redactor` (content-stream rewrite, images, forms, annotations, verification), `RedactSearch` presets + tests
+  - [ ] viewer integration: `EditController` / `EditMode` (select, move, resize, duplicate, front), toolbar, option sheets
+  - [ ] image import (gallery / camera), whiteout colour picker + eyedropper, replace-with-text
+  - [ ] redact UI: drag marks, text selection, search & review list, apply-confirm, result report, save path
+  - [ ] P16 / P18 / P19 Available, Compose tests, screenshots (light+dark), render samples
+  - [ ] final gradle check (test, assemble, lint, R8) + CI green
 - [x] Fill & Sign: fill forms (P25), sign with a saved signature library (P27) — Round 2B checklist:
   - [x] core: form detection (all field kinds, XFA-only), FillIo writer (values + appearances, flatten, FreeText, Stamp / flattened signature), FillSession undo/redo + pending store + tests
   - [x] signature library, image processing (crop, threshold), placement math, OFL fonts + licences + tests

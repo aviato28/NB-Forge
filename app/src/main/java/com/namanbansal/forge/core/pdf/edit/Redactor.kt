@@ -112,6 +112,14 @@ object Redactor {
         val seen = IdentityHashMap<Any, Boolean>()
         fun hit(b: Box) = areas.any { it.intersects(b) }
         fun inside(b: Box) = areas.any { it.contains(b) }
+        /** True when at least a third of [g] (a glyph's box) lies inside one marked area. */
+        fun mostlyIn(g: Box): Boolean {
+            val ga = (g.r - g.l) * (g.t - g.b)
+            return areas.any { a ->
+                val w = min(a.r, g.r) - max(a.l, g.l); val h = min(a.t, g.t) - max(a.b, g.b)
+                w > 0f && h > 0f && (ga <= 1e-6f || w * h >= ga * 0.35f)
+            }
+        }
     }
 
     private val PATH_BUILD = setOf("m", "l", "c", "v", "y", "re", "h")
@@ -232,7 +240,7 @@ object Redactor {
                 if (!vertical && gs.fs != 0f) {
                     val gw = dx * gs.fs * gs.th
                     val m = tm.then(gs.ctm)
-                    hit = ctx.hit(m.bounds(gw * 0.1f, gs.rise + gs.fs * 0.05f, gw * 0.9f, gs.rise + gs.fs * 0.75f))
+                    hit = ctx.mostlyIn(m.bounds(0f, gs.rise + gs.fs * 0.05f, gw, gs.rise + gs.fs * 0.75f))
                 }
                 if (hit) {
                     flushKeep(); any = true; ctx.report.glyphs++
