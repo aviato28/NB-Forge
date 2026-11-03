@@ -136,7 +136,7 @@ class AnnotateController(
                 text = null
                 textJob?.cancel()
                 textJob = scope.launch { text = textOf(hit.page); last?.let { updateQuads(it.x, it.y) } }
-                live.type = textType(t); live.color = colorOf(t); live.opacity = 1f; live.quads = emptyList()
+                live.type = textType(t); live.color = colorOf(t); live.opacity = textOpacity(t); live.quads = emptyList()
             }
             t == AnnotTool.ERASER -> { erased = LinkedHashSet(); live.erasing = emptySet() }
         }
@@ -147,6 +147,8 @@ class AnnotateController(
         val base = AnnotPalette.thicknesses[(_thickness.value[t] ?: 1).coerceIn(0, 2)]
         return if (t == AnnotTool.HIGHLIGHTER) base * AnnotPalette.HIGHLIGHTER_FACTOR else base
     }
+
+    private fun textOpacity(t: AnnotTool) = if (t == AnnotTool.HIGHLIGHT) AnnotPalette.HIGHLIGHT_OPACITY else 1f
 
     private fun textType(t: AnnotTool) = when (t) { AnnotTool.HIGHLIGHT -> AnnotType.HIGHLIGHT; AnnotTool.UNDERLINE -> AnnotType.UNDERLINE; else -> AnnotType.STRIKEOUT }
 
@@ -191,7 +193,7 @@ class AnnotateController(
                 scope.launch {
                     job?.join()
                     val q = text?.let { TextSnap.quadsBetween(it, s.x, s.y, end.x, end.y) }
-                    if (q != null && q.isNotEmpty()) session.add(Annot(session.newId(), s.page, textType(t), colorOf(t), quads = q))
+                    if (q != null && q.isNotEmpty()) session.add(Annot(session.newId(), s.page, textType(t), colorOf(t), textOpacity(t), quads = q))
                     live.clear()
                 }
             }

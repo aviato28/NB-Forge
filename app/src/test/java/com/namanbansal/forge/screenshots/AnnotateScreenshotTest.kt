@@ -88,7 +88,7 @@ class AnnotateScreenshotTest {
 
     private fun annotated(vm: ViewerViewModel) {
         val s = vm.annotate.session
-        s.add(Annot("h1", 0, AnnotType.HIGHLIGHT, AnnotPalette.YELLOW, quads = quadsOf(vm, "grew 14 percent year on year")))
+        s.add(Annot("h1", 0, AnnotType.HIGHLIGHT, AnnotPalette.YELLOW, AnnotPalette.HIGHLIGHT_OPACITY, quads = quadsOf(vm, "grew 14 percent year on year")))
         s.add(Annot("u1", 0, AnnotType.UNDERLINE, AnnotPalette.RED, quads = quadsOf(vm, "lifted margin to 21 percent")))
         s.add(Annot("s1", 0, AnnotType.STRIKEOUT, AnnotPalette.BLUE, quads = quadsOf(vm, "second half")))
     }

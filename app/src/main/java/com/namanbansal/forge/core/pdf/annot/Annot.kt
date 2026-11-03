@@ -46,6 +46,8 @@ object AnnotPalette {
     val colors = listOf(YELLOW, EMBER, RED, BLUE, GREEN, BLACK)
     val names = mapOf(YELLOW to "Yellow", EMBER to "Ember", RED to "Red", BLUE to "Blue", GREEN to "Green", BLACK to "Black")
 
+    /** Text highlights are drawn with Multiply at this opacity: text stays readable even in a viewer without blend-mode support. */
+    const val HIGHLIGHT_OPACITY = 0.55f
     const val HIGHLIGHTER_OPACITY = 0.4f
     /** Pen thickness presets as a fraction of page width (about 1.8 / 3.6 / 7 pt on A4). */
     val thicknesses = listOf(0.003f, 0.006f, 0.012f)

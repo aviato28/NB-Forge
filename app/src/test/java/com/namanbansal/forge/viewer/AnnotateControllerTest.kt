@@ -53,7 +53,7 @@ class AnnotateControllerTest {
         val c = controller(); c.selectTool(AnnotTool.HIGHLIGHT)
         c.onStart(hit(0.1f + 6.5f * 0.03f, 0.11f)); c.onMove(0.1f + 8.5f * 0.03f, 0.11f); c.onEnd()
         val a = c.session.current.single()
-        assertEquals(AnnotType.HIGHLIGHT, a.type); assertEquals(AnnotPalette.YELLOW, a.color)
+        assertEquals(AnnotType.HIGHLIGHT, a.type); assertEquals(AnnotPalette.YELLOW, a.color); assertEquals(AnnotPalette.HIGHLIGHT_OPACITY, a.opacity, 0f)
         assertEquals(0.1f + 6 * 0.03f, a.quads.single().left, 1e-4f); assertEquals(0.1f + 9 * 0.03f, a.quads.single().right, 1e-4f)
         c.selectTool(AnnotTool.UNDERLINE)
         assertEquals(AnnotPalette.RED, c.colorOf(AnnotTool.UNDERLINE))
