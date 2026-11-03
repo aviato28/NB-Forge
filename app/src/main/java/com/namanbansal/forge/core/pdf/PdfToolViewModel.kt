@@ -39,6 +39,15 @@ abstract class PdfToolViewModel(application: Application, saved: SavedStateHandl
     /** How much memory the page-bitmap cache may use; the viewer asks for more than a thumbnail grid needs. */
     protected open val thumbnailCacheBytes: Int get() = PdfThumbnails.defaultCacheBytes()
 
+    /**
+     * The file that pages are rendered from. By default the working copy itself; the viewer returns a copy without the
+     * annotations its own overlay draws. Runs off the main thread's critical path (suspending); may keep extra files via [trackWorkFile].
+     */
+    protected open suspend fun renderFileFor(source: PdfSource): File = source.file
+
+    /** Marks [f] as a temporary file to delete when the document is closed. */
+    protected fun trackWorkFile(f: File) { workFiles += f }
+
     /** Called on the main thread once the document is open (also after a successful password). */
     protected open fun onPdfReady(source: PdfSource) {}
 
@@ -53,13 +62,14 @@ abstract class PdfToolViewModel(application: Application, saved: SavedStateHandl
 
     private fun workDir() = File(app.cacheDir, PdfLoader.WORK_DIR)
 
-    private fun handle(copy: File, name: String, result: PdfOpenResult) {
+    private suspend fun handle(copy: File, name: String, result: PdfOpenResult) {
         when (result) {
             is PdfOpenResult.Ready -> {
                 if (result.source.file != copy) workFiles += result.source.file
                 lockedCopy = null
                 _passwordPrompt.value = null
-                val thumbs = try { PdfThumbnails(result.source.file, cacheBytes = thumbnailCacheBytes) } catch (_: Exception) {
+                val renderFile = renderFileFor(result.source)
+                val thumbs = try { PdfThumbnails(renderFile, cacheBytes = thumbnailCacheBytes) } catch (_: Exception) {
                     throw ToolException("This PDF can't be displayed on your device.")
                 }
                 _thumbnails.value = thumbs
@@ -70,6 +80,18 @@ abstract class PdfToolViewModel(application: Application, saved: SavedStateHandl
             PdfOpenResult.WrongPassword -> { lockedCopy = copy; _passwordPrompt.value = PasswordPrompt(name, wrong = true) }
             is PdfOpenResult.Unreadable -> throw ToolException(result.reason)
         }
+    }
+
+    /**
+     * Swaps the open document for [file] (a plain working copy with the same pages, e.g. just saved with edits) without
+     * going back through the picker; [onPdfReady] runs again.
+     */
+    protected suspend fun reopen(file: File, protection: PdfProtection?) {
+        val old = _source.value ?: return
+        val oldThumbs = _thumbnails.value
+        workFiles += file
+        handle(file, primaryName(), PdfOpenResult.Ready(PdfSource(file, old.pageCount, old.wasEncrypted, protection)))
+        oldThumbs?.close()
     }
 
     /** Password dialog "Unlock". */

@@ -122,6 +122,12 @@ object ForgeIcons {
     val Wand by lazy { line("wand", "M4 20L15 9M14 4v2M18 8h2M18.5 4.5l-1.4 1.4M10 5.5l1 1") }
     val Share by lazy { line("share", circle(6f, 12f, 2.5f), circle(18f, 6f, 2.5f), circle(18f, 18f, 2.5f), "M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6") }
     val Trash by lazy { line("trash", "M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6") }
+    val Highlight by lazy { line("highlight", "M9 11l7-7 4 4-7 7z", "M9 11l-5 5v4h4l3-3", "M4 21h16") }
+    val Underline by lazy { line("underline", "M7 4v7a5 5 0 0 0 10 0V4", "M5 21h14") }
+    val Strike by lazy { line("strike", "M4 12h16", "M16.5 7A4.5 3 0 0 0 12 5c-2.8 0-4.5 1.3-4.5 3s1.7 2.7 4.5 3", "M8 17a4.5 3 0 0 0 4 2c2.8 0 4.5-1.3 4.5-3") }
+    val Note by lazy { line("note", "M5 4h14a1 1 0 0 1 1 1v10l-5 5H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z", "M15 20v-4a1 1 0 0 1 1-1h4") }
+    val Pointer by lazy { line("pointer", "M5 3l14 7-6 2-2 6z") }
+    val Save by lazy { line("save", "M5 4h11l3 3v13H5z", "M8 4v5h7V4", "M8 20v-6h8v6") }
     val More by lazy { line("more", "M5 12h.01M12 12h.01M19 12h.01") }
     val Grip by lazy { line("grip", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01") }
     val Minus by lazy { line("minus", "M5 12h14") }
