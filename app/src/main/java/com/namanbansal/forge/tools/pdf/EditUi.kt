@@ -88,7 +88,7 @@ private fun Dots(colors: List<Int>, names: List<String>, selected: Int, what: St
             Box(
                 Modifier.size(44.dp).clip(CircleShape).clickable(role = Role.RadioButton) { onPick(col) }.semantics { contentDescription = "${names[i]} $what"; this.selected = on },
                 contentAlignment = Alignment.Center,
-            ) { Box(Modifier.size(if (on) 28.dp else 24.dp).clip(CircleShape).background(Color(col)).border(if (on) 3.dp else 1.dp, if (on) c.text else c.border, CircleShape)) }
+            ) { Box(Modifier.size(if (on) 28.dp else 24.dp).clip(CircleShape).background(Color(col)).border(if (on) 3.dp else 1.dp, if (on) c.text else c.text2.copy(alpha = 0.55f), CircleShape)) }
         }
     }
 }
@@ -110,6 +110,18 @@ private fun ShapeGlyph(kind: EditKind, tint: Color) {
             }
         }
     }
+}
+
+/** One of the five tools: a column tab, equal width so all of them fit a narrow phone. */
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.ToolTab(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, on: Boolean, onClick: () -> Unit) {
+    val c = ForgeTheme.colors
+    val tint = if (on) c.accent else c.text
+    Column(
+        Modifier.weight(1f).heightIn(min = 52.dp).clip(RoundedCornerShape(14.dp)).background(if (on) c.tint else Color.Transparent).border(1.dp, if (on) c.accent else c.border, RoundedCornerShape(14.dp))
+            .clickable(role = Role.Button, onClick = onClick).padding(vertical = 4.dp).semantics { contentDescription = label; selected = on },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    ) { Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp)); Text(label, style = ForgeType.Tiny, color = tint, maxLines = 1) }
 }
 
 @Composable
@@ -157,13 +169,13 @@ fun EditToolbar(controller: EditController, hasTextSelection: Boolean, onMarkSel
     // the look shown: the selected object's, else the template's (new objects)
     val look = sel ?: template
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).semantics { contentDescription = "Edit tools" }) {
-        Text(hintFor(tool, sel, how, state.marks.size, eyedropper), style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp), maxLines = 2)
-        Row1 {
-            Chip("Text", ForgeIcons.Type, tool == EditTool.TEXT) { controller.setTool(if (tool == EditTool.TEXT) EditTool.SELECT else EditTool.TEXT) }
-            Chip("Image", ForgeIcons.Image, tool == EditTool.IMAGE) { controller.setTool(if (tool == EditTool.IMAGE) EditTool.SELECT else EditTool.IMAGE) }
-            Chip("Shape", ForgeIcons.Layers, tool == EditTool.SHAPE) { controller.setTool(if (tool == EditTool.SHAPE) EditTool.SELECT else EditTool.SHAPE) }
-            Chip("Whiteout", ForgeIcons.Eraser, tool == EditTool.WHITEOUT) { controller.setTool(if (tool == EditTool.WHITEOUT) EditTool.SELECT else EditTool.WHITEOUT) }
-            Chip("Redact", ForgeIcons.Shield, tool == EditTool.REDACT) { controller.setTool(if (tool == EditTool.REDACT) EditTool.SELECT else EditTool.REDACT) }
+        if (sel == null || eyedropper) Text(hintFor(tool, sel, how, state.marks.size, eyedropper), style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp), maxLines = 2)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            ToolTab("Text", ForgeIcons.Type, tool == EditTool.TEXT) { controller.setTool(if (tool == EditTool.TEXT) EditTool.SELECT else EditTool.TEXT) }
+            ToolTab("Image", ForgeIcons.Image, tool == EditTool.IMAGE) { controller.setTool(if (tool == EditTool.IMAGE) EditTool.SELECT else EditTool.IMAGE) }
+            ToolTab("Shape", ForgeIcons.Layers, tool == EditTool.SHAPE) { controller.setTool(if (tool == EditTool.SHAPE) EditTool.SELECT else EditTool.SHAPE) }
+            ToolTab("Whiteout", ForgeIcons.Eraser, tool == EditTool.WHITEOUT) { controller.setTool(if (tool == EditTool.WHITEOUT) EditTool.SELECT else EditTool.WHITEOUT) }
+            ToolTab("Redact", ForgeIcons.Shield, tool == EditTool.REDACT) { controller.setTool(if (tool == EditTool.REDACT) EditTool.SELECT else EditTool.REDACT) }
         }
         when (kind) {
             EditKind.TEXT -> TextOptions(controller, look)
@@ -196,7 +208,7 @@ private fun TextOptions(controller: EditController, look: EditObject) {
     Row1 {
         EditFont.entries.forEach { f -> Chip(f.label, null, look.font == f, description = "${f.label} font") { controller.style { it.copy(font = f) } } }
         Chip("Bold", null, look.bold, description = "Bold") { controller.style { it.copy(bold = !it.bold) } }
-        EditStyle.alignNames.forEachIndexed { i, n -> Chip(n, null, look.align == i, description = "Align $n") { controller.style { it.copy(align = i) } } }
+        EditStyle.alignNames.forEachIndexed { i, n -> Chip(n.take(1), null, look.align == i, description = "Align $n") { controller.style { it.copy(align = i) } } }
     }
     Row1 {
         IconAction(ForgeIcons.Minus, "Smaller text") { controller.style { it.copy(sizeFrac = (it.sizeFrac * 0.88f).coerceAtLeast(EditStyle.MIN_SIZE)) } }

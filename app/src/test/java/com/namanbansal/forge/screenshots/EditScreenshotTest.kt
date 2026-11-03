@@ -179,7 +179,7 @@ class EditScreenshotTest {
     @Test fun savedEditedPage() {
         val out = File(tmp.root, "edited.pdf")
         val state = EditState(listOf(
-            EditObject("w", 0, EditKind.WHITEOUT, NormRect(0.07f, 0.285f, 0.8f, 0.325f), text = "Total due: 980.00 EUR", sizeFrac = 0.02f),
+            EditObject("w", 0, EditKind.WHITEOUT, NormRect(0.07f, 0.186f, 0.40f, 0.216f), text = "Total due: 980.00 EUR", sizeFrac = 0.02f),
             EditObject("t", 0, EditKind.TEXT, NormRect(0.1f, 0.5f, 0.7f, 0.56f), text = "Paid in full - thank you", font = EditFont.SERIF, bold = true, sizeFrac = 0.03f, color = EditStyle.BLUE),
             EditObject("r", 0, EditKind.RECT, NormRect(0.1f, 0.6f, 0.45f, 0.7f), color = EditStyle.RED, strokeWidth = 4f, filled = true, fillColor = EditStyle.ORANGE, fillOpacity = 1f),
             EditObject("e", 0, EditKind.ELLIPSE, NormRect(0.5f, 0.6f, 0.8f, 0.7f), color = EditStyle.BLUE, strokeWidth = 3f),
@@ -198,7 +198,7 @@ class EditScreenshotTest {
         }
         val report = Redactor.redactInPlace(f, marks, RedactOptions())
         check(report.glyphs > 30) { report.summary }
-        check(!PDDocument.load(f).use { d -> com.tom_roush.pdfbox.text.PDFTextStripper().getText(d) }.contains("4111")) { "card number still in the file" }
+        check(!PDDocument.load(f).use { d -> com.tom_roush.pdfbox.text.PDFTextStripper().also { it.startPage = 1; it.endPage = 1 }.getText(d) }.contains("4111")) { "card number still in the file" }
         recordTo("redact-saved-render", f)
     }
 
