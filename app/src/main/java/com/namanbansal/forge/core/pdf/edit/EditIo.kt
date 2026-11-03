@@ -95,7 +95,7 @@ object EditIo {
             }
             EditKind.LINE, EditKind.ARROW -> {
                 val sw = o.strokeWidth.coerceAtLeast(0.25f)
-                val (x1, y1, x2, y2) = if (o.flip) listOf(0f, 0f, dw, dh) else listOf(0f, dh, dw, 0f)
+                val (x1, y1, x2, y2) = (if (o.flip) listOf(0f, 0f, dw, dh) else listOf(0f, dh, dw, 0f)).let { if (o.reverse) listOf(it[2], it[3], it[0], it[1]) else it }
                 val c = rgb(o.color)
                 cs.setStrokingColor(c[0], c[1], c[2]); cs.setNonStrokingColor(c[0], c[1], c[2])
                 cs.setLineWidth(sw); cs.setLineCapStyle(1); cs.setLineJoinStyle(1)

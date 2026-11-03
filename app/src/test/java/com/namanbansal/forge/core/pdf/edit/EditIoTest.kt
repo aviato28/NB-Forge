@@ -112,6 +112,12 @@ class EditIoTest {
         assertTrue("head $head should be wider than shaft $shaft", head > shaft + 3)
     }
 
+    @Test fun reversedArrowPutsTheHeadAtTheStart() {
+        val bmp = render(write(blank(), o(EditKind.ARROW, NormRect(0.1f, 0.5f, 0.6f, 0.5f + 0.001f)).copy(color = Color.BLACK, strokeWidth = 3f, reverse = true)))
+        fun ink(fx: Float): Int { var k = 0; for (dy in -14..14) if (!bmp.getPixel((fx * bmp.width).toInt(), (0.5f * bmp.height).toInt() + dy).near(Color.WHITE, 40)) k++; return k }
+        assertTrue("head at the left end", ink(0.1f + 0.017f) > ink(0.58f) + 3)
+    }
+
     @Test fun textIsRealTextInTheContentStreamAndVisible() {
         val src = PdfFixtures.withText(tmp.newFile("t.pdf"), 1)
         val out = write(src, o(EditKind.TEXT, NormRect(0.1f, 0.5f, 0.6f, 0.6f)).copy(text = "Added by Forge", font = EditFont.SERIF, bold = true, color = Color.RED, sizeFrac = 0.04f))

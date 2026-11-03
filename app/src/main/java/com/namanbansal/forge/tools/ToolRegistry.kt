@@ -10,7 +10,7 @@ import com.namanbansal.forge.ui.icons.ForgeIcons
 object ToolRegistry {
 
     /** Codes of tools that have a real implementation. Everything else shows the "Coming soon" screen. */
-    private val AVAILABLE: Set<String> = setOf("P1", "P2", "P3", "P4", "P5", "P6", "P17", "P25", "P27", "P40")
+    private val AVAILABLE: Set<String> = setOf("P1", "P2", "P3", "P4", "P5", "P6", "P16", "P17", "P18", "P19", "P25", "P27", "P40")
 
     /**
      * Unambiguous labels for tiles and chips where [ToolDef.name] alone is not enough

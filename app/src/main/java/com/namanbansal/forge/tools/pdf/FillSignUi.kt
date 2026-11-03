@@ -70,7 +70,7 @@ import com.namanbansal.forge.ui.theme.ForgeType
 // ---- toolbar ------------------------------------------------------------------------------------------------------------
 
 @Composable
-private fun Chip(label: String, icon: ImageVector?, on: Boolean, enabled: Boolean = true, description: String = label, onClick: () -> Unit) {
+internal fun Chip(label: String, icon: ImageVector?, on: Boolean, enabled: Boolean = true, description: String = label, onClick: () -> Unit) {
     val c = ForgeTheme.colors
     Row(
         Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(22.dp)).background(if (on) c.tint else Color.Transparent)

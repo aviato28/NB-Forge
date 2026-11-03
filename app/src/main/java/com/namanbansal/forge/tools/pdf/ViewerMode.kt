@@ -6,10 +6,10 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** The modes on the viewer's mode bar. Only [available] ones switch the viewer; the rest show "Coming soon" or open another tool. */
 enum class ViewerModeId(val label: String, val available: Boolean) {
-    READ("Read", true), ANNOTATE("Annotate", true), EDIT("Edit", false), FILL_SIGN("Fill & Sign", true), PAGES("Pages", true), MORE("More", true);
+    READ("Read", true), ANNOTATE("Annotate", true), EDIT("Edit", true), FILL_SIGN("Fill & Sign", true), PAGES("Pages", true), MORE("More", true);
 
     /** True for modes that stay open in the viewer (the others are one-shot actions). */
-    val staysInViewer: Boolean get() = this == READ || this == ANNOTATE || this == FILL_SIGN
+    val staysInViewer: Boolean get() = this == READ || this == ANNOTATE || this == EDIT || this == FILL_SIGN
 }
 
 /** A touch landing on a page: [page] (0-based), the point as fractions of the displayed page, and the page's width / height. */

@@ -99,7 +99,7 @@ private val PICK = PickSpec(listOf(FileKind.PDF), title = "Choose a PDF to read"
  * contents panel, search, dark pages and immersive bars. Layout choices persist globally; the position persists per document.
  */
 @Composable
-fun ViewerScreen(host: ToolHost, vm: ViewerViewModel = viewModel(), startMode: ViewerModeId = ViewerModeId.READ) {
+fun ViewerScreen(host: ToolHost, vm: ViewerViewModel = viewModel(), startMode: ViewerModeId = ViewerModeId.READ, startTool: EditTool? = null) {
     val phase by vm.phase.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
     val inputs by vm.inputs.collectAsStateWithLifecycle()
@@ -114,7 +114,7 @@ fun ViewerScreen(host: ToolHost, vm: ViewerViewModel = viewModel(), startMode: V
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     LaunchedEffect(vm) { vm.messages.collect { snack(it) } }
-    LaunchedEffect(vm, startMode) { vm.startIn(startMode) }
+    LaunchedEffect(vm, startMode, startTool) { if (startTool != null) vm.startInEdit(startTool) else vm.startIn(startMode) }
 
     val t = thumbs
     if (phase == ToolPhase.Options && source != null && t != null && restored) {
@@ -162,6 +162,16 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     val fillSelected by vm.fill.selectedId.collectAsStateWithLifecycle()
     val fillJump by vm.fill.jump.collectAsStateWithLifecycle()
     val permissionProblem by vm.permissionProblem.collectAsStateWithLifecycle()
+    val editCanUndo by vm.edit.session.canUndo.collectAsStateWithLifecycle()
+    val editCanRedo by vm.edit.session.canRedo.collectAsStateWithLifecycle()
+    val editState by vm.edit.session.state.collectAsStateWithLifecycle()
+    val editSelected by vm.edit.selectedId.collectAsStateWithLifecycle()
+    val editTool by vm.edit.tool.collectAsStateWithLifecycle()
+    val editingId by vm.edit.editingId.collectAsStateWithLifecycle()
+    val applyConfirm by vm.edit.applyConfirm.collectAsStateWithLifecycle()
+    val removeInfo by vm.edit.removeInfo.collectAsStateWithLifecycle()
+    val redactSearch by vm.edit.search.collectAsStateWithLifecycle()
+    val imageRev by vm.imageRev.collectAsStateWithLifecycle()
     val annotCanUndo by vm.annotate.session.canUndo.collectAsStateWithLifecycle()
     val annotCanRedo by vm.annotate.session.canRedo.collectAsStateWithLifecycle()
     val fillCanUndo by vm.fill.session.canUndo.collectAsStateWithLifecycle()
@@ -173,17 +183,35 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     val annotMode = remember(vm, annotating) { AnnotateMode(vm.annotate, interactive = annotating) }
     val filling = mode == ViewerModeId.FILL_SIGN
     val fillMode = remember(vm, filling, permissionProblem) { FillSignMode(vm.fill, interactive = filling, notice = permissionProblem?.let { "$it Forge can save a copy instead." }, sigBitmap = vm::sigBitmap) }
-    val canUndo = if (filling) fillCanUndo else annotCanUndo
-    val canRedo = if (filling) fillCanRedo else annotCanRedo
+    val editing = mode == ViewerModeId.EDIT
+    val pickImage = rememberFilePicker(arrayOf("image/*"), false) { uris -> uris.firstOrNull()?.let(vm::addImage) }
+    var cameraUri by rememberSaveable { mutableStateOf<String?>(null) }
+    val takePhoto = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.TakePicture()) { ok ->
+        val u = cameraUri; cameraUri = null
+        if (ok && u != null) vm.addImage(android.net.Uri.parse(u))
+    }
+    val launchCamera: () -> Unit = {
+        val f = java.io.File(context.cacheDir, "camera/photo-${System.nanoTime()}.jpg").also { it.parentFile?.mkdirs() }
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", f)
+        cameraUri = uri.toString()
+        try { takePhoto.launch(uri) } catch (_: Exception) { cameraUri = null; snack("No camera app is available on this phone.") }
+    }
+    val editMode = remember(vm, editing, imageRev, selection != null) {
+        EditMode(vm.edit, interactive = editing, pageWidthPt = vm::pageWidthPt, imageOf = vm::editImage, hasTextSelection = editing && selection != null,
+            onMarkSelection = { vm.selection.value?.let { s -> vm.edit.markSelection(s); vm.clearSelection() } }, onPickImage = pickImage, onTakePhoto = launchCamera)
+    }
+    val canUndo = if (editing) editCanUndo else if (filling) fillCanUndo else annotCanUndo
+    val canRedo = if (editing) editCanRedo else if (filling) fillCanRedo else annotCanRedo
+    var applyDone by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
     var saveOptions by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
     var saveOptionsOpen by rememberSaveable { mutableStateOf(false) }
     /** Save, asking first about flattening when there is a filled form or a signature (or the PDF only allows a copy). */
     fun requestSave(done: (Boolean) -> Unit = {}) {
+        if (editState.marks.isNotEmpty()) { applyDone = done; vm.edit.askApply(); return }
         val formEdits = fillState.overrides.isNotEmpty() && fillForm.hasAcroForm
         val needsAsk = fillDirty && (formEdits || fillState.hasSignatures || permissionProblem != null)
         if (needsAsk) { saveOptions = done; saveOptionsOpen = true } else vm.saveAnnotations(onDone = done)
     }
-    var comingSoon by rememberSaveable { mutableStateOf<String?>(null) }
     var moreSheet by remember { mutableStateOf(false) }
     // What to do once the unsaved-changes question is answered (leave, open another tool...).
     var guarded by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -215,7 +243,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     DisposableEffect(Unit) { onDispose { vm.flushPosition() } }
 
     // System back: peel off one layer at a time (selection, contents, menu, search) before leaving the document.
-    BackHandler(enabled = selection != null || panelOpen || menu || searchOpen || selectedId != null || (filling && fillSelected != null) || dirty) {
+    BackHandler(enabled = selection != null || panelOpen || menu || searchOpen || selectedId != null || (filling && fillSelected != null) || (editing && (editSelected != null || editTool != EditTool.SELECT)) || dirty) {
         when {
             selection != null -> vm.clearSelection()
             menu -> menu = false
@@ -223,6 +251,8 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
             searchOpen -> { searchOpen = false; showHits = false; vm.clearSearch() }
             selectedId != null -> vm.annotate.select(null)
             filling && fillSelected != null -> vm.fill.select(null)
+            editing && editSelected != null -> vm.edit.select(null)
+            editing && editTool != EditTool.SELECT -> vm.edit.setTool(EditTool.SELECT)
             else -> guard(host.onBack)
         }
     }
@@ -254,17 +284,17 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                         onUri = { pendingUri = it },
                         onScrolling = { scrollTick++ },
                         modifier = Modifier.fillMaxSize(),
-                        input = if (filling) fillMode.input else annotMode.input,
-                        extraLayer = { page, w, h -> annotMode.PageOverlay(page, w, h, invert); fillMode.PageOverlay(page, w, h, invert) },
+                        input = if (editing) editMode.input else if (filling) fillMode.input else annotMode.input,
+                        extraLayer = { page, w, h -> annotMode.PageOverlay(page, w, h, invert); fillMode.PageOverlay(page, w, h, invert); editMode.PageOverlay(page, w, h, invert) },
                     )
                 }
-                val barsOn = barsVisible || annotating || filling
+                val barsOn = barsVisible || annotating || filling || editing
                 val topVisible = barsOn || searchOpen
                 Fade(topVisible, Modifier.align(Alignment.TopCenter)) {
                     Column(Modifier.fillMaxWidth().background(c.bg.copy(alpha = 0.96f)).border(1.dp, c.border.copy(alpha = 0.6f))) {
                         TopBar(title, onBack = { guard(host.onBack) }) {
-                            if (annotating || filling) {
-                                UndoRedoButtons(canUndo, canRedo, if (filling) vm.fill.session else vm.annotate.session)
+                            if (annotating || filling || editing) {
+                                UndoRedoButtons(canUndo, canRedo, if (editing) vm.edit.session else if (filling) vm.fill.session else vm.annotate.session)
                             } else {
                                 RoundIconButton(ForgeIcons.Search, "Search in document", { searchOpen = !searchOpen; if (!searchOpen) vm.clearSearch() }, active = searchOpen)
                                 Spacer(Modifier.width(8.dp))
@@ -297,6 +327,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                     Fade(barsOn) {
                       Column(Modifier.fillMaxWidth().background(c.bg).border(1.dp, c.border.copy(alpha = 0.6f)).navigationBarsPadding()) {
                         if (filling) fillMode.Toolbar()
+                        if (editing) editMode.Toolbar()
                         if (annotating) {
                             val sel = annots.firstOrNull { it.id == selectedId }
                             if (sel != null) SelectionBar(sel, vm.annotate::recolorSelected, vm.annotate::deleteSelected, vm.annotate::editSelectedNote)
@@ -304,8 +335,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                         }
                         ViewerModeBar(mode, { m ->
                             when (m) {
-                                ViewerModeId.READ, ViewerModeId.ANNOTATE, ViewerModeId.FILL_SIGN -> vm.setMode(m)
-                                ViewerModeId.EDIT -> comingSoon = m.name
+                                ViewerModeId.READ, ViewerModeId.ANNOTATE, ViewerModeId.EDIT, ViewerModeId.FILL_SIGN -> vm.setMode(m)
                                 ViewerModeId.PAGES -> guard { host.onOpenTool("P3", inputs) }
                                 ViewerModeId.MORE -> moreSheet = true
                             }
@@ -360,7 +390,20 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
         )
     }
     FillSignHost(vm)
-    comingSoon?.let { name -> ComingSoonSheet(ViewerModeId.valueOf(name)) { comingSoon = null } }
+    editingId?.let { id ->
+        val item = editState.items.firstOrNull { it.id == id }
+        if (item == null) vm.edit.closeTextEdit(null)
+        else TextBoxSheet(item.text, onSave = { vm.edit.closeTextEdit(it) }, onCancel = { vm.edit.closeTextEdit(null) })
+    }
+    if (redactSearch.open) RedactSearchSheet(
+        redactSearch, onPreset = { vm.edit.runSearch(it, null) }, onTerm = { vm.edit.runSearch(null, it) }, onToggle = vm.edit::toggleHit,
+        onAll = vm.edit::setAllHits, onMark = vm.edit::markHits, onClose = vm.edit::closeSearch,
+    )
+    if (applyConfirm) ApplyRedactionsDialog(
+        marks = editState.marks.size, pages = editState.marks.map { it.page }.distinct().size, removeInfo = removeInfo, onRemoveInfo = vm.edit::setRemoveInfo, busy = saving,
+        onApply = { val cb = applyDone; vm.saveAnnotations(redact = com.namanbansal.forge.core.pdf.edit.RedactOptions(removeInfo)) { ok -> vm.edit.cancelApply(); applyDone = null; cb?.invoke(ok) } },
+        onCancel = { vm.edit.cancelApply(); applyDone = null },
+    )
     if (moreSheet) MoreToolsSheet(onDismiss = { moreSheet = false }) { code -> moreSheet = false; guard { host.onOpenTool(code, inputs) } }
     editingNote?.let { id ->
         val n = annots.firstOrNull { it.id == id }

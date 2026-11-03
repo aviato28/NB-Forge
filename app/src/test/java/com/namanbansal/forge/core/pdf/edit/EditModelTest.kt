@@ -64,7 +64,7 @@ class EditModelTest {
 
     @Test fun jsonRoundTripAndPendingStore() {
         val o = EditObject("x", 2, EditKind.TEXT, NormRect(0.1f, 0.2f, 0.4f, 0.3f), text = "Héllo\nworld", font = EditFont.MONO, sizeFrac = 0.03f, bold = true, align = 2,
-            color = EditStyle.BLUE, strokeWidth = 4f, filled = true, fillColor = 0x80112233.toInt(), fillOpacity = 0.4f, imageId = "img1", turns = 3, flip = true)
+            color = EditStyle.BLUE, strokeWidth = 4f, filled = true, fillColor = 0x80112233.toInt(), fillOpacity = 0.4f, imageId = "img1", turns = 3, flip = true, reverse = true)
         val st = EditState(listOf(o), listOf(RedactMark("m1", 1, NormRect(0.1f, 0.1f, 0.2f, 0.2f), RedactMark.ORIGIN_SEARCH)))
         assertEquals(st, EditJson.decode(EditJson.encode(st)))
         assertTrue(EditJson.decode("garbage").isEmpty)

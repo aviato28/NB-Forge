@@ -41,6 +41,8 @@ data class EditObject(
     val imageId: String = "",
     val turns: Int = 0,
     val flip: Boolean = false,
+    /** An arrow's head sits at the start of the line instead of the end. */
+    val reverse: Boolean = false,
 )
 
 object EditStyle {
@@ -149,7 +151,7 @@ object EditJson {
                     put("id", i.id); put("page", i.page); put("kind", i.kind.name); rect(i.rect)
                     put("text", i.text); put("font", i.font.name); put("size", i.sizeFrac.toDouble()); put("bold", i.bold); put("align", i.align)
                     put("color", i.color); put("sw", i.strokeWidth.toDouble()); put("filled", i.filled); put("fc", i.fillColor); put("fo", i.fillOpacity.toDouble())
-                    put("img", i.imageId); put("turns", i.turns); put("flip", i.flip)
+                    put("img", i.imageId); put("turns", i.turns); put("flip", i.flip); put("rev", i.reverse)
                 })
             }
         })
@@ -167,7 +169,7 @@ object EditJson {
                     j.getString("id"), j.getInt("page"), EditKind.valueOf(j.getString("kind")), j.rect(),
                     j.getString("text"), EditFont.valueOf(j.getString("font")), j.getDouble("size").toFloat(), j.getBoolean("bold"), j.getInt("align"),
                     j.getInt("color"), j.getDouble("sw").toFloat(), j.getBoolean("filled"), j.getInt("fc"), j.getDouble("fo").toFloat(),
-                    j.getString("img"), j.getInt("turns"), j.getBoolean("flip"),
+                    j.getString("img"), j.getInt("turns"), j.getBoolean("flip"), j.optBoolean("rev", false),
                 )
             }
         }
