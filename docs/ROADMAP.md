@@ -1,0 +1,34 @@
+# Forge — Roadmap
+
+Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager, Extract, Insert, Viewer (basic).
+
+## Owner decisions (2026-11-03)
+- Saving edits made in the viewer: **overwrite the original when Android grants write access, after writing a backup copy** to `Downloads/Forge/Backups/`; otherwise save a new copy. Standalone tools still always create new files.
+- Viewer scrolling: **continuous vertical by default**; page-by-page swipe is a setting.
+- Viewer is the hub: the standalone tools stay, and some of them also open the viewer in a matching mode.
+
+## Round 1 — Previews everywhere + daily-driver viewer
+**1A. Visual page picking (shared `PagePicker`)**
+- [ ] Thumbnail grid component: tap / drag-select, range text field kept in two-way sync with the grid, long-press = full-screen page peek
+- [ ] Split: tap the gap between pages to cut; colour-coded groups preview the output files
+- [ ] Extract: tap pages
+- [ ] Insert: tap the gap to choose the insert position, with a preview of the pages being inserted
+- [ ] Merge: expand a file to see its pages
+- [ ] Page manager uses the same component
+- [ ] Default pins → Merge, Split, Viewer, Page manager (migrate users still on the old defaults)
+
+**1B. Viewer as default PDF app**
+- [ ] Sharp zoom (tiled hi-res rendering of the visible area)
+- [ ] Text select + copy, tappable links (external + internal), outline/bookmarks panel
+- [ ] Remember the last page per document; viewer home with recent PDFs
+- [ ] Fit-width, landscape two-page, page-by-page setting, dark pages
+- [ ] Settings → "Make Forge your PDF viewer" guided setup
+- [ ] Write-back infrastructure: detect a writable URI, back up the original, then overwrite (used in Round 2)
+
+## Round 2 — Edit inside the viewer
+- [ ] Annotate: highlight, underline, strike, pen, notes (P17)
+- [ ] Edit: add text, image, shapes (P16), whiteout (P18), true redaction (P19)
+- [ ] Fill & Sign: fill forms (P25), sign with a saved signature library (P27)
+
+## Round 3 — Remaining PDF tools
+- [ ] Compress (P9), Protect / Unlock (P29/P30), Watermark (P20), Page numbers (P21), PDF→images (P31), Images→PDF (P32) — each with a live preview
