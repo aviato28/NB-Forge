@@ -7,6 +7,7 @@ import com.namanbansal.forge.core.ToolException
 import com.namanbansal.forge.core.ToolOutcome
 import com.namanbansal.forge.core.pagesLabel
 import com.namanbansal.forge.core.pdf.PageRanges
+import com.namanbansal.forge.core.pdf.PageSelectionSync
 import com.namanbansal.forge.core.pdf.PageSpec
 import com.namanbansal.forge.core.pdf.PdfAssembler
 import com.namanbansal.forge.core.pdf.PdfSource
@@ -25,11 +26,8 @@ class ExtractViewModel(application: Application, saved: SavedStateHandle) : PdfT
 
     private val selectedState = persistedIntSet("extract.selected")
     private val textState = persistedString("extract.text", "")
-    private val viewState = persistedInt("extract.view", 0)
     val selected: StateFlow<Set<Int>> = selectedState.flow
     val rangeText: StateFlow<String> = textState.flow
-    /** 0 = pick on the grid, 1 = type ranges. */
-    val view: StateFlow<Int> = viewState.flow
 
     private var pageCount = 0
 
@@ -38,26 +36,26 @@ class ExtractViewModel(application: Application, saved: SavedStateHandle) : PdfT
         if (stateRestored) selectedState.value = selectedState.value.filter { it in 0 until pageCount }.toSet()
     }
 
-    fun setView(v: Int) { viewState.value = v }
-
-    fun toggle(page: Int) {
-        selectedState.update { if (page in it) it - page else it + page }
-        textState.value = PageRanges.format(selectedState.value)
+    /** The grid changed the selection (tap, drag, All / None / Invert): rewrite the range text to match. */
+    fun setSelection(pages: Set<Int>) {
+        selectedState.value = pages
+        textState.value = PageSelectionSync.toText(pages)
     }
 
-    fun selectAll() { selectedState.value = (0 until pageCount).toSet(); textState.value = PageRanges.format(selectedState.value) }
+    fun toggle(page: Int) = setSelection(selectedState.value.let { if (page in it) it - page else it + page })
 
-    fun selectNone() { selectedState.value = emptySet(); textState.value = "" }
+    fun selectAll() = setSelection(PageSelectionSync.all(pageCount))
 
+    fun selectNone() = setSelection(emptySet())
+
+    /** The range field changed: a valid text selects those pages, an invalid one leaves the grid alone. */
     fun setText(text: String) {
         textState.value = text
-        (PageRanges.parse(text, pageCount) as? PageRanges.Result.Ok)?.let { selectedState.value = it.sortedUnique.toSet() }
-        if (text.isBlank()) selectedState.value = emptySet()
+        selectedState.value = PageSelectionSync.fromText(text, pageCount, selectedState.value).selection
     }
 
     /** Message for the text field, or null when the text is empty or valid. */
-    fun textError(text: String = textState.value): String? =
-        if (text.isBlank()) null else (PageRanges.parse(text, pageCount) as? PageRanges.Result.Error)?.message
+    fun textError(text: String = textState.value): String? = PageSelectionSync.error(text, pageCount)
 
     override suspend fun execute(scope: RunScope): ToolOutcome {
         val src = source.value ?: throw ToolException("Open a PDF first.")

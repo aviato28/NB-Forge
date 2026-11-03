@@ -13,6 +13,7 @@ import com.namanbansal.forge.core.pdf.PageRanges
 import com.namanbansal.forge.core.pdf.PdfSource
 import com.namanbansal.forge.core.pdf.PdfSplitter
 import com.namanbansal.forge.core.pdf.PdfToolViewModel
+import com.namanbansal.forge.core.pdf.SplitGroups
 import com.namanbansal.forge.core.pdf.SplitPart
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -25,7 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class SplitMode(val label: String) { Ranges("Ranges"), EveryN("Every N"), Single("Pages"), Bookmarks("Bookmarks") }
+enum class SplitMode(val label: String) { Cut("Cut"), Ranges("Ranges"), EveryN("Every N"), Single("Pages"), Bookmarks("Bookmarks") }
 
 /** The files a split would make, or why it cannot be made yet. */
 sealed interface SplitPlan {
@@ -38,13 +39,16 @@ class SplitViewModel(application: Application, saved: SavedStateHandle) : PdfToo
 
     override val toolCode = "P2"
 
-    private val modeState = persisted("split.mode", SplitMode.Ranges, encode = { it.ordinal }, decode = { SplitMode.entries.getOrNull(it as? Int ?: -1) })
+    private val modeState = persisted("split.mode", SplitMode.Cut, encode = { it.ordinal }, decode = { SplitMode.entries.getOrNull(it as? Int ?: -1) })
     private val rangesState = persistedString("split.ranges", "")
+    private val cutsState = persistedIntSet("split.cuts")
     private val everyState = persistedInt("split.every", 1)
     private val zipState = persistedBool("split.zip", false)
 
     val mode: StateFlow<SplitMode> = modeState.flow
     val rangesText: StateFlow<String> = rangesState.flow
+    /** Cut mode: 0-based indexes of the pages that START a new file (never 0). */
+    val cuts: StateFlow<Set<Int>> = cutsState.flow
     val everyN: StateFlow<Int> = everyState.flow
     val makeZip: StateFlow<Boolean> = zipState.flow
 
@@ -54,12 +58,22 @@ class SplitViewModel(application: Application, saved: SavedStateHandle) : PdfToo
 
     fun setMode(m: SplitMode) { modeState.value = m }
     fun setRanges(text: String) { rangesState.value = text }
+    /** Tap on the gap before page [start] (0-based): cut there, or join the two files again. */
+    fun toggleCut(start: Int) {
+        val total = source.value?.pageCount ?: return
+        if (start !in 1 until total) return
+        cutsState.update { if (start in it) it - start else it + start }
+    }
+    fun clearCuts() { cutsState.value = emptySet() }
     fun setEveryN(n: Int) { everyState.value = n.coerceAtLeast(1) }
     fun setMakeZip(on: Boolean) { zipState.value = on }
 
     override fun onPdfReady(source: PdfSource) {
         _bookmarks.value = null
-        if (stateRestored) everyState.value = everyState.value.coerceIn(1, source.pageCount)
+        if (stateRestored) {
+            everyState.value = everyState.value.coerceIn(1, source.pageCount)
+            cutsState.value = SplitGroups.cleanStarts(cutsState.value, source.pageCount)
+        }
         launchBookmarks(source)
     }
 
@@ -70,7 +84,7 @@ class SplitViewModel(application: Application, saved: SavedStateHandle) : PdfToo
         bookmarkJob = viewModelScope.launch(Dispatchers.IO) {
             val marks = try { PdfSplitter.readBookmarks(source.file) } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() }
             _bookmarks.value = marks
-            if (marks.isEmpty() && modeState.value == SplitMode.Bookmarks) modeState.value = SplitMode.Ranges
+            if (marks.isEmpty() && modeState.value == SplitMode.Bookmarks) modeState.value = SplitMode.Cut
         }
     }
 
@@ -82,7 +96,7 @@ class SplitViewModel(application: Application, saved: SavedStateHandle) : PdfToo
 
     fun plan(): SplitPlan {
         val total = source.value?.pageCount ?: return SplitPlan.Invalid("Open a PDF first.")
-        return buildPlan(mode.value, rangesState.value, everyState.value, _bookmarks.value, total)
+        return buildPlan(mode.value, cutsState.value, rangesState.value, everyState.value, _bookmarks.value, total)
     }
 
     override suspend fun execute(scope: RunScope): ToolOutcome {
@@ -113,8 +127,9 @@ class SplitViewModel(application: Application, saved: SavedStateHandle) : PdfToo
 
     companion object {
         /** Pure planning, shared with the UI so the chips and the real run always agree. */
-        fun buildPlan(mode: SplitMode, rangesText: String, everyN: Int, bookmarks: List<Bookmark>?, total: Int): SplitPlan = try {
+        fun buildPlan(mode: SplitMode, cuts: Set<Int>, rangesText: String, everyN: Int, bookmarks: List<Bookmark>?, total: Int): SplitPlan = try {
             val parts = when (mode) {
+                SplitMode.Cut -> if (SplitGroups.cleanStarts(cuts, total).isEmpty()) return SplitPlan.Invalid("Tap the gap between two pages to cut there.") else SplitGroups.partsFromStarts(cuts, total)
                 SplitMode.Ranges -> when (val r = PageRanges.parse(rangesText, total)) {
                     is PageRanges.Result.Ok -> PdfSplitter.byRanges(r.ranges)
                     is PageRanges.Result.Error -> return SplitPlan.Invalid(if (rangesText.isBlank()) "Type the pages for each file, like 1-3, 5, 8-10." else r.message)

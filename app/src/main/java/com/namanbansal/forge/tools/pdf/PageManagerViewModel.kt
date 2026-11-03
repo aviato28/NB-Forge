@@ -54,6 +54,10 @@ class PageManagerViewModel(application: Application, saved: SavedStateHandle) : 
     fun toggle(id: Int) { editor.toggle(id); publish() }
     fun selectAll() { editor.selectAll(); publish() }
     fun selectNone() { editor.clearSelection(); publish() }
+    fun invertSelection() {
+        val st = editor.state()
+        editor.select(st.pages.map { it.id }.toSet() - st.selected); publish()
+    }
 
     fun rotateSelected() { if (editor.rotateSelected(90) > 0) publish() }
 

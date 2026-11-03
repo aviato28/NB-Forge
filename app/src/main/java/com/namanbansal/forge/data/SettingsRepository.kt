@@ -45,7 +45,7 @@ class SettingsRepository(context: Context) {
     val settings: Flow<Settings> = store.data.map { p ->
         Settings(
             theme = p[Keys.THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.System,
-            pins = p[Keys.PINS].toList()?.filter { ToolRegistry.get(it) != null } ?: ToolRegistry.DEFAULT_PINS,
+            pins = Pins.migrate(p[Keys.PINS].toList())?.filter { ToolRegistry.get(it) != null } ?: ToolRegistry.DEFAULT_PINS,
             recentSearches = p[Keys.RECENT_SEARCHES].toList() ?: emptyList(),
             autoCheckUpdates = p[Keys.AUTO_CHECK] ?: true,
             betaUpdates = p[Keys.BETA] ?: false,
@@ -63,7 +63,7 @@ class SettingsRepository(context: Context) {
     suspend fun togglePin(code: String): PinResult {
         var result = PinResult.Unpinned
         store.edit { p ->
-            val pins = p[Keys.PINS].toList() ?: ToolRegistry.DEFAULT_PINS
+            val pins = Pins.migrate(p[Keys.PINS].toList()) ?: ToolRegistry.DEFAULT_PINS
             val next = Pins.toggle(pins, code)
             result = when {
                 next == null -> PinResult.LimitReached
@@ -105,6 +105,10 @@ class SettingsRepository(context: Context) {
 
 /** Pure pin-list rules, kept separate from storage so they are unit-testable. */
 object Pins {
+    /** Stored pins that are exactly the old defaults become the new defaults; anything the user changed is left alone. */
+    fun migrate(stored: List<String>?): List<String>? =
+        if (stored == ToolRegistry.LEGACY_DEFAULT_PINS) ToolRegistry.DEFAULT_PINS else stored
+
     /** Toggle [code]; returns null when pinning would exceed [ToolRegistry.MAX_PINS]. */
     fun toggle(pins: List<String>, code: String): List<String>? = when {
         code in pins -> pins - code

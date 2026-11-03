@@ -20,6 +20,8 @@ import com.namanbansal.forge.core.pdf.PdfLoader
 import com.namanbansal.forge.core.pdf.PdfMerger
 import com.namanbansal.forge.core.pdf.PdfProtection
 import com.namanbansal.forge.core.pdf.PdfSource
+import com.namanbansal.forge.core.pdf.PdfThumbnails
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,12 +75,33 @@ class MergeViewModel(application: Application, saved: SavedStateHandle) : ToolVi
 
     private var nextId = 1L
 
+    private val _expanded = MutableStateFlow<Set<Long>>(emptySet())
+    /** Ids of the files whose page strip is open. */
+    val expanded: StateFlow<Set<Long>> = _expanded.asStateFlow()
+    private val pageThumbs = HashMap<Long, PdfThumbnails?>()
+
+    fun toggleExpanded(id: Long) { _expanded.update { if (id in it) it - id else it + id } }
+
+    /** Thumbnails of one ready file for its page strip / peek (created on first use, closed when the file goes away). */
+    fun thumbnailsFor(item: MergeItem): PdfThumbnails? = synchronized(pageThumbs) {
+        val src = item.source ?: return null
+        pageThumbs.getOrPut(item.id) { try { PdfThumbnails(src.file, maxSidePx = 240, cacheBytes = 6 shl 20) } catch (_: Exception) { null } }
+    }
+
+    private fun closeThumbs(id: Long? = null) = synchronized(pageThumbs) {
+        if (id == null) { pageThumbs.values.forEach { it?.close() }; pageThumbs.clear() } else pageThumbs.remove(id)?.close()
+    }
+
+    override fun onCleared() { closeThumbs(); super.onCleared() }
+
     /** The first locked file, if any: the screen shows the password dialog for it. */
     val passwordPrompt: StateFlow<PasswordPrompt?> = _items.map { list ->
         list.firstOrNull { it.status is MergeStatus.Locked }?.let { PasswordPrompt(it.file.name, (it.status as MergeStatus.Locked).wrong) }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     override fun onInputsReset() {
+        closeThumbs()
+        _expanded.value = emptySet()
         _items.value.forEach { it.workFiles.forEach(File::delete); it.copy?.delete() }
         _items.value = emptyList()
         super.onInputsReset()
@@ -140,6 +163,8 @@ class MergeViewModel(application: Application, saved: SavedStateHandle) : ToolVi
 
     fun remove(id: Long) {
         val item = _items.value.firstOrNull { it.id == id } ?: return
+        closeThumbs(id)
+        _expanded.update { it - id }
         item.workFiles.forEach(File::delete); item.copy?.delete()
         val rest = _items.value.filterNot { it.id == id }
         _items.value = rest

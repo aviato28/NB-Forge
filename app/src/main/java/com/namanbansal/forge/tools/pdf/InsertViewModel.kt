@@ -13,13 +13,15 @@ import com.namanbansal.forge.core.pagesLabel
 import com.namanbansal.forge.core.pdf.BlankSize
 import com.namanbansal.forge.core.pdf.InsertPosition
 import com.namanbansal.forge.core.pdf.IntakeResult
-import com.namanbansal.forge.core.pdf.PageRanges
+import com.namanbansal.forge.core.pdf.InsertPreview
+import com.namanbansal.forge.core.pdf.PageSelectionSync
 import com.namanbansal.forge.core.pdf.PageSpec
 import com.namanbansal.forge.core.pdf.PasswordPrompt
 import com.namanbansal.forge.core.pdf.PdfAssembler
 import com.namanbansal.forge.core.pdf.PdfInsert
 import com.namanbansal.forge.core.pdf.PdfIntake
 import com.namanbansal.forge.core.pdf.PdfSource
+import com.namanbansal.forge.core.pdf.PdfThumbnails
 import com.namanbansal.forge.core.pdf.PdfToolViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -31,7 +33,22 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /** The second PDF whose pages are inserted. */
-class InsertSource(val file: PickedFile, val source: PdfSource, internal val workFiles: List<File>)
+class InsertSource(val file: PickedFile, val source: PdfSource, internal val workFiles: List<File>) {
+    private var thumbs: PdfThumbnails? = null
+    private var tried = false
+
+    /** Thumbnails for the page picker / in-place preview; null if the PDF cannot be drawn (the grid then shows blank pages). */
+    val thumbnails: PdfThumbnails?
+        @Synchronized get() {
+            if (!tried) { tried = true; thumbs = try { PdfThumbnails(source.file, cacheBytes = 12 shl 20) } catch (_: Exception) { null } }
+            return thumbs
+        }
+
+    @Synchronized internal fun close() {
+        thumbs?.close(); thumbs = null; tried = true
+        workFiles.forEach(File::delete)
+    }
+}
 
 /** P6 Insert pages: blank pages (sized like the neighbour / A4 / Letter) or pages of another PDF, at a chosen place. */
 class InsertViewModel(application: Application, saved: SavedStateHandle) : PdfToolViewModel(application, saved) {
@@ -44,6 +61,8 @@ class InsertViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     private val positionState = persisted("insert.position", InsertPosition.End, encode = { it.ordinal }, decode = { InsertPosition.entries.getOrNull(it as? Int ?: -1) })
     private val pageState = persistedInt("insert.page", 1)
     private val rangeState = persistedString("insert.range", "")
+    private val otherSelState = persistedIntSet("insert.otherSel")
+    private val stepState = persistedInt("insert.step", 1)
     private val otherUriState = persistedString("insert.other", "")
 
     val fromPdf: StateFlow<Boolean> = fromPdfState.flow
@@ -52,8 +71,12 @@ class InsertViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     val position: StateFlow<InsertPosition> = positionState.flow
     /** 1-based page for Before/After. */
     val positionPage: StateFlow<Int> = pageState.flow
-    /** Which pages of the second PDF to insert; empty = all. */
+    /** The range field of the second PDF's page picker, in two-way sync with [otherSelection]. */
     val otherRange: StateFlow<String> = rangeState.flow
+    /** 0-based pages of the second PDF that will be inserted (in page order). */
+    val otherSelection: StateFlow<Set<Int>> = otherSelState.flow
+    /** From-PDF mode: 0 = choose the pages, 1 = choose the place. */
+    val step: StateFlow<Int> = stepState.flow
 
     private val _other = MutableStateFlow<InsertSource?>(null)
     val other: StateFlow<InsertSource?> = _other.asStateFlow()
@@ -69,34 +92,63 @@ class InsertViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     fun setBlankSize(s: BlankSize) { sizeState.value = s }
     fun setPosition(p: InsertPosition) { positionState.value = p }
     fun setPositionPage(n: Int) { pageState.value = n.coerceAtLeast(1) }
-    fun setOtherRange(t: String) { rangeState.value = t }
+    fun setStep(n: Int) { stepState.value = n.coerceIn(0, 1) }
+
+    /** Range field typed: a valid text selects those pages; an invalid one leaves the grid alone (the screen shows the error). */
+    fun setOtherRange(t: String) {
+        rangeState.value = t
+        otherSelState.value = PageSelectionSync.fromText(t, _other.value?.source?.pageCount ?: 0, otherSelState.value).selection
+    }
+
+    /** The second PDF's grid changed (tap, drag, All / None / Invert): rewrite the range text to match. */
+    fun setOtherSelection(pages: Set<Int>) {
+        otherSelState.value = pages
+        rangeState.value = PageSelectionSync.toText(pages)
+    }
+
+    fun selectAllOther() = setOtherSelection(PageSelectionSync.all(_other.value?.source?.pageCount ?: 0))
+
+    /** Tap on gap [gap] (0 = before the first page ... page count = after the last) of the base PDF's grid. */
+    fun setInsertGap(gap: Int) {
+        val total = source.value?.pageCount ?: return
+        val (pos, page) = InsertPreview.positionFor(gap, total)
+        positionState.value = pos
+        pageState.value = page
+    }
+
+    /** The gap the pages go into, 0..page count. */
+    fun insertGap(): Int = PdfInsert.insertIndex(positionState.value, pageState.value, source.value?.pageCount ?: 0)
 
     override fun onPdfReady(source: PdfSource) {
         if (stateRestored) {
             pageState.value = pageState.value.coerceIn(1, source.pageCount)
-            otherUriState.value.takeIf { it.isNotEmpty() }?.let { pickOther(Uri.parse(it)) }
+            otherUriState.value.takeIf { it.isNotEmpty() }?.let { pickOther(Uri.parse(it), restoring = true) }
         } else pageState.value = pageState.value.coerceIn(1, source.pageCount)
     }
 
     // ---- the second PDF ---------------------------------------------------------------------------------------
 
-    fun pickOther(uri: Uri) {
+    fun pickOther(uri: Uri, restoring: Boolean = false) {
         viewModelScope.launch {
             _otherLoading.value = true
             try {
                 val picked = FileResolver.resolve(app, uri)
                 val result = try { PdfIntake.open(app, picked) } catch (e: CancellationException) { throw e } catch (_: Throwable) { IntakeResult.Failed("This file couldn't be opened.") }
-                handleOther(picked, result)
+                handleOther(picked, result, restoring)
             } finally { _otherLoading.value = false }
         }
     }
 
-    private fun handleOther(picked: PickedFile, result: IntakeResult) {
+    private fun handleOther(picked: PickedFile, result: IntakeResult, restoring: Boolean = false) {
         when (result) {
             is IntakeResult.Ready -> {
+                val keepSelection = otherSelState.value
+                val keepText = rangeState.value
                 clearOther()
                 _other.value = InsertSource(picked, result.source, result.files)
                 otherUriState.value = picked.uri.toString()
+                val count = result.source.pageCount
+                if (restoring) { otherSelState.value = keepSelection.filter { it in 0 until count }.toSet(); rangeState.value = keepText } else setOtherSelection(PageSelectionSync.all(count))
                 _otherPrompt.value = null; lockedCopy = null; lockedFile = null
             }
             is IntakeResult.Locked -> { lockedCopy = result.copy; lockedFile = picked; _otherPrompt.value = PasswordPrompt(picked.name, result.wrong) }
@@ -113,9 +165,16 @@ class InsertViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     fun cancelOtherPassword() { lockedCopy?.delete(); lockedCopy = null; lockedFile = null; _otherPrompt.value = null }
 
     fun clearOther() {
-        _other.value?.workFiles?.forEach(File::delete)
+        _other.value?.close()
         _other.value = null
         otherUriState.value = ""
+        otherSelState.value = emptySet()
+        rangeState.value = ""
+    }
+
+    override fun onCleared() {
+        _other.value?.close()
+        super.onCleared()
     }
 
     override fun onInputsReset() {
@@ -126,14 +185,12 @@ class InsertViewModel(application: Application, saved: SavedStateHandle) : PdfTo
 
     // ---- planning ---------------------------------------------------------------------------------------------
 
-    /** Pages of the second PDF to insert (0-based) or the reason they cannot be chosen yet. */
-    fun otherPages(range: String = rangeState.value, other: InsertSource? = _other.value): Result<List<Int>> {
-        val o = other ?: return Result.failure(ToolException("Choose the PDF to take pages from."))
-        if (range.isBlank()) return Result.success((0 until o.source.pageCount).toList())
-        return when (val r = PageRanges.parse(range, o.source.pageCount)) {
-            is PageRanges.Result.Ok -> Result.success(r.pages)
-            is PageRanges.Result.Error -> Result.failure(ToolException(r.message))
-        }
+    /** Pages of the second PDF to insert (0-based, ascending) or the reason they cannot be chosen yet. */
+    fun otherPages(): Result<List<Int>> {
+        val o = _other.value ?: return Result.failure(ToolException("Choose the PDF to take pages from."))
+        PageSelectionSync.error(rangeState.value, o.source.pageCount)?.let { return Result.failure(ToolException(it)) }
+        val pages = otherSelState.value.filter { it in 0 until o.source.pageCount }.sorted()
+        return if (pages.isEmpty()) Result.failure(ToolException("Select at least one page to insert.")) else Result.success(pages)
     }
 
     /** Why Insert cannot run yet, or null. */
