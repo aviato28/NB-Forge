@@ -129,7 +129,8 @@ class EditUiTest {
     @Test fun redactOptionsMarkSelectionSearchAndApply() {
         val c = controller(); c.setTool(EditTool.REDACT)
         var marked = 0
-        compose.setContent { var sel by mutableStateOf(true); ForgeTheme { EditToolbar(c, sel, { marked++; sel = false }, {}, {}) } }
+        var sel by mutableStateOf(true)
+        compose.setContent { ForgeTheme { EditToolbar(c, sel, { marked++; sel = false }, {}, {}) } }
         compose.onNodeWithContentDescription("Mark the selected text").performClick()
         assertEquals(1, marked)
         compose.onNodeWithContentDescription("Search and redact").performClick()
