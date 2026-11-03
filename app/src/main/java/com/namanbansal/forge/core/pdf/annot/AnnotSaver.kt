@@ -24,16 +24,18 @@ class SaveOutcome(val result: WriteResult, val reloadFile: File) {
  * writable, otherwise a copy). The password of an encrypted original is kept ([PdfProtection]).
  */
 class AnnotSaver(private val writer: DocumentWriter, private val workDir: File) {
-    suspend fun save(uri: Uri, displayName: String, source: File, protection: PdfProtection?, baseline: List<Annot>, current: List<Annot>): SaveOutcome {
+    suspend fun save(uri: Uri, displayName: String, source: File, protection: PdfProtection?, baseline: List<Annot>, current: List<Annot>,
+                     extra: ((File) -> Unit)? = null, copyOnly: Boolean = false, copyReason: String = ""): SaveOutcome {
         workDir.mkdirs()
         val plain = File(workDir, "annotated-${UUID.randomUUID()}.pdf")
         val toStore = if (protection == null) plain else File(workDir, "annotated-${UUID.randomUUID()}-enc.pdf")
         try {
             withContext(Dispatchers.IO) {
                 PdfAnnotIo.write(source, plain, baseline, current, null)
+                extra?.invoke(plain) // Fill & Sign edits are written into the same working file before it is encrypted again
                 if (protection != null) PDDocument.load(plain).use { d -> protection.applyTo(d); toStore.outputStream().use { d.save(it) } }
             }
-            val result = writer.write(uri, displayName, toStore)
+            val result = if (copyOnly) writer.writeCopy(displayName, toStore, copyReason) else writer.write(uri, displayName, toStore)
             return SaveOutcome(result, plain)
         } catch (t: Throwable) {
             plain.delete()

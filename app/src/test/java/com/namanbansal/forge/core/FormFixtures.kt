@@ -52,16 +52,16 @@ object FormFixtures {
                 text(doc, form, page, "locked", LOCKED) { it.defaultAppearance = "/Helv 12 Tf 0 g"; it.isReadOnly = true; it.setValue("fixed") }
                 text(doc, form, page, "code", CODE) { it.defaultAppearance = "/Helv 12 Tf 0 g"; it.maxLen = 4 }
                 val box = PDCheckBox(form); box.partialName = "agree"
-                widget(page, AGREE, onNames = listOf("Yes")).also { box.widgets = listOf(it); form.fields.add(box) }
+                widget(doc, page, AGREE, onNames = listOf("Yes")).also { box.widgets = listOf(it); form.fields.add(box) }
                 val radio = PDRadioButton(form); radio.partialName = "colour"
-                val w1 = widget(page, RED, listOf("Red")); val w2 = widget(page, BLUE, listOf("Blue"))
+                val w1 = widget(doc, page, RED, listOf("Red")); val w2 = widget(doc, page, BLUE, listOf("Blue"))
                 radio.widgets = listOf(w1, w2); form.fields.add(radio)
                 val combo = PDComboBox(form); combo.partialName = "fruit"; combo.options = listOf("Apple", "Banana", "Cherry"); combo.defaultAppearance = "/Helv 12 Tf 0 g"
-                combo.widgets = listOf(widget(page, COLOR)); form.fields.add(combo)
+                combo.widgets = listOf(widget(doc, page, COLOR)); form.fields.add(combo)
                 val list = PDListBox(form); list.partialName = "pets"; list.options = listOf("Cat", "Dog", "Fish"); list.defaultAppearance = "/Helv 12 Tf 0 g"
-                list.widgets = listOf(widget(page, LIST)); form.fields.add(list)
+                list.widgets = listOf(widget(doc, page, LIST)); form.fields.add(list)
                 val sig = PDSignatureField(form); sig.partialName = "signature"
-                sig.widgets = listOf(widget(page, SIGN)); form.fields.add(sig)
+                sig.widgets = listOf(widget(doc, page, SIGN)); form.fields.add(sig)
             }
             if (userPassword != null || permissions != null) {
                 val policy = com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy("owner-x", userPassword.orEmpty(), permissions ?: com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission())
@@ -77,7 +77,7 @@ object FormFixtures {
         val f = PDTextField(form)
         f.partialName = name.substringAfterLast('.')
         setup(f)
-        f.widgets = listOf(widget(page, r))
+        f.widgets = listOf(widget(doc, page, r))
         if ('.' in name) {
             // a nested field: parent "person" holds "name"
             val parent = com.tom_roush.pdfbox.pdmodel.interactive.form.PDNonTerminalField(form)
@@ -87,14 +87,13 @@ object FormFixtures {
         } else form.fields.add(f)
     }
 
-    private fun widget(page: PDPage, r: PDRectangle, onNames: List<String> = emptyList()): PDAnnotationWidget {
+    private fun widget(doc: PDDocument, page: PDPage, r: PDRectangle, onNames: List<String> = emptyList()): PDAnnotationWidget {
         val w = PDAnnotationWidget()
         w.rectangle = r
         w.page = page
         w.isPrinted = true
         if (onNames.isNotEmpty()) {
             val n = COSDictionary()
-            val doc = PDDocument()
             for (name in onNames + "Off") n.setItem(COSName.getPDFName(name), PDAppearanceStream(doc).cosObject)
             val ap = PDAppearanceDictionary()
             ap.normalAppearance = PDAppearanceEntry(n)

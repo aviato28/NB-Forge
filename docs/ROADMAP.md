@@ -35,7 +35,13 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
   - [x] P17 Available (opens viewer in Annotate), Compose tests, screenshots (light+dark) incl. saved-page render
   - [x] Final: full gradle check + CI green
 - [ ] Edit: add text, image, shapes (P16), whiteout (P18), true redaction (P19)
-- [ ] Fill & Sign: fill forms (P25), sign with a saved signature library (P27)
+- [ ] Fill & Sign: fill forms (P25), sign with a saved signature library (P27) — Round 2B checklist:
+  - [x] core: form detection (all field kinds, XFA-only), FillIo writer (values + appearances, flatten, FreeText, Stamp / flattened signature), FillSession undo/redo + pending store + tests
+  - [x] signature library, image processing (crop, threshold), placement math, OFL fonts + licences + tests
+  - [ ] viewer integration: FillSignMode overlay/input/toolbar, field sheets, next/previous field, Add text
+  - [ ] sign UI: library, draw pad, type, import preview, placement handles
+  - [ ] save options sheet, permissions guard, pending survives process death
+  - [ ] P25 + P27 Available, Compose tests, screenshots (light+dark), final gradle check + CI
 
 ## Round 3 — Remaining PDF tools
 - [ ] Compress (P9), Protect / Unlock (P29/P30), Watermark (P20), Page numbers (P21), PDF→images (P31), Images→PDF (P32) — each with a live preview

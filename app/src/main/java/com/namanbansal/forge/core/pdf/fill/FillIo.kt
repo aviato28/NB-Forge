@@ -99,7 +99,7 @@ object FillIo {
                 when (f) {
                     is PDCheckBox -> if (value == FormValues.OFF) f.unCheck() else f.check()
                     is PDRadioButton -> if (value == FormValues.OFF) f.setValue("Off") else f.setValue(value)
-                    is PDListBox -> f.value = value.split('\n').filter { it.isNotEmpty() }
+                    is PDListBox -> value.split('\n').filter { it.isNotEmpty() }.let { v -> if (v.size == 1) f.setValue(v[0]) else f.setValue(v) }
                     is PDComboBox -> f.setValue(value)
                     is PDTextField -> f.setValue(if (f.maxLen > 0) value.take(f.maxLen) else value)
                     else -> Unit
