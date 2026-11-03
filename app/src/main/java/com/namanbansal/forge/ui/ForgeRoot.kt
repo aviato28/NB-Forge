@@ -20,7 +20,17 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.namanbansal.forge.core.PickedFile
+import com.namanbansal.forge.core.RecentsViewModel
+import com.namanbansal.forge.data.SettingsRepository
+import com.namanbansal.forge.ui.toolkit.ForgeSnackbarHost
+import com.namanbansal.forge.ui.toolkit.LocalForgeSnackbar
+import com.namanbansal.forge.ui.toolkit.OpenWithSheet
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -78,21 +88,48 @@ private val navItems = listOf(
 )
 
 @Composable
-fun ForgeRoot(app: ForgeApp, settings: Settings) {
+fun ForgeRoot(
+    app: ForgeApp,
+    settings: Settings,
+    incoming: List<PickedFile> = emptyList(),
+    incomingIsView: Boolean = false,
+    onIncomingHandled: () -> Unit = {},
+) {
     val nav = rememberNavController()
     val scope = rememberCoroutineScope()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     val showBottomBar = route in setOf(Routes.HOME, Routes.FILES, Routes.SETTINGS, Routes.CATEGORY)
-    val togglePin: (String) -> Unit = { code -> scope.launch { app.settings.togglePin(code) } }
     val c = ForgeTheme.colors
+    val snackbar = remember { SnackbarHostState() }
+    val recentsVm: RecentsViewModel = viewModel()
+    val recents by recentsVm.items.collectAsStateWithLifecycle()
+    val togglePin: (String) -> Unit = { code ->
+        scope.launch {
+            if (app.settings.togglePin(code) == SettingsRepository.PinResult.LimitReached) {
+                snackbar.currentSnackbarData?.dismiss()
+                snackbar.showSnackbar("You can pin up to ${ToolRegistry.MAX_PINS} tools. Unpin one first.")
+            }
+        }
+    }
+    /** Open a tool with files already loaded (share sheet, "Next" chips). */
+    val openToolWith: (String, List<PickedFile>) -> Unit = { code, files ->
+        app.pendingFiles.put(code, files)
+        nav.navigate(Routes.tool(code))
+    }
 
+    CompositionLocalProvider(LocalForgeSnackbar provides snackbar) {
     Column(Modifier.fillMaxSize().background(c.bg)) {
         Box(Modifier.weight(1f).fillMaxWidth().statusBarsPadding()) {
             NavHost(navController = nav, startDestination = Routes.HOME) {
                 composable(Routes.HOME) {
+                    LaunchedEffect(Unit) { recentsVm.refresh() }
                     HomeScreen(
                         pins = settings.pins,
+                        recents = recents,
+                        onReorderPins = { order -> scope.launch { app.settings.setPins(order) } },
+                        onSeeAllRecents = { nav.navigateTab(Routes.FILES) },
+                        onRemoveRecent = recentsVm::remove,
                         onSearch = { nav.navigate(Routes.SEARCH) },
                         onSettings = { nav.navigateTab(Routes.SETTINGS) },
                         onTool = { nav.navigate(Routes.tool(it)) },
@@ -100,7 +137,7 @@ fun ForgeRoot(app: ForgeApp, settings: Settings) {
                         onTogglePin = togglePin,
                     )
                 }
-                composable(Routes.FILES) { FilesScreen() }
+                composable(Routes.FILES) { FilesScreen(recents, onRefresh = recentsVm::refresh, onRemove = recentsVm::remove) }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(app = app, settings = settings, onLicenses = { nav.navigate(Routes.LICENSES) })
                 }
@@ -134,13 +171,34 @@ fun ForgeRoot(app: ForgeApp, settings: Settings) {
                     val screen = tool?.takeIf { it.status == ToolStatus.Available }?.let { ToolScreens.screens[it.code] }
                     when {
                         tool == null -> ComingSoonScreen(tool = null, pinned = false, onBack = onBack, onTogglePin = {})
-                        screen != null -> screen(ToolHost(tool, onBack))
+                        screen != null -> screen(ToolHost(tool, onBack, openToolWith))
                         else -> ComingSoonScreen(tool, pinned = tool.code in settings.pins, onBack = onBack, onTogglePin = { togglePin(tool.code) })
                     }
                 }
             }
         }
+        ForgeSnackbarHost(snackbar)
         if (showBottomBar) BottomBar(currentRoute = route, onSelect = { nav.navigateTab(it) })
+    }
+    }
+
+    // "Open with" on a single PDF goes straight to the viewer; anything else asks what to do.
+    val direct = incomingIsView && incoming.size == 1 && incoming.first().kind == com.namanbansal.forge.core.FileKind.PDF
+    LaunchedEffect(incoming, direct) {
+        if (direct) {
+            onIncomingHandled()
+            openToolWith("P40", incoming)
+        }
+    }
+    if (incoming.isNotEmpty() && !direct) {
+        OpenWithSheet(
+            files = incoming,
+            onDismiss = onIncomingHandled,
+            onPick = { tool ->
+                onIncomingHandled()
+                openToolWith(tool.code, incoming)
+            },
+        )
     }
 
     UpdateSheet(app.updates)

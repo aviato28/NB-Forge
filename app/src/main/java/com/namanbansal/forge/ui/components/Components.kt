@@ -35,6 +35,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -151,19 +154,28 @@ fun ForgeSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 
 /** Segmented control (".seg"). */
 @Composable
-fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun Segmented(
+    options: List<String>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    /** Options that cannot be chosen right now (drawn dimmed); the caller should say why nearby. */
+    disabled: Set<Int> = emptySet(),
+) {
     val c = ForgeTheme.colors
     Row(modifier.fillMaxWidth().clip(ForgeShapes.Chip).background(c.surface2).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         options.forEachIndexed { i, label ->
             val on = i == selected
+            val off = i in disabled
             Box(
                 Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(11.dp))
                     .background(if (on) c.surface else Color.Transparent)
                     .let { if (on) it.border(1.dp, c.border, RoundedCornerShape(11.dp)) else it }
-                    .combinedClickableCompat { onSelect(i) },
+                    .let { if (off) it else it.combinedClickableCompat { onSelect(i) } }
+                    .semantics { if (off) disabled() else this.selected = on },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, style = ForgeType.Label, color = if (on) c.text else c.text2)
+                Text(label, style = ForgeType.Label, color = if (on) c.text else c.text2.copy(alpha = if (off) 0.45f else 1f), maxLines = 1)
             }
         }
     }
@@ -184,7 +196,7 @@ fun ForgeButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
     Row(
         modifier.height(52.dp).clip(ForgeShapes.Button).background(if (enabled) bg else c.border)
             .let { if (secondary) it.border(1.dp, c.border, ForgeShapes.Button) else it }
-            .let { if (enabled) it.clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick) else it }
+            .clickable(enabled = enabled, interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,

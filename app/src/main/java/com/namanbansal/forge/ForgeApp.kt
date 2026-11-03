@@ -2,7 +2,16 @@ package com.namanbansal.forge
 
 import android.app.Application
 import android.content.Context
+import com.namanbansal.forge.core.OutputSaver
+import com.namanbansal.forge.core.PendingFiles
+import com.namanbansal.forge.core.RecentFilesStore
 import com.namanbansal.forge.data.SettingsRepository
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import java.io.File
 import com.namanbansal.forge.update.UpdateManager
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -20,6 +29,22 @@ class ForgeApp : Application() {
     }
     val settings: SettingsRepository by lazy { SettingsRepository(this) }
     val updates: UpdateManager by lazy { UpdateManager(this, settings, http) }
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val outputSaver: OutputSaver by lazy { OutputSaver(this) }
+    val pendingFiles = PendingFiles()
+    val recents: RecentFilesStore by lazy { RecentFilesStore(File(filesDir, "recent_files.json")) }
+
+    override fun onCreate() {
+        super.onCreate()
+        PDFBoxResourceLoader.init(applicationContext) // once; PDFBox needs it for its bundled resources
+        appScope.launch {
+            recents.load()
+            // Working copies from a previous run are never reused.
+            File(cacheDir, com.namanbansal.forge.core.pdf.PdfLoader.WORK_DIR).deleteRecursively()
+        }
+    }
 
     companion object {
         fun from(context: Context): ForgeApp = context.applicationContext as ForgeApp
