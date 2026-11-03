@@ -26,14 +26,14 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
 - [x] Write-back infrastructure: detect a writable URI, back up the original, then overwrite (used in Round 2)
 
 ## Round 2 — Edit inside the viewer
-- [ ] Annotate: highlight, underline, strike, pen, notes (P17) — Round 2A checklist:
+- [x] Annotate: highlight, underline, strike, pen, notes (P17) — Round 2A checklist:
   - [x] core model + PDF round-trip (`core/pdf/annot/*`), session undo/redo, hit-test, smoothing, text snapping + tests
   - [x] save path: AnnotSaver (DocumentWriter), PendingStore, render-copy strip, reload in place + tests
   - [x] ViewerMode interface + mode bar (Read · Annotate · Edit · Fill & Sign · Pages · More), Coming-soon sheet
   - [x] Annotate overlay + gestures (draw, text-snap drag, eraser, note, select) + toolbar/palette/colour picker
   - [x] Selected-annotation bar, note editor sheet, unsaved-changes dialog, Save dot + snackbar
   - [x] P17 Available (opens viewer in Annotate), Compose tests, screenshots (light+dark) incl. saved-page render
-  - [ ] Final: full gradle check + CI green
+  - [x] Final: full gradle check + CI green
 - [ ] Edit: add text, image, shapes (P16), whiteout (P18), true redaction (P19)
 - [ ] Fill & Sign: fill forms (P25), sign with a saved signature library (P27)
 
