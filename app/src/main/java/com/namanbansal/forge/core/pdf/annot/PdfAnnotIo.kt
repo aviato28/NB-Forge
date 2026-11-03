@@ -44,7 +44,7 @@ object PdfAnnotIo {
         else -> false
     }
 
-    private class Geo(page: PDPage) {
+    internal class Geo(page: PDPage) {
         val box: PDRectangle = page.cropBox
         val rot: Int = ((page.rotation % 360) + 360) % 360
         /** Width of the page as displayed (swapped on sideways pages), in points. */
