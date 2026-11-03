@@ -166,17 +166,19 @@ internal fun todayText(): String = java.text.DateFormat.getDateInstance(java.tex
 @Composable
 private fun SelectedItemBar(controller: FillSignController, kind: ItemKind, size: Int, color: Int) {
     val c = ForgeTheme.colors
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (kind == ItemKind.TEXT) { SizeChips(size, controller::setTextSize) }
-        if (kind != ItemKind.SIGNATURE) ColorDots(color, controller::setTextColor)
+    if (kind != ItemKind.SIGNATURE) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (kind == ItemKind.TEXT) SizeChips(size, controller::setTextSize)
+        ColorDots(color, controller::setTextColor)
         if (kind == ItemKind.TEXT) IconAction(ForgeIcons.Type, "Edit text") { controller.editSelectedText() }
+    }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
         IconAction(ForgeIcons.Minus, "Make smaller") { controller.scaleSelected(0.88f) }
         IconAction(ForgeIcons.Plus, "Make bigger") { controller.scaleSelected(1.14f) }
         if (kind == ItemKind.SIGNATURE) IconAction(ForgeIcons.Rotate, "Rotate a quarter turn") { controller.rotateSelected() }
         IconAction(ForgeIcons.Trash, "Delete") { controller.deleteSelected() }
         IconAction(ForgeIcons.Check, "Done") { controller.select(null) }
     }
-    Text(if (kind == ItemKind.SIGNATURE) "Drag to move, drag the dot to resize." else "Drag to move, drag the dot to resize.", style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp))
+    Text("Drag to move, drag the dot to resize.", style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp))
 }
 
 // ---- field sheets ----------------------------------------------------------------------------------------------------------

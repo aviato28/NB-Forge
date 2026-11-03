@@ -96,6 +96,19 @@ class SignatureCoreTest {
         assertNull(SignatureImage.process(Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888).also { it.eraseColor(Color.WHITE) }, 150))
     }
 
+    @Test fun aPhoneLikePhotoWithAGreyPaperAndThinInkGetsAUsableAutoThreshold() {
+        val w = 300; val h = 120
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888); bmp.eraseColor(Color.rgb(226, 224, 218))
+        val c = android.graphics.Canvas(bmp)
+        c.drawLine(40f, 80f, 260f, 40f, android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(24, 32, 90); strokeWidth = 3f })
+        val px = IntArray(w * h); bmp.getPixels(px, 0, w, 0, 0, w, h)
+        val t = SignatureImage.autoThreshold(px)
+        assertTrue("threshold $t keeps the ink and drops the paper", t > 100 && t < 224)
+        val out = SignatureImage.process(bmp, t)
+        assertNotNull(out)
+        assertTrue(out!!.width in 200..260)
+    }
+
     @Test fun drawnStrokesAreRenderedTightlyOnTransparency() {
         val s = listOf(listOf(NormPt(10f, 10f), NormPt(60f, 40f), NormPt(110f, 12f)), listOf(NormPt(30f, 60f)))
         val b = SignatureImage.renderStrokes(s, 6f, Color.BLACK)!!

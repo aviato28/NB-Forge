@@ -48,7 +48,7 @@ object FormFixtures {
                 fun label(t: String, r: PDRectangle, size: Float = 9f) { cs.beginText(); cs.setFont(PDType1Font.HELVETICA, size); cs.newLineAtOffset(r.lowerLeftX, r.upperRightY + 4f); cs.showText(t); cs.endText() }
                 cs.beginText(); cs.setFont(PDType1Font.HELVETICA_BOLD, 20f); cs.newLineAtOffset(60f, 780f); cs.showText("Registration form"); cs.endText()
                 label("Full name (required)", NAME); label("Reference (read-only)", LOCKED); label("Code (max 4)", CODE); label("Comments", NOTES)
-                label("I agree to the terms", AGREE.let { PDRectangle(it.lowerLeftX + 22f, it.lowerLeftY - 14f, 10f, 10f) }); label("Favourite colour: Red / Blue", PDRectangle(60f, 542f, 10f, 10f)); label("Fruit", COLOR); label("Pets", LIST); label("Signature", SIGN)
+                label("I agree to the terms", PDRectangle(84f, 556f, 10f, 10f)); label("Favourite colour: Red / Blue", PDRectangle(60f, 526f, 10f, 10f)); label("Fruit", COLOR); label("Pets", LIST); label("Signature", SIGN)
             }
             if (xfaOnly) {
                 form.cosObject.setItem(COSName.getPDFName("XFA"), doc.document.createCOSStream())
@@ -100,7 +100,15 @@ object FormFixtures {
         w.isPrinted = true
         if (onNames.isNotEmpty()) {
             val n = COSDictionary()
-            for (name in onNames + "Off") n.setItem(COSName.getPDFName(name), PDAppearanceStream(doc).cosObject)
+            for (name in onNames + "Off") {
+                val st = PDAppearanceStream(doc)
+                st.bBox = PDRectangle(r.width, r.height)
+                com.tom_roush.pdfbox.pdmodel.PDPageContentStream(doc, st).use { cs ->
+                    cs.setStrokingColor(0f); cs.addRect(0.5f, 0.5f, r.width - 1f, r.height - 1f); cs.stroke()
+                    if (name != "Off") { cs.setNonStrokingColor(0f); cs.addRect(3f, 3f, r.width - 6f, r.height - 6f); cs.fill() }
+                }
+                n.setItem(COSName.getPDFName(name), st.cosObject)
+            }
             val ap = PDAppearanceDictionary()
             ap.normalAppearance = PDAppearanceEntry(n)
             w.appearance = ap

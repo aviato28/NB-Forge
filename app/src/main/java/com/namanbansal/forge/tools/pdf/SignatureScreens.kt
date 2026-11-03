@@ -225,14 +225,20 @@ val PEN_WIDTHS_DP = listOf(2.5f, 4.5f, 7f)
 
 /** A full-screen pad to draw on: smooth strokes, pen thickness, three inks, undo and clear. Points are in pad pixels. */
 @Composable
-fun SignaturePadContent(kind: SigKind, onSave: (Bitmap) -> Unit, onCancel: () -> Unit) {
+fun SignaturePadContent(kind: SigKind, onSave: (Bitmap) -> Unit, onCancel: () -> Unit, initialStrokes: List<List<NormPt>> = emptyList()) {
     val c = ForgeTheme.colors
     val density = LocalDensity.current.density
-    var strokes by rememberSaveable(stateSaver = StrokesSaver) { mutableStateOf(emptyList<List<NormPt>>()) }
+    var strokes by rememberSaveable(stateSaver = StrokesSaver) { mutableStateOf(initialStrokes) }
     var live by remember { mutableStateOf(emptyList<NormPt>()) }
     var colorIdx by rememberSaveable { mutableIntStateOf(0) }
     var widthIdx by rememberSaveable { mutableIntStateOf(1) }
     val penPx = PEN_WIDTHS_DP[widthIdx] * density
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+    val wide = maxWidth > 560.dp // landscape: controls and Cancel / Save share one row to leave the pad as tall as possible
+    val actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {
+        TextButton(onClick = onCancel) { Text("Cancel", color = c.text2) }
+        TextButton(onClick = { SignatureImage.renderStrokes(strokes, penPx, SIGNATURE_COLORS[colorIdx])?.let(onSave) }, enabled = strokes.isNotEmpty()) { Text("Save", color = if (strokes.isNotEmpty()) c.accent else c.text2.copy(alpha = 0.5f)) }
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(12.dp).semantics { contentDescription = "Signature pad" }) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(if (kind == SigKind.INITIALS) "Draw your initials" else "Draw your signature", style = ForgeType.Section, color = c.text, modifier = Modifier.weight(1f))
@@ -280,10 +286,10 @@ fun SignaturePadContent(kind: SigKind, onSave: (Bitmap) -> Unit, onCancel: () ->
                     Box(Modifier.size(w.dp + 4.dp).clip(CircleShape).background(if (on) c.accent else c.text2))
                 }
             }
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onCancel) { Text("Cancel", color = c.text2) }
-            TextButton(onClick = { SignatureImage.renderStrokes(strokes, penPx, SIGNATURE_COLORS[colorIdx])?.let(onSave) }, enabled = strokes.isNotEmpty()) { Text("Save", color = if (strokes.isNotEmpty()) c.accent else c.text2.copy(alpha = 0.5f)) }
+            if (wide) { Spacer(Modifier.weight(1f)); actions() }
         }
+        if (!wide) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) { Spacer(Modifier.weight(1f)); actions() }
+    }
     }
 }
 
@@ -358,14 +364,17 @@ fun ImportSignatureContent(source: Bitmap?, onChoosePhoto: () -> Unit, onSave: (
     var threshold by rememberSaveable(source) { mutableFloatStateOf(-1f) }
     val auto = remember(source) { source?.let { b -> val px = IntArray(b.width * b.height); b.getPixels(px, 0, b.width, 0, 0, b.width, b.height); SignatureImage.autoThreshold(px) } ?: SignatureImage.DEFAULT_THRESHOLD }
     val t = if (threshold < 0) auto.toFloat() else threshold
-    val processed by produceState<Bitmap?>(null, source, t.toInt()) {
-        value = if (source == null) null else { delay(60); withContext(Dispatchers.Default) { SignatureImage.process(source, t.toInt()) } }
+    // (threshold, picture): null until the first result; the old picture stays while a new threshold is being worked out
+    val result by produceState<Pair<Int, Bitmap?>?>(null, source, t.toInt()) {
+        if (source == null) value = null else { delay(60); value = t.toInt() to withContext(Dispatchers.Default) { SignatureImage.process(source, t.toInt()) } }
     }
+    val processed = result?.second
+    val noInk = source != null && result != null && processed == null
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(16.dp).semantics { contentDescription = "Import signature" }) {
         Text("Import a photo of your signature", style = ForgeType.Section, color = c.text)
         Text("Sign on white paper in good light. Forge crops to the ink and removes the paper.", style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
         CheckerPreview(processed?.asImageBitmap(), Modifier.weight(1f).fillMaxWidth())
-        if (source != null && processed == null) Text("No ink found. Raise the slider.", style = ForgeType.Small, color = c.accent, modifier = Modifier.padding(top = 6.dp))
+        if (noInk) Text("No ink found. Raise the slider.", style = ForgeType.Small, color = c.accent, modifier = Modifier.padding(top = 6.dp))
         if (source != null) {
             Text("Ink sensitivity", style = ForgeType.Label, color = c.text, modifier = Modifier.padding(top = 10.dp))
             Slider(
