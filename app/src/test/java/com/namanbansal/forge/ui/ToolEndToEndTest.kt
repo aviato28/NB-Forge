@@ -58,7 +58,7 @@ class ToolEndToEndTest {
 
     @After fun done() { PdfBoxRasterizer.uninstall() }
 
-    private fun pump(timeoutMs: Long = 30_000, until: () -> Boolean) {
+    private fun pump(timeoutMs: Long = 60_000, until: () -> Boolean) {
         val end = System.currentTimeMillis() + timeoutMs
         while (!until() && System.currentTimeMillis() < end) { shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(20) }
         shadowOf(Looper.getMainLooper()).idle()

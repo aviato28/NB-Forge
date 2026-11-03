@@ -155,7 +155,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     val jump by vm.jump.collectAsStateWithLifecycle()
     val aspects by vm.aspects.collectAsStateWithLifecycle()
     val inputs by vm.inputs.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = vm.lastPage.value.coerceIn(0, (pageCount - 1).coerceAtLeast(0)))
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = vm.startPage().coerceIn(0, (pageCount - 1).coerceAtLeast(0)))
     var searchOpen by remember { mutableStateOf(query.isNotEmpty()) }
     var showHits by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
@@ -220,7 +220,7 @@ private fun ZoomablePages(
     val c = ForgeTheme.colors
     val density = LocalDensity.current
     val hScroll = rememberScrollState()
-    var zoom by remember { mutableFloatStateOf(vm.zoom.value.coerceIn(1f, MAX_ZOOM)) }
+    var zoom by remember { mutableFloatStateOf(vm.startZoom().coerceIn(1f, MAX_ZOOM)) }
     var live by remember { mutableFloatStateOf(1f) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     var pendingScrollX by remember { mutableStateOf<Int?>(null) }

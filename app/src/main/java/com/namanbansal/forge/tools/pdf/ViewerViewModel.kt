@@ -40,6 +40,9 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     val lastPage: StateFlow<Int> = pageState.flow
     val invert: StateFlow<Boolean> = darkState.flow
     val zoom: StateFlow<Float> = zoomState.flow
+    /** One-off reads of the saved position when the screen opens. */
+    fun startPage(): Int = pageState.value
+    fun startZoom(): Float = zoomState.value
     fun rememberPage(p: Int) { pageState.value = p }
     fun rememberZoom(z: Float) { zoomState.value = z }
     fun toggleInvert() { darkState.value = !darkState.value }
