@@ -11,6 +11,15 @@ import com.namanbansal.forge.core.RunScope
 import com.namanbansal.forge.core.friendlyMessage
 import com.namanbansal.forge.core.pdf.PageRasterizers
 import com.namanbansal.forge.core.pdf.PdfIntake
+import com.namanbansal.forge.core.pdf.PdfLoader
+import com.namanbansal.forge.core.pdf.annot.Annot
+import com.namanbansal.forge.core.pdf.annot.AnnotSaver
+import com.namanbansal.forge.core.pdf.annot.PdfAnnotIo
+import com.namanbansal.forge.core.pdf.annot.PendingStore
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.FlowPreview
+import java.io.File
+import java.util.UUID
 import com.namanbansal.forge.core.pdf.viewer.DocumentKey
 import com.namanbansal.forge.core.pdf.viewer.OutlineItem
 import com.namanbansal.forge.core.pdf.viewer.PageLink
@@ -68,6 +77,84 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     fun rememberZoom(z: Float) { if (zoomState.value != z) { zoomState.value = z; scheduleSave() } }
     fun toggleInvert() { darkState.value = !darkState.value }
 
+    // ---- modes and annotations -----------------------------------------------------------------------------------------
+
+    private val modeState = persistedInt("viewer.mode", ViewerModeId.READ.ordinal)
+    private val modeChosen = persistedBool("viewer.modeChosen", false)
+    /** The active mode of the mode bar; survives rotation and process death. */
+    val mode: StateFlow<ViewerModeId> = modeState.flow.map { ViewerModeId.entries.getOrElse(it) { ViewerModeId.READ } }.stateIn(viewModelScope, SharingStarted.Eagerly, ViewerModeId.READ)
+    fun setMode(m: ViewerModeId) { if (!m.staysInViewer) return; modeState.value = m.ordinal; modeChosen.value = true; if (m != ViewerModeId.ANNOTATE) annotate.select(null) }
+    /** Opens in [m] the first time only (P17 opens Annotate); later rotations and restores keep whatever the user chose. */
+    fun startIn(m: ViewerModeId) { if (!modeChosen.value) setMode(m) }
+
+    val annotate = AnnotateController(AnnotPrefs(application), viewModelScope) { pageText(it) }
+    private val pendingStore by lazy { PendingStore(File(app.filesDir, "annot-pending")) }
+    private var baselineAnnots: List<Annot> = emptyList()
+    private var renderFile: File? = null
+    private var reloading = false
+    private val _saving = MutableStateFlow(false)
+    val saving: StateFlow<Boolean> = _saving.asStateFlow()
+    private val _revision = MutableStateFlow(0)
+    /** Bumped whenever the document is swapped for a freshly saved one, so pages are rebuilt (at the same page and zoom). */
+    val revision: StateFlow<Int> = _revision.asStateFlow()
+
+    @OptIn(FlowPreview::class)
+    private fun keepPendingOnDisk() {
+        viewModelScope.launch {
+            annotate.session.annots.debounce(300).collect { list ->
+                val key = docKey ?: return@collect
+                withContext(Dispatchers.IO) { if (annotate.session.dirty.value) pendingStore.save(key, list) else pendingStore.clear(key) }
+            }
+        }
+    }
+
+    init { keepPendingOnDisk() }
+
+    override suspend fun renderFileFor(source: PdfSource): File {
+        val dst = File(source.file.parentFile, "render-${UUID.randomUUID()}.pdf")
+        val found = withContext(Dispatchers.IO) { runCatching { PdfAnnotIo.strip(source.file, dst) }.onFailure { dst.delete() }.getOrNull() }
+        baselineAnnots = found.orEmpty()
+        val f = if (found != null) dst.also { trackWorkFile(it) } else source.file
+        renderFile = f
+        return f
+    }
+
+    /** Writes the annotations into the PDF (backup + overwrite, or a copy), tells the user which, and reloads in place. */
+    fun saveAnnotations(onDone: (Boolean) -> Unit = {}) {
+        val src = source.value ?: return
+        val input = inputs.value.firstOrNull() ?: return
+        if (_saving.value) return
+        _saving.value = true
+        viewModelScope.launch {
+            var ok = false
+            try {
+                val saver = AnnotSaver(app.documentWriter, File(app.cacheDir, PdfLoader.WORK_DIR))
+                val session = annotate.session
+                val out = saver.save(input.uri, input.name, src.file, src.protection, session.baseline, session.current)
+                val oldKey = docKey
+                reloading = true
+                reopen(out.reloadFile, src.protection)
+                withContext(Dispatchers.IO) { oldKey?.let { pendingStore.clear(it) }; docKey?.let { pendingStore.clear(it) } }
+                notify(out.message)
+                ok = true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                notify("Couldn't save your changes: ${t.friendlyMessage()} They are still here, so you can try again.")
+            } finally {
+                reloading = false; _saving.value = false
+                onDone(ok)
+            }
+        }
+    }
+
+    /** "Discard": forgets the unsaved annotations (and their copy on disk). */
+    fun discardAnnotations() {
+        annotate.load(baselineAnnots)
+        val key = docKey
+        if (key != null) viewModelScope.launch(Dispatchers.IO) { pendingStore.clear(key) }
+    }
+
     // ---- layout settings (global) ----------------------------------------------------------------------------------
 
     val prefs: StateFlow<ViewerPrefs> = app.settings.settings.map { it.viewer }.stateIn(viewModelScope, SharingStarted.Eagerly, ViewerPrefs())
@@ -119,6 +206,11 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         app.viewerPositions.put(ViewerPosition(key, f.uri.toString(), f.name, f.size, total, pageState.value, zoomState.value, System.currentTimeMillis()))
     }
 
+    private suspend fun afterReload(src: PdfSource) {
+        docKey = withContext(Dispatchers.IO) { runCatching { DocumentKey.of(src.file) }.getOrNull() }
+        persistPosition()
+    }
+
     private suspend fun afterOpen(src: PdfSource) {
         val key = withContext(Dispatchers.IO) { runCatching { DocumentKey.of(src.file) }.getOrNull() }
         docKey = key
@@ -128,6 +220,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
                 zoomState.value = it.zoom.coerceIn(1f, 8f)
             }
         }
+        if (key != null) withContext(Dispatchers.IO) { pendingStore.load(key) }?.let { if (it != baselineAnnots) annotate.load(baselineAnnots, it) }
         _restored.value = true
         if (key != null) {
             persistPosition()
@@ -231,11 +324,16 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
 
     override fun onPdfReady(source: PdfSource) {
         val thumbs = thumbnails.value ?: return
-        _restored.value = false
+        val reload = reloading
+        if (!reload) _restored.value = false
         _tiles.value?.close()
-        _tiles.value = runCatching { TileRenderer(PageRasterizers.factory(source.file), focusPage = { pageState.value }) }.getOrNull()
-        viewModelScope.launch { afterOpen(source) }
-        _aspects.value = null
+        _tiles.value = runCatching { TileRenderer(PageRasterizers.factory(renderFile ?: source.file), focusPage = { pageState.value }) }.getOrNull()
+        annotate.load(baselineAnnots)
+        if (reload) { runCatching { docIndex?.close() }; docIndex = null; runCatching { search?.close() }; search = null }
+        viewModelScope.launch { if (reload) afterReload(source) else afterOpen(source) }
+        if (!reload) _aspects.value = null
+        _revision.value++
+        if (reload && _aspects.value != null) return // same pages, same sizes: keep the layout steady
         aspectJob?.cancel()
         aspectJob = viewModelScope.launch {
             val n = thumbs.pageCount
@@ -320,7 +418,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         searchJob?.cancel(); aspectJob?.cancel(); saveJob?.cancel()
         _tiles.value?.close(); _tiles.value = null
         runCatching { docIndex?.close() }; docIndex = null
-        _outline.value = null; _selection.value = null; _restored.value = false; docKey = null
+        _outline.value = null; _selection.value = null; _restored.value = false; docKey = null; baselineAnnots = emptyList(); renderFile = null; annotate.load(emptyList())
         runCatching { search?.close() }; search = null
         _hits.value = emptyList(); _current.value = -1; _query.value = ""; _searching.value = false; _aspects.value = null
         super.onInputsReset()
