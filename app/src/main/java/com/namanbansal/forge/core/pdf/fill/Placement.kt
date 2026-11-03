@@ -70,3 +70,23 @@ object Placement {
 
     fun contains(r: NormRect, x: Float, y: Float, slop: Float = 0f) = x >= r.left - slop && x <= r.right + slop && y >= r.top - slop && y <= r.bottom + slop
 }
+
+/** Sizing helpers for text boxes (page fractions), kept pure so they are unit-tested. */
+object TextBoxMath {
+    /** Height of one line of a text box in page-height fractions. */
+    fun lineHeight(sizeFrac: Float, pageAspect: Float) = sizeFrac * pageAspect * 1.25f
+
+    /** The box for [text] at ([x], [y]) (top-left): about [widthFrac] wide, tall enough for the lines it needs, kept on the page. */
+    fun boxFor(text: String, sizeFrac: Float, pageAspect: Float, x: Float, y: Float, widthFrac: Float): NormRect {
+        val w = widthFrac.coerceIn(0.05f, 1f)
+        val charW = sizeFrac * 0.52f
+        val perLine = max(1, ((w - sizeFrac * 0.5f) / charW).toInt())
+        val lines = max(1, text.split('\n').sumOf { max(1, (it.length + perLine - 1) / perLine) })
+        val h = (lines * lineHeight(sizeFrac, pageAspect) + sizeFrac * pageAspect * 0.5f).coerceAtMost(1f)
+        val l = x.coerceIn(0f, max(0f, 1f - w)); val t = y.coerceIn(0f, max(0f, 1f - h))
+        return NormRect(l, t, l + w, t + h)
+    }
+
+    /** Width of a short one-line text such as a date, so it is not wrapped. */
+    fun widthForLine(text: String, sizeFrac: Float): Float = (text.length * sizeFrac * 0.56f + sizeFrac * 0.8f).coerceIn(0.06f, 0.9f)
+}

@@ -77,6 +77,9 @@ class FillSession(initial: FillState = FillState(), private val maxHistory: Int 
     fun removeItem(id: String) = commit(current.copy(items = current.items.filter { it.id != id }))
     fun find(id: String): FillItem? = current.items.firstOrNull { it.id == id }
 
+    /** Drops the last committed change without keeping it for redo (used to throw away a text box that was never typed into). */
+    fun undoLast() { val prev = undoStack.removeLastOrNull() ?: return; set(prev) }
+
     override fun undo() { val prev = undoStack.removeLastOrNull() ?: return; redoStack.addLast(current); set(prev) }
     override fun redo() { val next = redoStack.removeLastOrNull() ?: return; undoStack.addLast(current); set(next) }
 
