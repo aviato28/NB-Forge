@@ -28,7 +28,7 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
 ## Round 2 — Edit inside the viewer
 - [ ] Annotate: highlight, underline, strike, pen, notes (P17) — Round 2A checklist:
   - [x] core model + PDF round-trip (`core/pdf/annot/*`), session undo/redo, hit-test, smoothing, text snapping + tests
-  - [ ] save path (render-copy strip, AnnotSave via DocumentWriter, reload in place, pending persistence) + tests
+  - [x] AnnotSaver (DocumentWriter) + PendingStore + tests; [ ] wire into viewer VM (render-copy strip, reload in place)
   - [ ] ViewerMode interface + mode bar (Read · Annotate · Edit · Fill & Sign · Pages · More), Coming-soon sheet
   - [ ] Annotate overlay + gestures (draw, text-snap drag, eraser, note, select) + toolbar/palette/colour picker
   - [ ] Selected-annotation bar, note editor sheet, unsaved-changes dialog, Save dot + snackbar

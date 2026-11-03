@@ -17,7 +17,9 @@ interface UndoRedo {
  * undo / redo history. Pure Kotlin so it is unit-tested; the UI only reads [annots]. [baseline] is what the file contains now:
  * [dirty] is whether [annots] differs from it, so undoing everything makes the document clean again.
  */
-class AnnotSession(val baseline: List<Annot>, initial: List<Annot>? = null, private val maxHistory: Int = 100) : UndoRedo {
+class AnnotSession(baseline: List<Annot> = emptyList(), initial: List<Annot>? = null, private val maxHistory: Int = 100) : UndoRedo {
+    var baseline: List<Annot> = baseline
+        private set
     private val _annots = MutableStateFlow(initial ?: baseline)
     val annots: StateFlow<List<Annot>> = _annots.asStateFlow()
     private val undoStack = ArrayDeque<List<Annot>>()
@@ -63,7 +65,13 @@ class AnnotSession(val baseline: List<Annot>, initial: List<Annot>? = null, priv
         set(next)
     }
 
-    /** After a successful save the saved state becomes the new baseline in a fresh session. */
+    /** Starts over on [newBaseline] (a document was opened, or just saved and reloaded) with an empty history. */
+    fun reset(newBaseline: List<Annot>, initial: List<Annot>? = null) {
+        baseline = newBaseline
+        undoStack.clear(); redoStack.clear()
+        set(initial ?: newBaseline)
+    }
+
     fun newId(): String = "n" + java.lang.Long.toString(System.nanoTime(), 36) + counter++
     private var counter = 0
 }
