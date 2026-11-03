@@ -215,7 +215,6 @@ private fun InsertHeader(
                     style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(top = 8.dp),
                 )
             }
-            Text("Tap the + between two pages to move the insertion point. Long-press a page to preview it.", style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(top = 4.dp))
         }
         if (protectionNote != null) InfoNote(protectionNote, Modifier.padding(top = 12.dp))
     }

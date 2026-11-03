@@ -9,13 +9,13 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
 
 ## Round 1 — Previews everywhere + daily-driver viewer
 **1A. Visual page picking (shared `PagePicker`)**
-- [ ] Thumbnail grid component: tap / drag-select, range text field kept in two-way sync with the grid, long-press = full-screen page peek
-- [ ] Split: tap the gap between pages to cut; colour-coded groups preview the output files
-- [ ] Extract: tap pages
-- [ ] Insert: tap the gap to choose the insert position, with a preview of the pages being inserted
-- [ ] Merge: expand a file to see its pages
-- [ ] Page manager uses the same component
-- [ ] Default pins → Merge, Split, Viewer, Page manager (migrate users still on the old defaults)
+- [x] Thumbnail grid component: tap / drag-select, range text field kept in two-way sync with the grid, long-press = full-screen page peek
+- [x] Split: tap the gap between pages to cut; colour-coded groups preview the output files
+- [x] Extract: tap pages
+- [x] Insert: tap the gap to choose the insert position, with a preview of the pages being inserted
+- [x] Merge: expand a file to see its pages
+- [x] Page manager uses the same component
+- [x] Default pins → Merge, Split, Viewer, Page manager (migrate users still on the old defaults)
 
 **1B. Viewer as default PDF app**
 - [ ] Sharp zoom (tiled hi-res rendering of the visible area)

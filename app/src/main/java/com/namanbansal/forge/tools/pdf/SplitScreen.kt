@@ -121,11 +121,11 @@ private fun ColumnScope.SplitOptions(
                         SplitMode.entries.map { it.label }, mode.ordinal, { vm.setMode(SplitMode.entries[it]) },
                         disabled = if (noBookmarks) setOf(SplitMode.Bookmarks.ordinal) else emptySet(),
                     )
-                    if (noBookmarks) Text("Bookmarks is unavailable: this PDF has no bookmarks (outline) to split by.", style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(top = 8.dp))
+                    if (noBookmarks) Text("Bookmarks is unavailable: this PDF has none.", style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(top = 8.dp))
                     Spacer(Modifier.height(12.dp))
                     when (mode) {
                         SplitMode.Cut -> Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Tap the gap between two pages to cut there. Long-press a page to preview it.", style = ForgeType.Small, color = c.text2, modifier = Modifier.weight(1f))
+                            Text("Tap a gap to cut there. Long-press a page to preview.", style = ForgeType.Small, color = c.text2, modifier = Modifier.weight(1f))
                             if (cuts.isNotEmpty()) TextAction("Clear", vm::clearCuts)
                         }
                         SplitMode.Ranges -> {
@@ -145,12 +145,12 @@ private fun ColumnScope.SplitOptions(
                         else Text("One file for each top-level bookmark, from its page to the next bookmark.", style = ForgeType.Body, color = c.text2)
                     }
                     if (parts != null) {
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(10.dp))
                         Legend(parts, mode, c.isDark)
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(10.dp))
                     if (parts != null && parts.size > 100) InfoNote("That is a lot of files. They are all saved to Downloads/Forge; the ZIP option keeps them tidy.", Modifier.padding(bottom = 8.dp))
-                    ToggleRow("Also save a ZIP", zip, vm::setMakeZip, subtitle = "One archive with all the files, handy for sharing")
+                    ToggleRow("Also save a ZIP", zip, vm::setMakeZip)
                     if (protectionNote != null) InfoNote(protectionNote, Modifier.padding(top = 8.dp))
                     Spacer(Modifier.height(12.dp))
                 }
@@ -164,7 +164,6 @@ private fun ColumnScope.SplitOptions(
 private fun Legend(parts: List<SplitPart>, mode: SplitMode, dark: Boolean) {
     val c = ForgeTheme.colors
     Column {
-        Text("${parts.size} ${if (parts.size == 1) "file" else "files"}", style = ForgeType.Small.copy(fontWeight = FontWeight.SemiBold), color = c.text2, modifier = Modifier.padding(bottom = 6.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             parts.take(MAX_CHIPS).forEachIndexed { i, part ->
                 val color = groupColor(i, dark)

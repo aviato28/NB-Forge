@@ -78,7 +78,9 @@ fun PagePeekContent(pages: List<GridPage>, startIndex: Int, onIndexChange: (Int)
         }
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "${pages[pager.currentPage.coerceIn(0, pages.lastIndex)].description} · ${pager.currentPage + 1} of ${pages.size}",
+                pages[pager.currentPage.coerceIn(0, pages.lastIndex)].description.let { d ->
+                    if (d == "Page ${pager.currentPage + 1}") "$d of ${pages.size}" else "$d · ${pager.currentPage + 1} of ${pages.size}"
+                },
                 style = ForgeType.Label, color = Color.White, modifier = Modifier.weight(1f).padding(start = 8.dp),
             )
             Box(

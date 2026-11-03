@@ -88,6 +88,14 @@ That's it: search, category lists, pins, the `tool/{code}` route, the "Open with
 - Many outputs: return `ToolOutcome(outputs = ..., archive = zip)`; the result screen offers Share all / Share ZIP and rolls back saved files if a run fails or is cancelled.
 - UI: `PageThumb` / `PageSelectGrid`, `ReorderableGrid` / `ReorderableColumn` (drag to reorder), `ForgeTextField`, `Stepper`, `ToggleRow`, `InfoNote`, `OptionChip`.
 
+## Page picking (Round 1A)
+
+Anything that asks the user for pages should show them, not ask for page numbers:
+- `ui/toolkit/PagePicker` = selection grid (tap, drag across a run, long-press peek, All/None/Invert) plus an optional range field in two-way sync (`core/pdf/PageSelectionSync`: keep the selection set and the text in the ViewModel, both persisted).
+- `PagePickerGrid` is the lower-level lazy grid: pass `GridPage`s (tint, badge, dimmed, blank, gap ids) and optional `GridGaps` for tappable gaps (Split's cuts, Insert's insertion point), plus `header`/`footer` via `fullWidthItem`.
+- `PagePeek` is the full-screen page view (swipe between pages, swipe down or Back to close); the grid opens it on long-press, Merge and the Page manager open it directly.
+- `core/pdf/SplitGroups` (cuts -> files, colour owners) and `core/pdf/InsertPreview` (in-place preview list) are the pure models behind Split and Insert.
+
 ## Screenshots
 
 `./gradlew recordRoborazziDebug --tests '*ScreenshotTest'` writes light/dark PNGs of every screen to `docs/screenshots/`
