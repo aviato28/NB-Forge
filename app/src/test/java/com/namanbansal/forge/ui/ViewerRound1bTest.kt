@@ -184,7 +184,7 @@ class ViewerRound1bTest {
     @Test fun contentsButtonOpensTheSheetWithAnEmptyStateWhenThereAreNoBookmarks() {
         openViewer()
         compose.onNodeWithContentDescription("Contents and pages").performClick()
-        pump { runCatching { compose.onNodeWithText("Pages").assertExists() }.isSuccess }
+        pump { runCatching { compose.onNodeWithText("Bookmarks").assertExists() }.isSuccess }
         compose.onNodeWithText("Bookmarks").performClick()
         pump { runCatching { compose.onNodeWithText("No bookmarks in this PDF").assertExists() }.isSuccess }
     }

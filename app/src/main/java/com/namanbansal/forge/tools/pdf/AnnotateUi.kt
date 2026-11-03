@@ -205,14 +205,15 @@ fun IconAction(icon: ImageVector, description: String, onClick: () -> Unit) {
 @Composable
 fun NoteEditorContent(initial: String, isNew: Boolean, onSave: (String) -> Unit, onCancel: () -> Unit, onDelete: () -> Unit) {
     val c = ForgeTheme.colors
-    var text by rememberSaveable { mutableStateOf(initial) }
+    var field by rememberSaveable(stateSaver = androidx.compose.ui.text.input.TextFieldValue.Saver) { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(initial, androidx.compose.ui.text.TextRange(initial.length))) }
+    val text = field.text
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp).navigationBarsPadding().imePadding().semantics { contentDescription = "Note editor" }) {
         Text(if (isNew) "New note" else "Edit note", style = ForgeType.Title, color = c.text, modifier = Modifier.padding(bottom = 10.dp))
         Box(Modifier.fillMaxWidth().heightIn(min = 120.dp).clip(RoundedCornerShape(14.dp)).background(c.surface2).border(1.5.dp, c.accent, RoundedCornerShape(14.dp)).padding(12.dp)) {
             BasicTextField(
-                value = text, onValueChange = { text = it.take(2000) },
+                value = field, onValueChange = { field = if (it.text.length > 2000) field else it },
                 textStyle = ForgeType.Body.copy(color = c.text), cursorBrush = SolidColor(c.accent),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics { contentDescription = "Note text" },
