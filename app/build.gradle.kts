@@ -1,3 +1,4 @@
+import java.time.Duration
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -97,7 +98,7 @@ dependencies {
 
 // A hung test must fail the build with a clear culprit instead of burning CI hours.
 tasks.withType<Test>().configureEach {
-    timeout.set(java.time.Duration.ofMinutes(25))
+    timeout.set(Duration.ofMinutes(25))
     testLogging { events("failed", "skipped"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT }
     maxHeapSize = "3g"
 }
