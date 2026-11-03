@@ -150,7 +150,8 @@ fun FillSignToolbar(controller: FillSignController, notice: String?) {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     SizeChips(size, controller::setTextSize)
                     ColorDots(color, controller::setTextColor)
-                    Spacer(Modifier.width(4.dp))
+                }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("Date", ForgeIcons.Calendar, false, description = "Add today's date") { controller.addQuick(ItemKind.TEXT, todayText()) }
                     Chip("✓", null, false, description = "Add a check mark") { controller.addQuick(ItemKind.CHECK) }
                     Chip("✗", null, false, description = "Add a cross") { controller.addQuick(ItemKind.CROSS) }
@@ -204,7 +205,7 @@ fun FieldTextContent(field: FormField, initial: String, hasNext: Boolean, onDone
         }
         Box(Modifier.fillMaxWidth().heightIn(min = if (multi) 120.dp else 52.dp).clip(RoundedCornerShape(14.dp)).background(c.surface2).border(1.5.dp, c.accent, RoundedCornerShape(14.dp)).padding(12.dp)) {
             BasicTextField(
-                value = value, onValueChange = { if (it.text.length <= limit) value = it },
+                value = value, onValueChange = { value = if (it.text.length <= limit) it else TextFieldValue(it.text.take(limit), TextRange(limit)) },
                 singleLine = !multi, textStyle = ForgeType.Body.copy(color = c.text), cursorBrush = SolidColor(c.accent),
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardFor(field.hint), imeAction = if (multi) ImeAction.Default else if (hasNext) ImeAction.Next else ImeAction.Done,
                     capitalization = if (field.hint == KeyHint.TEXT) KeyboardCapitalization.Sentences else KeyboardCapitalization.None),

@@ -35,7 +35,7 @@ object FormFixtures {
     val LOCKED = PDRectangle(300f, 700f, 150f, 24f)
     val CODE = PDRectangle(300f, 650f, 100f, 24f)
 
-    fun acroForm(file: File, rotation: Int = 0, xfaOnly: Boolean = false, userPassword: String? = null, permissions: com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission? = null): File {
+    fun acroForm(file: File, rotation: Int = 0, xfaOnly: Boolean = false, userPassword: String? = null, permissions: com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission? = null, labels: Boolean = false): File {
         PDDocument().use { doc ->
             val page = PDPage(PDRectangle.A4)
             page.rotation = rotation
@@ -44,6 +44,12 @@ object FormFixtures {
             doc.documentCatalog.acroForm = form
             form.defaultResources = PDResources().also { it.put(COSName.getPDFName("Helv"), PDType1Font.HELVETICA) }
             form.defaultAppearance = "/Helv 0 Tf 0 g"
+            if (labels) com.tom_roush.pdfbox.pdmodel.PDPageContentStream(doc, page).use { cs ->
+                fun label(t: String, r: PDRectangle, size: Float = 9f) { cs.beginText(); cs.setFont(PDType1Font.HELVETICA, size); cs.newLineAtOffset(r.lowerLeftX, r.upperRightY + 4f); cs.showText(t); cs.endText() }
+                cs.beginText(); cs.setFont(PDType1Font.HELVETICA_BOLD, 20f); cs.newLineAtOffset(60f, 780f); cs.showText("Registration form"); cs.endText()
+                label("Full name (required)", NAME); label("Reference (read-only)", LOCKED); label("Code (max 4)", CODE); label("Comments", NOTES)
+                label("I agree to the terms", AGREE.let { PDRectangle(it.lowerLeftX + 22f, it.lowerLeftY - 14f, 10f, 10f) }); label("Favourite colour: Red / Blue", PDRectangle(60f, 542f, 10f, 10f)); label("Fruit", COLOR); label("Pets", LIST); label("Signature", SIGN)
+            }
             if (xfaOnly) {
                 form.cosObject.setItem(COSName.getPDFName("XFA"), doc.document.createCOSStream())
             } else {
