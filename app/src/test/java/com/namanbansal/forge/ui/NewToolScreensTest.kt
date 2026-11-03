@@ -88,7 +88,7 @@ class NewToolScreensTest {
     @Test fun everyNewScreenShowsItsPickStateViaTheDefaultViewModelFactory() {
         val cases = listOf(
             "P1" to "Choose PDFs to merge", "P2" to "Choose a PDF to split", "P3" to "Choose a PDF to organise",
-            "P5" to "Choose a PDF to extract pages from", "P6" to "Choose the PDF to add pages to", "P40" to "Choose a PDF to read",
+            "P5" to "Choose a PDF to extract pages from", "P6" to "Choose the PDF to add pages to", "P40" to "Open PDF",
         )
         var current by androidx.compose.runtime.mutableStateOf(cases.first().first)
         compose.setContent { ForgeTheme { androidx.compose.runtime.key(current) { com.namanbansal.forge.tools.ToolScreens.screens.getValue(current)(host(current)) } } }
@@ -220,7 +220,7 @@ class NewToolScreensTest {
         compose.setContent { ForgeTheme { ViewerScreen(host("P40"), vm) } }
         val f = PdfFixtures.withText(File(tmp.root, "v.pdf"), 8, body = { listOf("find the needle here") })
         vm.onFilesPicked(listOf(PickedFile(Uri.fromFile(f), "v.pdf", f.length(), "application/pdf")))
-        pump { vm.source.value != null && vm.aspects.value != null }
+        pump { vm.source.value != null && vm.aspects.value != null && vm.restored.value }
         compose.onNodeWithText("v.pdf").assertExists()
         compose.onNodeWithContentDescription("of 8", substring = true, useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("Dark pages").performClick()
@@ -244,7 +244,7 @@ class NewToolScreensTest {
         var opened: Pair<String, List<PickedFile>>? = null
         compose.setContent { ForgeTheme { ViewerScreen(ToolHost(ToolRegistry.get("P40")!!, {}, { c, f -> opened = c to f }), vm) } }
         vm.onFilesPicked(listOf(pdf("q.pdf", 3)))
-        pump { vm.source.value != null && vm.aspects.value != null }
+        pump { vm.source.value != null && vm.aspects.value != null && vm.restored.value }
         compose.onNodeWithContentDescription("More actions").performClick()
         compose.onNodeWithText("Open this PDF in…").assertExists()
         compose.onNodeWithText("Split PDF").performClick()

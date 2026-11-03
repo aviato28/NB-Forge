@@ -190,7 +190,7 @@ class ToolScreensScreenshotTest {
     private fun viewer(searchFor: String?): ViewerViewModel {
         val vm = ViewerViewModel(app, SavedStateHandle())
         vm.onFilesPicked(listOf(pdf("annual_report.pdf", 12, 5_100_000, title = "Annual report 2026")))
-        compose.pumpUntil { vm.source.value != null && vm.thumbnails.value != null && vm.aspects.value != null }
+        compose.pumpUntil { vm.source.value != null && vm.thumbnails.value != null && vm.aspects.value != null && vm.restored.value }
         if (searchFor != null) {
             vm.search(searchFor)
             compose.pumpUntil { vm.hits.value.size >= 3 && !vm.searching.value }

@@ -162,6 +162,12 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         viewModelScope.launch { _outline.value = index()?.let { withContext(Dispatchers.IO) { it.outline() } }.orEmpty() }
     }
 
+    private val _flash = MutableStateFlow<LinkFlash?>(null)
+    /** The link that was just tapped (drives the ripple). */
+    val flash: StateFlow<LinkFlash?> = _flash.asStateFlow()
+    private var flashId = 0
+    fun flashLink(page: Int, link: PageLink) { _flash.value = LinkFlash(page, link.rect, ++flashId) }
+
     private val _selection = MutableStateFlow<TextSelection?>(null)
     val selection: StateFlow<TextSelection?> = _selection.asStateFlow()
     fun setSelection(s: TextSelection?) { _selection.value = s?.takeIf { !it.isEmpty } }

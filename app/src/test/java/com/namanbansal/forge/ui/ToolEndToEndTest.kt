@@ -362,7 +362,7 @@ class ToolEndToEndTest {
         val vm = ViewerViewModel(app, handle)
         val f = PdfFixtures.withText(File(tmp.root, "v.pdf"), 6, body = { p -> if (p == 2 || p == 5) listOf("the final figures") else listOf("nothing") })
         vm.onFilesPicked(listOf(PickedFile(Uri.fromFile(f), "v.pdf", f.length(), "application/pdf")))
-        pump { vm.source.value != null && vm.aspects.value != null }
+        pump { vm.source.value != null && vm.aspects.value != null && vm.restored.value }
         vm.search("figures")
         pump { vm.hits.value.size == 2 && !vm.searching.value }
         assertEquals(listOf(1, 4), vm.hits.value.map { it.page })
