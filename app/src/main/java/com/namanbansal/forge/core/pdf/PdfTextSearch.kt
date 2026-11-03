@@ -109,7 +109,7 @@ class PdfTextSearch(file: File) : Closeable {
     override fun close() { runCatching { doc.close() } }
 
     /** Gathers one page's text and the [TextPosition] of every character (null for the separators it adds). */
-    private class Collector : PDFTextStripper() {
+    internal class Collector : PDFTextStripper() {
         private val sb = StringBuilder()
         val positions = ArrayList<TextPosition?>()
         var pageSize: Pair<Float, Float> = 0f to 0f

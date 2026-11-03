@@ -31,13 +31,15 @@ class OutputSaver(context: Context) {
         ext: String,
         mime: String,
         onSaved: (SavedOutput) -> Unit = {},
+        subDir: String = "",
         write: suspend (OutputStream) -> Unit,
     ): SavedOutput = withContext(Dispatchers.IO) {
-        val name = OutputNaming.build(originalName, action, ext) { exists(it) }
+        val path = RELATIVE_PATH + subDir
+        val name = OutputNaming.build(originalName, action, ext) { exists(it, path) }
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, RELATIVE_PATH)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, path)
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
@@ -56,12 +58,12 @@ class OutputSaver(context: Context) {
         }
     }
 
-    private fun exists(displayName: String): Boolean = try {
+    private fun exists(displayName: String, path: String): Boolean = try {
         resolver.query(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             arrayOf(MediaStore.MediaColumns._ID),
             "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
-            arrayOf(displayName, RELATIVE_PATH),
+            arrayOf(displayName, path),
             null,
         )?.use { it.count > 0 } ?: false
     } catch (_: Exception) {

@@ -63,7 +63,13 @@ class MainActivity : ComponentActivity() {
         if (uris.isEmpty()) return
         lifecycleScope.launch {
             // Read name/size right away while the sender's temporary read grant is certainly alive.
-            val files = IncomingIntents.accept(uris.map { FileResolver.resolve(this@MainActivity, it) })
+            val files = IncomingIntents.accept(uris.map { uri ->
+                // Providers sometimes report no type or a generic one; the sender said it is a PDF.
+                val f = FileResolver.resolve(this@MainActivity, uri)
+                if (intent?.type == "application/pdf" && f.kind == com.namanbansal.forge.core.FileKind.OTHER) f.copy(mime = "application/pdf") else f
+            })
+            // Keep read access for "recent" if the sender allows it (most don't; recents then say the file is gone).
+            if (intent?.action == Intent.ACTION_VIEW) uris.forEach { runCatching { contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
             if (files.isNotEmpty()) {
                 incomingIsView.value = intent?.action == Intent.ACTION_VIEW
                 incoming.value = files

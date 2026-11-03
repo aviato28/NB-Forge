@@ -15,6 +15,14 @@ import kotlinx.coroutines.flow.map
 
 enum class ThemeMode { System, Light, Dark }
 
+/** Viewer layout choices, shared by every document. Defaults: continuous vertical scroll, fit width, one page, screen kept on. */
+data class ViewerPrefs(
+    val pageByPage: Boolean = false,
+    val fitPage: Boolean = false,
+    val twoPageLandscape: Boolean = false,
+    val keepScreenOn: Boolean = true,
+)
+
 data class Settings(
     val theme: ThemeMode = ThemeMode.System,
     val pins: List<String> = ToolRegistry.DEFAULT_PINS,
@@ -22,6 +30,7 @@ data class Settings(
     val autoCheckUpdates: Boolean = true,
     val betaUpdates: Boolean = false,
     val lastUpdateCheck: Long = 0L,
+    val viewer: ViewerPrefs = ViewerPrefs(),
 )
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "forge_settings")
@@ -38,6 +47,10 @@ class SettingsRepository(context: Context) {
         val AUTO_CHECK = booleanPreferencesKey("auto_check_updates")
         val BETA = booleanPreferencesKey("beta_updates")
         val LAST_CHECK = longPreferencesKey("last_update_check")
+        val V_PAGED = booleanPreferencesKey("viewer_page_by_page")
+        val V_FIT_PAGE = booleanPreferencesKey("viewer_fit_page")
+        val V_TWO_PAGE = booleanPreferencesKey("viewer_two_page")
+        val V_KEEP_ON = booleanPreferencesKey("viewer_keep_screen_on")
     }
 
     private fun String?.toList(): List<String>? = this?.split('\n')?.filter { it.isNotBlank() }
@@ -50,6 +63,12 @@ class SettingsRepository(context: Context) {
             autoCheckUpdates = p[Keys.AUTO_CHECK] ?: true,
             betaUpdates = p[Keys.BETA] ?: false,
             lastUpdateCheck = p[Keys.LAST_CHECK] ?: 0L,
+            viewer = ViewerPrefs(
+                pageByPage = p[Keys.V_PAGED] ?: false,
+                fitPage = p[Keys.V_FIT_PAGE] ?: false,
+                twoPageLandscape = p[Keys.V_TWO_PAGE] ?: false,
+                keepScreenOn = p[Keys.V_KEEP_ON] ?: true,
+            ),
         )
     }
 
@@ -95,6 +114,13 @@ class SettingsRepository(context: Context) {
     suspend fun setAutoCheck(enabled: Boolean) = store.edit { it[Keys.AUTO_CHECK] = enabled }
 
     suspend fun setBeta(enabled: Boolean) = store.edit { it[Keys.BETA] = enabled }
+
+    suspend fun setViewerPrefs(prefs: ViewerPrefs) = store.edit {
+        it[Keys.V_PAGED] = prefs.pageByPage
+        it[Keys.V_FIT_PAGE] = prefs.fitPage
+        it[Keys.V_TWO_PAGE] = prefs.twoPageLandscape
+        it[Keys.V_KEEP_ON] = prefs.keepScreenOn
+    }
 
     suspend fun setLastUpdateCheck(time: Long) = store.edit { it[Keys.LAST_CHECK] = time }
 

@@ -46,6 +46,18 @@ object PdfLoader {
         copyStream(input, workDir(context.cacheDir))
     }
 
+    /** True if [uri] starts with `%PDF-` (within the first KB, as the spec allows). */
+    suspend fun looksLikePdf(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        try {
+            context.contentResolver.openInputStream(uri)?.use { i ->
+                val buf = ByteArray(1024)
+                var n = 0
+                while (n < buf.size) { val r = i.read(buf, n, buf.size - n); if (r < 0) break; n += r }
+                String(buf, 0, n, Charsets.ISO_8859_1).contains("%PDF-")
+            } ?: false
+        } catch (_: Exception) { false }
+    }
+
     fun copyStream(input: InputStream, dir: File): File {
         dir.mkdirs()
         val out = File(dir, "in-${UUID.randomUUID()}.pdf")

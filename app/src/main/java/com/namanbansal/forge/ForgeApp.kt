@@ -36,11 +36,17 @@ class ForgeApp : Application() {
     val pendingFiles = PendingFiles()
     val recents: RecentFilesStore by lazy { RecentFilesStore(File(filesDir, "recent_files.json")) }
 
+    val viewerPositions: com.namanbansal.forge.core.pdf.viewer.ViewerPositionStore by lazy {
+        com.namanbansal.forge.core.pdf.viewer.ViewerPositionStore(File(filesDir, "viewer_positions.json"), File(filesDir, "viewer_covers"))
+    }
+    val documentWriter: com.namanbansal.forge.core.DocumentWriter by lazy { com.namanbansal.forge.core.DocumentWriter.create(this, outputSaver) }
+
     override fun onCreate() {
         super.onCreate()
         PDFBoxResourceLoader.init(applicationContext) // once; PDFBox needs it for its bundled resources
         appScope.launch {
             recents.load()
+            viewerPositions.load()
             // Working copies from a previous run are never reused.
             File(cacheDir, com.namanbansal.forge.core.pdf.PdfLoader.WORK_DIR).deleteRecursively()
         }
