@@ -178,7 +178,9 @@ class InsertViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     }
 
     override fun onInputsReset() {
-        clearOther()
+        // Release only: the persisted choices (second file, its pages) are reset by the base class for NEW files and kept when restoring.
+        _other.value?.close()
+        _other.value = null
         cancelOtherPassword()
         super.onInputsReset()
     }

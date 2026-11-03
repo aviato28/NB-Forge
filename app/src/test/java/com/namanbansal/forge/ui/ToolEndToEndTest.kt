@@ -152,7 +152,7 @@ class ToolEndToEndTest {
         val vm = SplitViewModel(app, SavedStateHandle())
         vm.onFilesPicked(listOf(pdf("report.pdf", 10)))
         pump { vm.source.value != null && vm.bookmarks.value != null }
-        vm.setRanges("1-3, 5, 8-10"); vm.setMakeZip(true)
+        vm.setMode(SplitMode.Ranges); vm.setRanges("1-3, 5, 8-10"); vm.setMakeZip(true)
         runToResult(vm)
         val r = vm.result.value!!
         assertEquals(listOf("report_p1-3.pdf", "report_p5.pdf", "report_p8-10.pdf"), r.outputs.map { it.displayName })
@@ -307,7 +307,7 @@ class ToolEndToEndTest {
         pump { vm.other.value != null }
         vm.setOtherRange("5, 1"); vm.setPosition(InsertPosition.End)
         runToResult(vm)
-        assertEquals(listOf(h(1), h(2), h(3), h(4), h(5), h(1)), heights(saved().last()))
+        assertEquals(listOf(h(1), h(2), h(3), h(4), h(1), h(5)), heights(saved().last())) // picked pages go in page order
     }
 
     @Test fun insertFromPdfNeedsAFileAndAValidRangeAndKeepsPassword() {
@@ -323,6 +323,8 @@ class ToolEndToEndTest {
         vm.setOtherRange("9")
         assertTrue(vm.blocker()!!.contains("doesn't exist"))
         vm.setOtherRange("")
+        assertTrue(vm.blocker()!!.contains("at least one page"))
+        vm.selectAllOther()
         assertNull(vm.blocker())
         assertEquals(2, vm.insertCount())
         runToResult(vm)
@@ -377,5 +379,49 @@ class ToolEndToEndTest {
         pump { again.source.value != null }
         assertEquals(3, again.lastPage.value); assertTrue(again.invert.value); assertEquals(2.5f, again.zoom.value)
         assertNotNull(again.aspects)
+    }
+
+    // ---- visual page tools survive process death --------------------------------------------------------------
+
+    @Test fun splitCutsAndExtractSelectionAndInsertChoicesSurviveProcessDeath() {
+        val split = SavedStateHandle()
+        val a = SplitViewModel(app, split)
+        a.onFilesPicked(listOf(pdf("sc.pdf", 10, unique = false)))
+        pump { a.source.value != null }
+        a.toggleCut(3); a.toggleCut(7); a.toggleCut(30) // 30 is not a gap and is ignored
+        assertEquals(setOf(3, 7), a.cuts.value)
+        val a2 = SplitViewModel(app, split)
+        pump { a2.source.value != null }
+        assertEquals(SplitMode.Cut, a2.mode.value)
+        assertEquals(setOf(3, 7), a2.cuts.value)
+        assertEquals(listOf(3, 4, 3), (a2.plan() as SplitPlan.Valid).parts.map { it.pages.size })
+        runToResult(a2)
+        assertEquals(listOf("sc_p1-3.pdf", "sc_p4-7.pdf", "sc_p8-10.pdf"), a2.result.value!!.outputs.map { it.displayName })
+
+        val ex = SavedStateHandle()
+        val e = ExtractViewModel(app, ex)
+        e.onFilesPicked(listOf(pdf("ec.pdf", 9)))
+        pump { e.source.value != null }
+        e.setSelection(setOf(0, 1, 5)); e.setText("1-2, 6, 99")
+        val e2 = ExtractViewModel(app, ex)
+        pump { e2.source.value != null }
+        assertEquals(setOf(0, 1, 5), e2.selected.value)
+        assertEquals("1-2, 6, 99", e2.rangeText.value) // the typed text (with its error) is restored too
+        assertTrue(e2.textError()!!.contains("doesn't exist"))
+
+        val ins = SavedStateHandle()
+        val i = InsertViewModel(app, ins)
+        i.onFilesPicked(listOf(pdf("ic.pdf", 6)))
+        pump { i.source.value != null }
+        i.setFromPdf(true); i.pickOther(pdf("io.pdf", 5).uri)
+        pump { i.other.value != null }
+        i.setOtherSelection(setOf(1, 3)); i.setInsertGap(4)
+        val i2 = InsertViewModel(app, ins)
+        pump { i2.source.value != null && i2.other.value != null }
+        assertEquals(setOf(1, 3), i2.otherSelection.value)
+        assertEquals("2, 4", i2.otherRange.value)
+        assertEquals(4, i2.insertGap())
+        runToResult(i2)
+        assertEquals(listOf(h(1), h(2), h(3), h(4), h(2), h(4), h(5), h(6)), heights(saved().last()))
     }
 }

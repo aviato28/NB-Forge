@@ -149,16 +149,10 @@ private fun ColumnScope.SplitOptions(
                         Legend(parts, mode, c.isDark)
                     }
                     Spacer(Modifier.height(12.dp))
-                }
-            }
-        },
-        footer = {
-            fullWidthItem("split-footer") {
-                Column {
-                    if (parts != null && parts.size > 100) InfoNote("That is a lot of files. They are all saved to Downloads/Forge; the ZIP option keeps them tidy.", Modifier.padding(top = 4.dp, bottom = 8.dp))
+                    if (parts != null && parts.size > 100) InfoNote("That is a lot of files. They are all saved to Downloads/Forge; the ZIP option keeps them tidy.", Modifier.padding(bottom = 8.dp))
                     ToggleRow("Also save a ZIP", zip, vm::setMakeZip, subtitle = "One archive with all the files, handy for sharing")
                     if (protectionNote != null) InfoNote(protectionNote, Modifier.padding(top = 8.dp))
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                 }
             }
         },

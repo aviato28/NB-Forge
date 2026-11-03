@@ -10,7 +10,10 @@ import com.namanbansal.forge.core.PdfFixtures
 import com.namanbansal.forge.core.PickedFile
 import com.namanbansal.forge.core.SavedOutput
 import com.namanbansal.forge.core.ToolResult
-import com.namanbansal.forge.core.pdf.InsertPosition
+import com.namanbansal.forge.core.pdf.PdfThumbnails
+import com.namanbansal.forge.tools.pdf.SplitMode
+import com.namanbansal.forge.ui.toolkit.GridPage
+import com.namanbansal.forge.ui.toolkit.PagePeekContent
 import com.namanbansal.forge.tools.ToolHost
 import com.namanbansal.forge.tools.ToolRegistry
 import com.namanbansal.forge.tools.pdf.ExtractScreen
@@ -65,6 +68,14 @@ class ToolScreensScreenshotTest {
         compose.shootBoth("merge", settle = { Thread.sleep(200); compose.waitForIdle() }) { MergeScreen(host("P1"), vm) }
     }
 
+    @Test fun mergeExpanded() {
+        val vm = MergeViewModel(app, SavedStateHandle())
+        vm.onFilesPicked(listOf(pdf("contract_signed.pdf", 6, 1_800_000), pdf("appendix_a.pdf", 12, 4_200_000), pdf("invoice_oct.pdf", 3, 640_000)))
+        compose.pumpUntil { vm.items.value.size == 3 && vm.items.value.all { it.status == MergeStatus.Ready } }
+        vm.toggleExpanded(vm.items.value[1].id)
+        compose.shootBoth("merge-expanded", settle = { Thread.sleep(400); compose.waitForIdle() }) { MergeScreen(host("P1"), vm) }
+    }
+
     @Test fun mergeWithProblems() {
         val bad = File(tmp.root, "broken_scan.pdf").also { PdfFixtures.corrupt(it) }
         val vm = MergeViewModel(app, SavedStateHandle())
@@ -73,19 +84,27 @@ class ToolScreensScreenshotTest {
         compose.shootBoth("merge-problems", settle = { Thread.sleep(200); compose.waitForIdle() }) { MergeScreen(host("P1"), vm) }
     }
 
-    @Test fun split() {
+    @Test fun splitCut() {
         val vm = SplitViewModel(app, SavedStateHandle())
         vm.onFilesPicked(listOf(pdf("report_2026.pdf", 12, 3_100_000)))
         compose.pumpUntil { vm.source.value != null && vm.thumbnails.value != null && vm.bookmarks.value != null }
-        vm.setRanges("1-3, 5, 8-10")
-        compose.shootBoth("split", settle = { Thread.sleep(200); compose.waitForIdle() }) { SplitScreen(host("P2"), vm) }
+        vm.toggleCut(3); vm.toggleCut(7); vm.toggleCut(9)
+        compose.shootBoth("split-cut", settle = { Thread.sleep(300); compose.waitForIdle() }) { SplitScreen(host("P2"), vm) }
+    }
+
+    @Test fun splitRanges() {
+        val vm = SplitViewModel(app, SavedStateHandle())
+        vm.onFilesPicked(listOf(pdf("report_2026.pdf", 12, 3_100_000)))
+        compose.pumpUntil { vm.source.value != null && vm.thumbnails.value != null && vm.bookmarks.value != null }
+        vm.setMode(SplitMode.Ranges); vm.setRanges("1-3, 5, 8-10")
+        compose.shootBoth("split-ranges", settle = { Thread.sleep(300); compose.waitForIdle() }) { SplitScreen(host("P2"), vm) }
     }
 
     @Test fun splitInvalidRange() {
         val vm = SplitViewModel(app, SavedStateHandle())
         vm.onFilesPicked(listOf(pdf("report_2026.pdf", 12, 3_100_000)))
         compose.pumpUntil { vm.source.value != null && vm.thumbnails.value != null && vm.bookmarks.value != null }
-        vm.setRanges("1-3, 15")
+        vm.setMode(SplitMode.Ranges); vm.setRanges("1-3, 15")
         compose.shootBoth("split-invalid", settle = { Thread.sleep(200); compose.waitForIdle() }) { SplitScreen(host("P2"), vm) }
     }
 
@@ -124,19 +143,26 @@ class ToolScreensScreenshotTest {
         compose.shootBoth("extract", settle = { Thread.sleep(300); compose.waitForIdle() }) { ExtractScreen(host("P5"), vm) }
     }
 
-    @Test fun extractRanges() {
+    @Test fun extractInvalidRange() {
         val vm = ExtractViewModel(app, SavedStateHandle())
         vm.onFilesPicked(listOf(pdf("annual_report.pdf", 9, 5_100_000)))
         compose.pumpUntil { vm.source.value != null && vm.thumbnails.value != null }
-        vm.setView(1); vm.setText("2-4, 7")
-        compose.shootBoth("extract-ranges", settle = { Thread.sleep(200); compose.waitForIdle() }) { ExtractScreen(host("P5"), vm) }
+        vm.setText("2-4, 7"); vm.setText("2-4, 70")
+        compose.shootBoth("extract-invalid", settle = { Thread.sleep(300); compose.waitForIdle() }) { ExtractScreen(host("P5"), vm) }
+    }
+
+    @Test fun pagePeek() {
+        val f = PdfFixtures.withText(File(tmp.root, "peek.pdf"), 8, title = "Quarterly report", uniqueHeights = false)
+        val thumbs = PdfThumbnails(f)
+        val pages = List(8) { GridPage("p$it", thumbs, it, "${it + 1}") }
+        compose.shootBoth("page-peek", settle = { Thread.sleep(500); compose.waitForIdle() }) { PagePeekContent(pages, 2, {}, {}) }
     }
 
     @Test fun insertBlank() {
         val vm = InsertViewModel(app, SavedStateHandle())
         vm.onFilesPicked(listOf(pdf("thesis_draft.pdf", 14, 7_000_000)))
         compose.pumpUntil { vm.source.value != null && vm.thumbnails.value != null }
-        vm.setBlankCount(2); vm.setPosition(InsertPosition.AfterPage); vm.setPositionPage(3)
+        vm.setBlankCount(2); vm.setInsertGap(3)
         compose.shootBoth("insert-blank", settle = { Thread.sleep(200); compose.waitForIdle() }) { InsertScreen(host("P6"), vm) }
     }
 
@@ -147,8 +173,18 @@ class ToolScreensScreenshotTest {
         val other = pdf("cover_page.pdf", 4, 400_000)
         vm.setFromPdf(true); vm.pickOther(other.uri)
         compose.pumpUntil { vm.other.value != null }
-        vm.setPosition(InsertPosition.Start); vm.setOtherRange("1-2")
-        compose.shootBoth("insert-from-pdf", settle = { Thread.sleep(200); compose.waitForIdle() }) { InsertScreen(host("P6"), vm) }
+        vm.setInsertGap(2); vm.setOtherRange("1-2")
+        compose.shootBoth("insert-from-pdf", settle = { Thread.sleep(500); compose.waitForIdle() }) { InsertScreen(host("P6"), vm) }
+    }
+
+    @Test fun insertPickPages() {
+        val vm = InsertViewModel(app, SavedStateHandle())
+        vm.onFilesPicked(listOf(pdf("thesis_draft.pdf", 14, 7_000_000)))
+        compose.pumpUntil { vm.source.value != null && vm.thumbnails.value != null }
+        vm.setFromPdf(true); vm.pickOther(pdf("cover_page.pdf", 6, 400_000).uri)
+        compose.pumpUntil { vm.other.value != null }
+        vm.setStep(0); vm.setOtherSelection(setOf(0, 1, 4))
+        compose.shootBoth("insert-pick-pages", settle = { Thread.sleep(500); compose.waitForIdle() }) { InsertScreen(host("P6"), vm) }
     }
 
     private fun viewer(searchFor: String?): ViewerViewModel {
