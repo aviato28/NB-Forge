@@ -9,7 +9,10 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.namanbansal.forge.ForgeApp
@@ -183,6 +186,44 @@ class ViewerRound1bTest {
         pump { runCatching { compose.onNodeWithText("Pages").assertExists() }.isSuccess }
         compose.onNodeWithText("Bookmarks").performClick()
         pump { runCatching { compose.onNodeWithText("No bookmarks in this PDF").assertExists() }.isSuccess }
+    }
+
+    @Test fun doubleTapZoomsAndRendersSharpTiles() {
+        val vm = openViewer(3)
+        val tiles = vm.tiles.value!!
+        compose.onNodeWithContentDescription("Page 1").performTouchInput { doubleClick(center) }
+        pump { tiles.rendered > 0 }
+        assertTrue(tiles.cachedBytes() > 0)
+        assertEquals(2.5f, vm.zoom.value, 0.001f)
+        compose.onNodeWithContentDescription("Page 1").performTouchInput { doubleClick(center) } // and back to fit width
+        pump { vm.zoom.value == 1f }
+    }
+
+    @Test fun tappingAnExternalLinkAsksBeforeOpening() {
+        val f = File(tmp.root, "links.pdf")
+        com.tom_roush.pdfbox.pdmodel.PDDocument().use { d ->
+            d.addPage(com.tom_roush.pdfbox.pdmodel.PDPage(com.tom_roush.pdfbox.pdmodel.common.PDRectangle.A4))
+            val l = com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink().apply {
+                rectangle = com.tom_roush.pdfbox.pdmodel.common.PDRectangle(100f, 700f, 100f, 20f)
+                action = com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI().apply { uri = "https://example.com/forge" }
+            }
+            d.getPage(0).annotations = listOf(l); d.save(f)
+        }
+        val vm = ViewerViewModel(app, SavedStateHandle())
+        compose.setContent { ForgeTheme { ViewerScreen(host(), vm) } }
+        vm.onFilesPicked(listOf(PickedFile(Uri.fromFile(f), "links.pdf", f.length(), "application/pdf")))
+        pump { vm.source.value != null && vm.restored.value && vm.aspects.value != null }
+        val found = runBlocking { vm.pageLinks(0) }
+        assertEquals("links: $found", 1, found.size)
+        compose.waitForIdle(); Thread.sleep(300); compose.waitForIdle()
+        // A4 at 1233 px wide: 2.07 px per point; the link centre is (150, 132 from the top) pt, below a 60 dp (180 px) gutter.
+        compose.onNodeWithContentDescription("Page 1").performTouchInput { click(androidx.compose.ui.geometry.Offset(150f * 2.07f, 132f * 2.07f)) }
+        compose.mainClock.advanceTimeBy(600) // a single tap is confirmed only after the double-tap window
+        compose.waitForIdle()
+        assertNotNull("flash after tap", vm.flash.value)
+        pump { runCatching { compose.onNodeWithText("Open this link?").assertExists() }.isSuccess }
+        compose.onNodeWithText("https://example.com/forge").assertExists()
+        compose.onNodeWithText("Cancel").performClick()
     }
 
     // ---- outline panel -----------------------------------------------------------------------------------------------

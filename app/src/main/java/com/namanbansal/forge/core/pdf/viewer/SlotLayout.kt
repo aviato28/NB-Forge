@@ -19,9 +19,9 @@ object SlotLayout {
     /**
      * Sizes the pages of one slot. [viewportW]/[viewportH] are the unzoomed viewport; the content is [zoom] times wider.
      * Fit-width makes a single page as wide as the viewport (a spread splits the width); fit-page also keeps it within the
-     * viewport height. Pages are centred in the slot; the slot is at least [minHeight] tall (paged mode centres vertically).
+     * viewport height. [topInset] adds empty space above the pages (room for the top bar above the first page). Pages are centred in the slot; the slot is at least [minHeight] tall (paged mode centres vertically).
      */
-    fun compute(pages: IntRange, aspects: FloatArray?, viewportW: Int, viewportH: Int, zoom: Float, fitPage: Boolean, minHeight: Int = 0): SlotGeometry {
+    fun compute(pages: IntRange, aspects: FloatArray?, viewportW: Int, viewportH: Int, zoom: Float, fitPage: Boolean, minHeight: Int = 0, topInset: Int = 0): SlotGeometry {
         val n = pages.last - pages.first + 1
         val cell = viewportW.toFloat() / n
         val widths = pages.map { p ->
@@ -30,11 +30,11 @@ object SlotLayout {
             (base * zoom).toInt().coerceAtLeast(1)
         }
         val heights = pages.mapIndexed { i, p -> (widths[i] / (aspects?.getOrNull(p) ?: 0.707f).coerceAtLeast(0.05f)).toInt().coerceAtLeast(1) }
-        val slotH = maxOf(heights.max(), minHeight)
+        val slotH = maxOf(heights.max(), minHeight) + topInset
         val slotW = (viewportW * zoom).toInt()
         var x = ((slotW - widths.sum()) / 2).coerceAtLeast(0)
         val boxes = pages.mapIndexed { i, p ->
-            PageBox(p, x, (slotH - heights[i]) / 2, widths[i], heights[i]).also { x += widths[i] }
+            PageBox(p, x, topInset + (slotH - topInset - heights[i]) / 2, widths[i], heights[i]).also { x += widths[i] }
         }
         return SlotGeometry(slotH, boxes)
     }

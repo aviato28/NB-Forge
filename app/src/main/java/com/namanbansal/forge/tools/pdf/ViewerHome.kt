@@ -96,7 +96,7 @@ fun ViewerHome(
                     Text("Report copies technical details (no file contents) so you can paste them in a message.", style = ForgeType.Tiny, color = c.text2)
                 }
             }
-            item("open") { ForgeButton("Open PDF", onOpenPdf, Modifier.fillMaxWidth(), icon = ForgeIcons.Open) }
+            item("open") { ForgeButton("Open PDF", onOpenPdf, Modifier.fillMaxWidth(), icon = ForgeIcons.Folder) }
             item("label") { GroupLabel("Recent") }
             if (recents.isEmpty()) item("empty") {
                 EmptyState(ForgeIcons.FileText, "No recent PDFs yet", "PDFs you read here, or open from other apps, show up in this list.")

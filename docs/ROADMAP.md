@@ -18,12 +18,12 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
 - [x] Default pins → Merge, Split, Viewer, Page manager (migrate users still on the old defaults)
 
 **1B. Viewer as default PDF app**
-- [ ] Sharp zoom (tiled hi-res rendering of the visible area)
-- [ ] Text select + copy, tappable links (external + internal), outline/bookmarks panel
-- [ ] Remember the last page per document; viewer home with recent PDFs
-- [ ] Fit-width, landscape two-page, page-by-page setting, dark pages
-- [ ] Settings → "Make Forge your PDF viewer" guided setup
-- [ ] Write-back infrastructure: detect a writable URI, back up the original, then overwrite (used in Round 2)
+- [x] Sharp zoom (tiled hi-res rendering of the visible area)
+- [x] Text select + copy, tappable links (external + internal), outline/bookmarks panel
+- [x] Remember the last page per document; viewer home with recent PDFs
+- [x] Fit-width, landscape two-page, page-by-page setting, dark pages
+- [x] Settings → "Make Forge your PDF viewer" guided setup
+- [x] Write-back infrastructure: detect a writable URI, back up the original, then overwrite (used in Round 2)
 
 ## Round 2 — Edit inside the viewer
 - [ ] Annotate: highlight, underline, strike, pen, notes (P17)

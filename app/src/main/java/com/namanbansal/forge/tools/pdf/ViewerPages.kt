@@ -97,6 +97,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.roundToInt
 
 const val MAX_ZOOM = 8f
+private val TOP_BAR_GUTTER = 60.dp
 private const val DOUBLE_TAP_ZOOM = 2.5f
 
 /** "Go to this page" asked by the chrome (page jump, outline, search hit); [nonce] makes repeated jumps to one page count. */
@@ -165,8 +166,10 @@ private fun PagesInner(
     val linkCache = remember { HashMap<Int, List<PageLink>>() }
 
     val aspectsRef = rememberUpdatedState(aspects)
+    // The first page of a continuous document starts below the top bar, so its first lines are readable with the bars shown.
+    val topInsetPx = with(density) { TOP_BAR_GUTTER.roundToPx() }
     fun geo(slot: Int, z: Float): SlotGeometry =
-        SlotLayout.compute(slots[slot], aspectsRef.value, vw, vh, z, fitPage, minHeight = if (paged) vh else 0)
+        SlotLayout.compute(slots[slot], aspectsRef.value, vw, vh, z, fitPage, minHeight = if (paged) vh else 0, topInset = if (!paged && slot == 0) topInsetPx else 0)
 
     // ---- current page, scrolling activity, jumps ------------------------------------------------------------------
     val currentSlot by remember {

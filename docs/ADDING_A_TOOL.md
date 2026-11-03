@@ -101,3 +101,13 @@ Anything that asks the user for pages should show them, not ask for page numbers
 `./gradlew recordRoborazziDebug --tests '*ScreenshotTest'` writes light/dark PNGs of every screen to `docs/screenshots/`
 (Roborazzi, Robolectric native graphics, 411x891dp). Plain `testDebugUnitTest` renders the same screens but writes nothing.
 Look at the PNGs after UI changes. Robolectric's PdfRenderer draws nothing, so tests swap in `PdfBoxRasterizer`.
+
+## The viewer (Round 1B)
+
+`tools/pdf/Viewer*.kt` is the app's PDF reader and the hub for Round 2 editing. Pieces worth reusing:
+- `core/pdf/viewer/TileRenderer` + `TileCache` + `TileMath`: sharp zoom. The UI says which tiles it wants (`setWanted`); one background thread renders them with `PageRasterizer.renderTile`, results sit in a byte-bounded LRU that never evicts visible tiles. `SlotLayout` sizes pages (single / spread, fit width / page) and is shared by scrolling, tiles and hit-testing.
+- `PdfDocIndex`: lazy per-page text boxes (`PageText`), link rectangles (`PageLink`) and the outline; all coordinates are fractions of the displayed page, so they are valid at any zoom and rotation.
+- `ViewerPositionStore` (recent list + last page/zoom per document, key = hash of the first 64 KB + size) and `ViewerPrefs` in `SettingsRepository` (global layout choices).
+- `DocumentWriter`: back up the original to `Downloads/Forge/Backups/`, overwrite it, verify, else save a copy. No UI yet; Round 2 calls it.
+- Layering for Round 2 modes: `ViewerPages(extraLayer = ...)` draws per page above the tiles and below selection handles; intercept `onTap` in the caller to take over gestures.
+- `DefaultPdfViewer` (Settings > "Make Forge your PDF viewer") detects which app opens PDFs and builds the App Info / test intents; the sample PDF is `assets/forge-sample.pdf`.

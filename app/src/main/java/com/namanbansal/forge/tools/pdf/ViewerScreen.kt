@@ -327,6 +327,7 @@ fun ViewerMenuItems(prefs: ViewerPrefs, onPrefs: ((ViewerPrefs) -> ViewerPrefs) 
     Text("Fit", style = ForgeType.Tiny, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
     Choice("Fit width", !prefs.fitPage && !prefs.pageByPage) { it.copy(fitPage = false) }
     Choice("Fit page", prefs.fitPage || prefs.pageByPage) { it.copy(fitPage = true) }
+    Text("Reading", style = ForgeType.Tiny, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
     Choice("Two pages side by side (landscape)", prefs.twoPageLandscape) { it.copy(twoPageLandscape = !it.twoPageLandscape) }
     Choice("Keep screen on", prefs.keepScreenOn) { it.copy(keepScreenOn = !it.keepScreenOn) }
     HorizontalDivider(color = c.border)
