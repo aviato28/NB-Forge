@@ -94,3 +94,10 @@ dependencies {
     testImplementation(libs.roborazzi)
     testImplementation(libs.roborazzi.compose)
 }
+
+// A hung test must fail the build with a clear culprit instead of burning CI hours.
+tasks.withType<Test>().configureEach {
+    timeout.set(java.time.Duration.ofMinutes(25))
+    testLogging { events("failed", "skipped"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT }
+    maxHeapSize = "3g"
+}
