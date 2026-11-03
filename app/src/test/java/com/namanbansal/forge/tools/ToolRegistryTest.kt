@@ -31,10 +31,10 @@ class ToolRegistryTest {
         assertEquals(ToolRegistry.DEFAULT_PINS.size, ToolRegistry.DEFAULT_PINS.map { ToolRegistry.get(it)!!.shortLabel }.toSet().size)
     }
 
-    @Test fun availableToolsAreTheOrganiseSetPlusAnnotateAndViewer() {
+    @Test fun availableToolsAreTheOrganiseSetPlusAnnotateFillSignAndViewer() {
         val available = ToolRegistry.all.filter { it.status == ToolStatus.Available }
-        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P17", "P40"), available.map { it.code })
-        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P17", "P40"), ToolRegistry.availableFor(setOf(FileKind.PDF)).map { it.code })
+        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P17", "P25", "P27", "P40"), available.map { it.code })
+        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P17", "P25", "P27", "P40"), ToolRegistry.availableFor(setOf(FileKind.PDF)).map { it.code })
         assertTrue(ToolRegistry.availableFor(setOf(FileKind.IMAGE)).isEmpty())
         assertTrue(ToolRegistry.availableFor(emptySet()).isEmpty())
         assertTrue(ToolRegistry.availableFor(setOf(FileKind.PDF, FileKind.IMAGE)).isEmpty()) // mixed: no tool takes both

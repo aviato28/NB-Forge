@@ -50,6 +50,9 @@ class DocumentWriter(private val io: DocumentIo, private val sink: DocumentSink,
 
     suspend fun write(uri: Uri, displayName: String, file: File): WriteResult = write(uri, displayName, file.length()) { file.inputStream() }
 
+    /** Saves [file] as a new copy only, leaving the original alone (for PDFs whose author forbids changing them). */
+    suspend fun writeCopy(displayName: String, file: File, reason: String): WriteResult = copy(displayName, { file.inputStream() }, reason, null)
+
     suspend fun write(uri: Uri, displayName: String, length: Long, content: () -> InputStream): WriteResult {
         val canWrite = try { io.takeWritePermission(uri) || io.probeWrite(uri) } catch (_: Exception) { false }
         if (!canWrite) return copy(displayName, content, "Android didn't give Forge permission to change the original, so your edit was saved as a new file.", null)

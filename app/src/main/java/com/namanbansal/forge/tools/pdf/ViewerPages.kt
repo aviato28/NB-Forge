@@ -275,8 +275,10 @@ private fun PagesInner(
                 val a = anchorAt(down.position) ?: return@awaitEachGesture
                 val aspect = a.box.w.toFloat() / a.box.h.coerceAtLeast(1)
                 val (x0, y0) = fracOf(a, down.position)
+                val startHit = PageHit(a.page, x0, y0, aspect)
+                if (!inp.claimsAt(startHit)) return@awaitEachGesture
                 down.consume()
-                inp.onStart(PageHit(a.page, x0, y0, aspect))
+                inp.onStart(startHit)
                 var travelled = 0f
                 var lastPos = down.position
                 while (true) {

@@ -31,6 +31,9 @@ private data class Lib(val name: String, val owner: String, val licence: String,
 
 private val libs = listOf(
     Lib("Inter typeface", "The Inter Project Authors", "SIL Open Font License 1.1", "licenses/Inter-OFL.txt"),
+    Lib("Dancing Script typeface (signatures)", "The Dancing Script Project Authors", "SIL Open Font License 1.1", "licenses/DancingScript-OFL.txt"),
+    Lib("Caveat typeface (signatures)", "The Caveat Project Authors", "SIL Open Font License 1.1", "licenses/Caveat-OFL.txt"),
+    Lib("Sacramento typeface (signatures)", "Brian J. Bonislawsky DBA Astigmatic", "SIL Open Font License 1.1", "licenses/Sacramento-OFL.txt"),
     Lib("Jetpack Compose & AndroidX", "The Android Open Source Project", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("Kotlin & kotlinx.serialization / coroutines", "JetBrains s.r.o.", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("OkHttp & Okio", "Square, Inc.", "Apache License 2.0", "licenses/Apache-2.0.txt"),

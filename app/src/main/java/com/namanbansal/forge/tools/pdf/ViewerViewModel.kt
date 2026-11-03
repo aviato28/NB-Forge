@@ -16,6 +16,17 @@ import com.namanbansal.forge.core.pdf.annot.Annot
 import com.namanbansal.forge.core.pdf.annot.AnnotSaver
 import com.namanbansal.forge.core.pdf.annot.PdfAnnotIo
 import com.namanbansal.forge.core.pdf.annot.PendingStore
+import com.namanbansal.forge.core.pdf.fill.FillIo
+import com.namanbansal.forge.core.pdf.fill.FillPendingStore
+import com.namanbansal.forge.core.pdf.fill.FillSaveOptions
+import com.namanbansal.forge.core.pdf.form.FormInfo
+import com.namanbansal.forge.core.pdf.form.FormReader
+import com.namanbansal.forge.core.pdf.sign.SigEntry
+import com.namanbansal.forge.core.pdf.sign.SigKind
+import com.namanbansal.forge.core.pdf.sign.SignatureImage
+import com.namanbansal.forge.core.pdf.sign.SignatureLibrary
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.FlowPreview
 import java.io.File
@@ -83,12 +94,61 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     private val modeChosen = persistedBool("viewer.modeChosen", false)
     /** The active mode of the mode bar; survives rotation and process death. */
     val mode: StateFlow<ViewerModeId> = modeState.flow.map { ViewerModeId.entries.getOrElse(it) { ViewerModeId.READ } }.stateIn(viewModelScope, SharingStarted.Eagerly, ViewerModeId.READ)
-    fun setMode(m: ViewerModeId) { if (!m.staysInViewer) return; modeState.value = m.ordinal; modeChosen.value = true; if (m != ViewerModeId.ANNOTATE) annotate.select(null) }
+    fun setMode(m: ViewerModeId) { if (!m.staysInViewer) return; modeState.value = m.ordinal; modeChosen.value = true; if (m != ViewerModeId.ANNOTATE) annotate.select(null); if (m != ViewerModeId.FILL_SIGN) fill.select(null) }
     /** Opens in [m] the first time only (P17 opens Annotate); later rotations and restores keep whatever the user chose. */
     fun startIn(m: ViewerModeId) { if (!modeChosen.value) setMode(m) }
 
     val annotate = AnnotateController(AnnotPrefs(application), viewModelScope) { pageText(it) }
     private val pendingStore by lazy { PendingStore(File(app.filesDir, "annot-pending")) }
+    private val fillPendingStore by lazy { FillPendingStore(File(app.filesDir, "fill-pending")) }
+
+    // ---- Fill & Sign ---------------------------------------------------------------------------------------------------
+    /** The signature library lives in the app's private files, never in Downloads. */
+    val signatures by lazy { SignatureLibrary(File(app.filesDir, "signatures")) }
+    private val _sigEntries = MutableStateFlow<List<SigEntry>>(emptyList())
+    val sigEntries: StateFlow<List<SigEntry>> = _sigEntries.asStateFlow()
+    private val sigBitmaps = HashMap<String, ImageBitmap?>()
+    fun refreshSignatures() { viewModelScope.launch { _sigEntries.value = withContext(Dispatchers.IO) { signatures.list() } } }
+    fun sigBitmap(id: String): ImageBitmap? = sigBitmaps.getOrPut(id) {
+        signatures.png(id)?.let { b -> runCatching { android.graphics.BitmapFactory.decodeByteArray(b, 0, b.size)?.asImageBitmap() }.getOrNull() }
+    }
+
+    val fill = FillSignController(
+        pageAspect = { _aspects.value?.getOrNull(it) ?: 0.707f }, currentPage = { pageState.value },
+        sigAspect = { id -> _sigEntries.value.firstOrNull { it.id == id }?.aspect }, message = { notify(it) },
+    )
+    /** Why this document can't be filled (its author's permissions), or null. */
+    private val _permissionProblem = MutableStateFlow<String?>(null)
+    val permissionProblem: StateFlow<String?> = _permissionProblem.asStateFlow()
+    /** Unsaved changes in any mode. */
+    val anyDirty: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(annotate.session.dirty, fill.session.dirty) { a, b -> a || b }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun saveSignature(kind: SigKind, bitmap: android.graphics.Bitmap, label: String = "") {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { signatures.add(kind, SignatureImage.toPng(bitmap), label) }
+                refreshSignatures()
+                notify(if (kind == SigKind.INITIALS) "Initials saved" else "Signature saved")
+            } catch (e: CancellationException) { throw e
+            } catch (t: Throwable) { notify(t.friendlyMessage()) }
+        }
+    }
+
+    fun deleteSignature(e: SigEntry) {
+        if (fill.usesSignature(e.id)) { notify("\"${e.label}\" is placed on a page. Remove it from the page first, or save, then delete it."); return }
+        viewModelScope.launch { withContext(Dispatchers.IO) { signatures.delete(e.id) }; sigBitmaps.remove(e.id); refreshSignatures() }
+    }
+
+    /** Decodes a picked photo for the signature import, downsampled so a 50 MP picture can't run out of memory. */
+    suspend fun loadPhoto(uri: Uri): android.graphics.Bitmap? = withContext(Dispatchers.IO) {
+        runCatching {
+            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            app.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+            var sample = 1
+            while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2200) sample *= 2
+            app.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }) }
+        }.getOrNull()
+    }
     private var baselineAnnots: List<Annot> = emptyList()
     private var renderFile: File? = null
     private var reloading = false
@@ -108,7 +168,17 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         }
     }
 
-    init { keepPendingOnDisk() }
+    @OptIn(FlowPreview::class)
+    private fun keepFillPendingOnDisk() {
+        viewModelScope.launch {
+            fill.session.state.debounce(300).collect { st ->
+                val key = docKey ?: return@collect
+                withContext(Dispatchers.IO) { if (fill.session.dirty.value) fillPendingStore.save(key, st) else fillPendingStore.clear(key) }
+            }
+        }
+    }
+
+    init { keepPendingOnDisk(); keepFillPendingOnDisk(); refreshSignatures() }
 
     override suspend fun renderFileFor(source: PdfSource): File {
         val dst = File(source.file.parentFile, "render-${UUID.randomUUID()}.pdf")
@@ -120,7 +190,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     }
 
     /** Writes the annotations into the PDF (backup + overwrite, or a copy), tells the user which, and reloads in place. */
-    fun saveAnnotations(onDone: (Boolean) -> Unit = {}) {
+    fun saveAnnotations(options: FillSaveOptions = FillSaveOptions(), onDone: (Boolean) -> Unit = {}) {
         val src = source.value ?: return
         val input = inputs.value.firstOrNull() ?: return
         if (_saving.value) return
@@ -130,11 +200,14 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
             try {
                 val saver = AnnotSaver(app.documentWriter, File(app.cacheDir, PdfLoader.WORK_DIR))
                 val session = annotate.session
-                val out = saver.save(input.uri, input.name, src.file, src.protection, session.baseline, session.current)
+                val fillState = fill.session.current
+                val problem = if (fillState.isEmpty) null else _permissionProblem.value
+                val extra: ((File) -> Unit)? = if (fillState.isEmpty) null else { f -> FillIo.applyInPlace(f, fillState, options) { signatures.png(it) } }
+                val out = saver.save(input.uri, input.name, src.file, src.protection, session.baseline, session.current, extra, copyOnly = problem != null, copyReason = problem?.let { "$it Your changes were saved as a copy." }.orEmpty())
                 val oldKey = docKey
                 reloading = true
                 reopen(out.reloadFile, src.protection)
-                withContext(Dispatchers.IO) { oldKey?.let { pendingStore.clear(it) }; docKey?.let { pendingStore.clear(it) } }
+                withContext(Dispatchers.IO) { oldKey?.let { pendingStore.clear(it); fillPendingStore.clear(it) }; docKey?.let { pendingStore.clear(it); fillPendingStore.clear(it) } }
                 notify(out.message)
                 ok = true
             } catch (e: CancellationException) {
@@ -151,8 +224,9 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     /** "Discard": forgets the unsaved annotations (and their copy on disk). */
     fun discardAnnotations() {
         annotate.load(baselineAnnots)
+        fill.reset()
         val key = docKey
-        if (key != null) viewModelScope.launch(Dispatchers.IO) { pendingStore.clear(key) }
+        if (key != null) viewModelScope.launch(Dispatchers.IO) { pendingStore.clear(key); fillPendingStore.clear(key) }
     }
 
     // ---- layout settings (global) ----------------------------------------------------------------------------------
@@ -221,6 +295,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
             }
         }
         if (key != null) withContext(Dispatchers.IO) { pendingStore.load(key) }?.let { if (it != baselineAnnots) annotate.load(baselineAnnots, it) }
+        if (key != null) withContext(Dispatchers.IO) { fillPendingStore.load(key) }?.let { if (!it.isEmpty) fill.reset(it) }
         _restored.value = true
         if (key != null) {
             persistPosition()
@@ -329,6 +404,9 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         _tiles.value?.close()
         _tiles.value = runCatching { TileRenderer(PageRasterizers.factory(renderFile ?: source.file), focusPage = { pageState.value }) }.getOrNull()
         annotate.load(baselineAnnots)
+        fill.reset()
+        _permissionProblem.value = FillIo.permissionProblem(source.protection?.permissionBytes)
+        viewModelScope.launch { fill.setForm(withContext(Dispatchers.IO) { runCatching { FormReader.read(source.file) }.getOrDefault(FormInfo()) }) }
         if (reload) { runCatching { docIndex?.close() }; docIndex = null; runCatching { search?.close() }; search = null }
         viewModelScope.launch { if (reload) afterReload(source) else afterOpen(source) }
         if (!reload) _aspects.value = null
@@ -418,7 +496,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         searchJob?.cancel(); aspectJob?.cancel(); saveJob?.cancel()
         _tiles.value?.close(); _tiles.value = null
         runCatching { docIndex?.close() }; docIndex = null
-        _outline.value = null; _selection.value = null; _restored.value = false; docKey = null; baselineAnnots = emptyList(); renderFile = null; annotate.load(emptyList())
+        _outline.value = null; _selection.value = null; _restored.value = false; docKey = null; baselineAnnots = emptyList(); renderFile = null; annotate.load(emptyList()); fill.reset(); fill.setForm(FormInfo()); _permissionProblem.value = null
         runCatching { search?.close() }; search = null
         _hits.value = emptyList(); _current.value = -1; _query.value = ""; _searching.value = false; _aspects.value = null
         super.onInputsReset()
