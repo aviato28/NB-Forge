@@ -10,7 +10,7 @@ import com.namanbansal.forge.ui.icons.ForgeIcons
 object ToolRegistry {
 
     /** Codes of tools that have a real implementation. Everything else shows the "Coming soon" screen. */
-    private val AVAILABLE: Set<String> = setOf("P1", "P2", "P3", "P4", "P5", "P6", "P40")
+    private val AVAILABLE: Set<String> = setOf("P1", "P2", "P3", "P4", "P5", "P6", "P17", "P40")
 
     /**
      * Unambiguous labels for tiles and chips where [ToolDef.name] alone is not enough
@@ -83,7 +83,7 @@ object ToolRegistry {
         tool("P14", "Linearise", Category.PDF, PdfGroup.OPTIMISE, "Optimise for fast web view (page 1 loads first).", listOf("linearize", "web", "fast view", "optimize"), ForgeIcons.Flash),
         tool("P15", "Edit existing text", Category.PDF, PdfGroup.EDIT, "True inline text editing. The hardest tool on the list.", listOf("edit", "text", "modify"), ForgeIcons.Type),
         tool("P16", "Add content", Category.PDF, PdfGroup.EDIT, "Text boxes, shapes, images, lines, arrows.", listOf("text box", "shapes", "insert", "image"), ForgeIcons.Plus),
-        tool("P17", "Annotate", Category.PDF, PdfGroup.EDIT, "Highlight, underline, strikeout, sticky notes, freehand pen.", listOf("highlight", "markup", "notes", "comment"), ForgeIcons.Pen),
+        tool("P17", "Annotate", Category.PDF, PdfGroup.EDIT, "Highlight, underline, strike through, draw with a pen and add sticky notes.", listOf("highlight", "markup", "notes", "comment"), ForgeIcons.Pen),
         tool("P18", "Whiteout & replace", Category.PDF, PdfGroup.EDIT, "Cover content and type over it.", listOf("whiteout", "cover", "replace"), ForgeIcons.Eraser),
         tool("P19", "True redaction", Category.PDF, PdfGroup.EDIT, "Actually deletes content underneath; search-to-redact emails, phones, etc.", listOf("redact", "black out", "privacy", "hide"), ForgeIcons.Shield),
         tool("P20", "Watermark", Category.PDF, PdfGroup.EDIT, "Text or image, opacity, angle, tiling.", listOf("stamp", "brand", "overlay"), ForgeIcons.Drop),

@@ -33,5 +33,6 @@ object ToolScreens {
         "P5" to { host -> ExtractScreen(host) },
         "P6" to { host -> InsertScreen(host) },
         "P40" to { host -> ViewerScreen(host) },
+        "P17" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.ANNOTATE) },
     )
 }

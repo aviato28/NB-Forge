@@ -99,7 +99,7 @@ private val PICK = PickSpec(listOf(FileKind.PDF), title = "Choose a PDF to read"
  * contents panel, search, dark pages and immersive bars. Layout choices persist globally; the position persists per document.
  */
 @Composable
-fun ViewerScreen(host: ToolHost, vm: ViewerViewModel = viewModel()) {
+fun ViewerScreen(host: ToolHost, vm: ViewerViewModel = viewModel(), startMode: ViewerModeId = ViewerModeId.READ) {
     val phase by vm.phase.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
     val inputs by vm.inputs.collectAsStateWithLifecycle()
@@ -114,6 +114,7 @@ fun ViewerScreen(host: ToolHost, vm: ViewerViewModel = viewModel()) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     LaunchedEffect(vm) { vm.messages.collect { snack(it) } }
+    LaunchedEffect(vm, startMode) { vm.startIn(startMode) }
 
     val t = thumbs
     if (phase == ToolPhase.Options && source != null && t != null && restored) {
@@ -151,6 +152,22 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     val selection by vm.selection.collectAsStateWithLifecycle()
     val flash by vm.flash.collectAsStateWithLifecycle()
     val outline by vm.outline.collectAsStateWithLifecycle()
+    val mode by vm.mode.collectAsStateWithLifecycle()
+    val revision by vm.revision.collectAsStateWithLifecycle()
+    val saving by vm.saving.collectAsStateWithLifecycle()
+    val dirty by vm.annotate.session.dirty.collectAsStateWithLifecycle()
+    val canUndo by vm.annotate.session.canUndo.collectAsStateWithLifecycle()
+    val canRedo by vm.annotate.session.canRedo.collectAsStateWithLifecycle()
+    val selectedId by vm.annotate.selectedId.collectAsStateWithLifecycle()
+    val editingNote by vm.annotate.editingNote.collectAsStateWithLifecycle()
+    val annots by vm.annotate.session.annots.collectAsStateWithLifecycle()
+    val annotating = mode == ViewerModeId.ANNOTATE
+    val annotMode = remember(vm, annotating) { AnnotateMode(vm.annotate, interactive = annotating) }
+    var comingSoon by rememberSaveable { mutableStateOf<String?>(null) }
+    var moreSheet by remember { mutableStateOf(false) }
+    // What to do once the unsaved-changes question is answered (leave, open another tool...).
+    var guarded by remember { mutableStateOf<(() -> Unit)?>(null) }
+    fun guard(action: () -> Unit) { if (dirty) guarded = action else action() }
 
     var barsVisible by rememberSaveable { mutableStateOf(true) }
     var searchOpen by remember { mutableStateOf(query.isNotEmpty()) }
@@ -177,12 +194,14 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     DisposableEffect(Unit) { onDispose { vm.flushPosition() } }
 
     // System back: peel off one layer at a time (selection, contents, menu, search) before leaving the document.
-    BackHandler(enabled = selection != null || panelOpen || menu || searchOpen) {
+    BackHandler(enabled = selection != null || panelOpen || menu || searchOpen || selectedId != null || dirty) {
         when {
             selection != null -> vm.clearSelection()
             menu -> menu = false
             panelOpen -> panelOpen = false
             searchOpen -> { searchOpen = false; showHits = false; vm.clearSearch() }
+            selectedId != null -> vm.annotate.select(null)
+            else -> guard(host.onBack)
         }
     }
 
@@ -204,23 +223,33 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
         val landscape = maxWidth > maxHeight
         Row(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
-                ViewerPages(
-                    vm = vm, thumbs = thumbs, tiles = tiles, aspects = aspects, pageCount = pageCount, hits = hits, currentHit = current,
-                    invert = invert, prefs = prefs, jump = jumpReq, flash = flash, selection = selection, actions = actions,
-                    onPage = { currentPage = it; vm.rememberPage(it) },
-                    onTap = { barsVisible = !barsVisible },
-                    onUri = { pendingUri = it },
-                    onScrolling = { scrollTick++ },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                val topVisible = barsVisible || searchOpen
+                androidx.compose.runtime.key(revision) {
+                    ViewerPages(
+                        vm = vm, thumbs = thumbs, tiles = tiles, aspects = aspects, pageCount = pageCount, hits = hits, currentHit = current,
+                        invert = invert, prefs = prefs, jump = jumpReq, flash = flash, selection = selection, actions = actions,
+                        onPage = { currentPage = it; vm.rememberPage(it) },
+                        onTap = { barsVisible = !barsVisible },
+                        onUri = { pendingUri = it },
+                        onScrolling = { scrollTick++ },
+                        modifier = Modifier.fillMaxSize(),
+                        input = annotMode.input,
+                        extraLayer = { page, w, h -> annotMode.PageOverlay(page, w, h, invert) },
+                    )
+                }
+                val barsOn = barsVisible || annotating
+                val topVisible = barsOn || searchOpen
                 Fade(topVisible, Modifier.align(Alignment.TopCenter)) {
                     Column(Modifier.fillMaxWidth().background(c.bg.copy(alpha = 0.96f)).border(1.dp, c.border.copy(alpha = 0.6f))) {
-                        TopBar(title, onBack = host.onBack) {
-                            RoundIconButton(ForgeIcons.Search, "Search in document", { searchOpen = !searchOpen; if (!searchOpen) vm.clearSearch() }, active = searchOpen)
-                            Spacer(Modifier.width(8.dp))
-                            RoundIconButton(ForgeIcons.Moon, if (invert) "Show pages normally" else "Dark pages", vm::toggleInvert, active = invert)
-                            Spacer(Modifier.width(8.dp))
+                        TopBar(title, onBack = { guard(host.onBack) }) {
+                            if (annotating) {
+                                UndoRedoButtons(canUndo, canRedo, vm.annotate.session)
+                            } else {
+                                RoundIconButton(ForgeIcons.Search, "Search in document", { searchOpen = !searchOpen; if (!searchOpen) vm.clearSearch() }, active = searchOpen)
+                                Spacer(Modifier.width(8.dp))
+                                RoundIconButton(ForgeIcons.Moon, if (invert) "Show pages normally" else "Dark pages", vm::toggleInvert, active = invert)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            if (dirty || saving) { SaveButton(dirty, saving) { vm.saveAnnotations() }; Spacer(Modifier.width(8.dp)) }
                             Box {
                                 RoundIconButton(ForgeIcons.More, "More actions", { menu = true })
                                 ViewerMenu(menu, prefs, onDismiss = { menu = false }, onPrefs = vm::updatePrefs) { code -> menu = false; host.onOpenTool(code, inputs) }
@@ -243,9 +272,23 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                     Fade(searchOpen && showHits && hits.isNotEmpty()) {
                         HitList(hits, current, Modifier.heightIn(max = 240.dp)) { i -> vm.openHit(i) }
                     }
-                    Fade(barsVisible) {
+                    Fade(barsOn) {
+                      Column(Modifier.fillMaxWidth().background(c.bg.copy(alpha = 0.96f)).border(1.dp, c.border.copy(alpha = 0.6f)).navigationBarsPadding()) {
+                        if (annotating) {
+                            val sel = annots.firstOrNull { it.id == selectedId }
+                            if (sel != null) SelectionBar(sel, vm.annotate::recolorSelected, vm.annotate::deleteSelected, vm.annotate::editSelectedNote)
+                            else annotMode.Toolbar()
+                        }
+                        ViewerModeBar(mode, { m ->
+                            when (m) {
+                                ViewerModeId.READ, ViewerModeId.ANNOTATE -> vm.setMode(m)
+                                ViewerModeId.EDIT, ViewerModeId.FILL_SIGN -> comingSoon = m.name
+                                ViewerModeId.PAGES -> guard { host.onOpenTool("P3", inputs) }
+                                ViewerModeId.MORE -> moreSheet = true
+                            }
+                        })
                         Row(
-                            Modifier.fillMaxWidth().background(c.bg.copy(alpha = 0.96f)).border(1.dp, c.border.copy(alpha = 0.6f)).navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp),
+                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Row(
@@ -259,8 +302,9 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { PagePill(currentPage + 1, pageCount, Modifier) { jumpDialog = true } }
                             Spacer(Modifier.width(112.dp))
                         }
+                      }
                     }
-                    Fade(!barsVisible && recentlyScrolled) {
+                    Fade(!barsOn && recentlyScrolled) {
                         Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp), contentAlignment = Alignment.Center) {
                             PagePill(currentPage + 1, pageCount, Modifier) { jumpDialog = true }
                         }
@@ -274,6 +318,23 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
         if (!landscape && panelOpen) OutlineSheet(onDismiss = { panelOpen = false }) {
             OutlinePanel(outline, thumbs, pageCount, currentPage, onJump = { jumpTo(it); panelOpen = false })
         }
+    }
+    guarded?.let { action ->
+        UnsavedChangesDialog(
+            busy = saving,
+            onSave = { vm.saveAnnotations { ok -> if (ok) { guarded = null; action() } } },
+            onDiscard = { vm.discardAnnotations(); guarded = null; action() },
+            onCancel = { guarded = null },
+        )
+    }
+    comingSoon?.let { name -> ComingSoonSheet(ViewerModeId.valueOf(name)) { comingSoon = null } }
+    if (moreSheet) MoreToolsSheet(onDismiss = { moreSheet = false }) { code -> moreSheet = false; guard { host.onOpenTool(code, inputs) } }
+    editingNote?.let { id ->
+        val n = annots.firstOrNull { it.id == id }
+        if (n != null) NoteEditorSheet(
+            initial = n.text, isNew = n.text.isEmpty(),
+            onSave = { vm.annotate.saveNote(id, it) }, onCancel = vm.annotate::cancelNote, onDelete = { vm.annotate.deleteNote(id) },
+        )
     }
     if (jumpDialog) JumpDialog(pageCount, currentPage + 1, onDismiss = { jumpDialog = false }) { p -> jumpDialog = false; jumpTo(p - 1) }
     pendingUri?.let { url ->

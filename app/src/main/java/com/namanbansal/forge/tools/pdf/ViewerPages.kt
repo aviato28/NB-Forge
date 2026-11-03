@@ -68,6 +68,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -122,6 +124,7 @@ fun ViewerPages(
     jump: JumpRequest?, flash: LinkFlash?, selection: TextSelection?, actions: SelectionActions,
     onPage: (Int) -> Unit, onTap: () -> Unit, onUri: (String) -> Unit, onScrolling: () -> Unit,
     modifier: Modifier = Modifier,
+    input: PageInput? = null,
     extraLayer: @Composable (page: Int, widthPx: Int, heightPx: Int) -> Unit = { _, _, _ -> },
 ) {
     val c = ForgeTheme.colors
@@ -134,7 +137,7 @@ fun ViewerPages(
         key(twoPage, paged, fitPage) {
             PagesInner(
                 vm, thumbs, tiles, aspects, pageCount, hits, currentHit, invert, vw, vh, twoPage, paged, fitPage,
-                jump, flash, selection, actions, onPage, onTap, onUri, onScrolling, extraLayer,
+                jump, flash, selection, actions, onPage, onTap, onUri, onScrolling, input, extraLayer,
             )
         }
     }
@@ -146,9 +149,10 @@ private fun PagesInner(
     hits: List<TextHit>, currentHit: Int, invert: Boolean, vw: Int, vh: Int, twoPage: Boolean, paged: Boolean, fitPage: Boolean,
     jump: JumpRequest?, flash: LinkFlash?, selection: TextSelection?, actions: SelectionActions,
     onPage: (Int) -> Unit, onTap: () -> Unit, onUri: (String) -> Unit, onScrolling: () -> Unit,
-    extraLayer: @Composable (Int, Int, Int) -> Unit,
+    input: PageInput?, extraLayer: @Composable (Int, Int, Int) -> Unit,
 ) {
     val density = LocalDensity.current
+    val inputRef = rememberUpdatedState(input)
     val scope = rememberCoroutineScope()
     val slots = remember(pageCount, twoPage) { SlotLayout.slots(pageCount, twoPage) }
     val startSlot = SlotLayout.slotOf(vm.startPage().coerceIn(0, (pageCount - 1).coerceAtLeast(0)), twoPage)
@@ -226,9 +230,25 @@ private fun PagesInner(
         return Triple(box.page, frac.first, frac.second)
     }
 
+    /** The page under [p] together with where its slot sits, so a gesture can keep measuring against that page after leaving it. */
+    class Anchor(val page: Int, val box: PageBox, val itemTop: Int)
+    fun anchorAt(p: Offset): Anchor? {
+        val slot: Int; val top: Int
+        if (paged) { slot = pager.currentPage; top = -vScroll.value } else {
+            val it = listState.layoutInfo.visibleItemsInfo.firstOrNull { p.y >= it.offset && p.y < it.offset + it.size } ?: return null
+            slot = it.index; top = it.offset
+        }
+        if (slot !in slots.indices) return null
+        val (box, _) = SlotLayout.hit(geo(slot, zoom), p.x + hScroll.value, p.y - top) ?: return null
+        return Anchor(box.page, box, top)
+    }
+    fun fracOf(a: Anchor, p: Offset): Pair<Float, Float> =
+        (((p.x + hScroll.value) - a.box.x) / a.box.w).coerceIn(0f, 1f) to (((p.y - a.itemTop) - a.box.y) / a.box.h).coerceIn(0f, 1f)
+
     val tapHandler = rememberUpdatedState<(Offset) -> Unit> { p ->
         if (selection != null) vm.clearSelection() else {
             val hit = pageAt(p)
+            if (hit != null && inputRef.value?.onTap(PageHit(hit.first, hit.second, hit.third, aspectsRef.value?.getOrNull(hit.first) ?: 0.707f)) == true) return@rememberUpdatedState
             val link = hit?.let { (pg, nx, ny) -> linkCache[pg]?.let { LinkGeometry.hit(it, nx, ny) } }
             val target = link?.page; val uri = link?.uri
             if (hit != null && link != null) vm.flashLink(hit.first, link)
@@ -245,6 +265,38 @@ private fun PagesInner(
 
     val contentWidthDp = with(density) { (vw * zoom).roundToInt().toDp() }
     val gestures = Modifier
+        .pointerInput(vw) {
+            // A mode that owns one-finger drags (drawing, snapping to text, erasing) claims the gesture here, before the scrollers
+            // see it. A second finger drops the claim and goes to the scrollers / pinch below: two fingers always navigate.
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                val inp = inputRef.value ?: return@awaitEachGesture
+                if (!inp.claimsDrag || !inp.accepts(down.type == PointerType.Stylus)) return@awaitEachGesture
+                val a = anchorAt(down.position) ?: return@awaitEachGesture
+                val aspect = a.box.w.toFloat() / a.box.h.coerceAtLeast(1)
+                val (x0, y0) = fracOf(a, down.position)
+                down.consume()
+                inp.onStart(PageHit(a.page, x0, y0, aspect))
+                var travelled = 0f
+                var lastPos = down.position
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    if (event.changes.count { it.pressed } >= 2) { inp.onCancel(); return@awaitEachGesture }
+                    val ch = event.changes.firstOrNull { it.id == down.id } ?: run { inp.onCancel(); return@awaitEachGesture }
+                    if (ch.changedToUp()) {
+                        ch.consume()
+                        if (travelled < viewConfiguration.touchSlop && !inp.tapIsStroke) { inp.onCancel(); tapHandler.value(down.position) } else inp.onEnd()
+                        return@awaitEachGesture
+                    }
+                    if (ch.positionChanged()) {
+                        ch.consume()
+                        travelled += (ch.position - lastPos).getDistance(); lastPos = ch.position
+                        val (fx, fy) = fracOf(a, ch.position)
+                        inp.onMove(fx, fy)
+                    }
+                }
+            }
+        }
         .pointerInput(vw) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
