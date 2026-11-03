@@ -178,6 +178,7 @@ class ViewerRound1bTest {
         compose.onNodeWithContentDescription("More actions").performClick()
         compose.onNodeWithText("Keep screen on").performClick()
         pump { !vm.prefs.value.keepScreenOn }
+        runBlocking { ForgeApp.from(app).settings.setViewerPrefs(ViewerPrefs()) } // the settings file outlives a test
     }
 
     @Test fun contentsButtonOpensTheSheetWithAnEmptyStateWhenThereAreNoBookmarks() {

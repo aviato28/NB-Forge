@@ -45,10 +45,10 @@ class ForgeApp : Application() {
         super.onCreate()
         PDFBoxResourceLoader.init(applicationContext) // once; PDFBox needs it for its bundled resources
         appScope.launch {
+            // Working copies from a previous run are never reused (first, so it can never race with a file opened right after start).
+            File(cacheDir, com.namanbansal.forge.core.pdf.PdfLoader.WORK_DIR).deleteRecursively()
             recents.load()
             viewerPositions.load()
-            // Working copies from a previous run are never reused.
-            File(cacheDir, com.namanbansal.forge.core.pdf.PdfLoader.WORK_DIR).deleteRecursively()
         }
     }
 

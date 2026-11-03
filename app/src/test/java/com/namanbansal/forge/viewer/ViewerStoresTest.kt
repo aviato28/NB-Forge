@@ -84,8 +84,8 @@ class ViewerPositionStoreTest {
 class ViewerPrefsPersistenceTest {
     @Test fun defaultsThenPersistedChoices() = runBlocking {
         val repo = SettingsRepository(ApplicationProvider.getApplicationContext())
-        val d = repo.current().viewer
-        assertEquals(ViewerPrefs(pageByPage = false, fitPage = false, twoPageLandscape = false, keepScreenOn = true), d)
+        // Defaults (the store is shared by the whole test JVM, so check the model's defaults rather than the file).
+        assertEquals(ViewerPrefs(pageByPage = false, fitPage = false, twoPageLandscape = false, keepScreenOn = true), com.namanbansal.forge.data.Settings().viewer)
         repo.setViewerPrefs(ViewerPrefs(pageByPage = true, fitPage = true, twoPageLandscape = true, keepScreenOn = false))
         val again = SettingsRepository(ApplicationProvider.getApplicationContext()).current().viewer
         assertEquals(ViewerPrefs(true, true, true, false), again)
