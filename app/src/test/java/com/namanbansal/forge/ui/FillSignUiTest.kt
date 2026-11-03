@@ -65,10 +65,10 @@ class FillSignUiTest {
         var done: String? = null; var next: String? = null
         val f = field("f1", "person.name", FieldKind.TEXT, 0.1f, required = true, maxLen = 5)
         compose.setContent { ForgeTheme { FieldTextContent(f, "Al", hasNext = true, onDone = { done = it }, onNext = { next = it }, onCancel = {}) } }
-        compose.onNodeWithText("name").assertIsDisplayed()
+        compose.onNodeWithText("Name").assertIsDisplayed()
         compose.onNodeWithText("Required", substring = true).assertIsDisplayed()
         compose.onNodeWithText("2 / 5 characters").assertIsDisplayed()
-        compose.onNodeWithContentDescription("name value").performTextInput("ice and more")
+        compose.onNodeWithContentDescription("Name value").performTextInput("ice and more")
         compose.waitForIdle()
         compose.onNodeWithText("5 / 5 characters").assertIsDisplayed() // max length is enforced while typing
         compose.onNodeWithText("Next").performClick()

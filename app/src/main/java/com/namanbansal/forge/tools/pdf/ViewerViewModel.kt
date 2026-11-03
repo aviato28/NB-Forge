@@ -16,6 +16,12 @@ import com.namanbansal.forge.core.pdf.annot.Annot
 import com.namanbansal.forge.core.pdf.annot.AnnotSaver
 import com.namanbansal.forge.core.pdf.annot.PdfAnnotIo
 import com.namanbansal.forge.core.pdf.annot.PendingStore
+import com.namanbansal.forge.core.pdf.edit.EditImageStore
+import com.namanbansal.forge.core.pdf.edit.EditIo
+import com.namanbansal.forge.core.pdf.edit.EditPendingStore
+import com.namanbansal.forge.core.pdf.edit.RedactOptions
+import com.namanbansal.forge.core.pdf.edit.RedactionReport
+import com.namanbansal.forge.core.pdf.edit.Redactor
 import com.namanbansal.forge.core.pdf.fill.FillIo
 import com.namanbansal.forge.core.pdf.fill.FillPendingStore
 import com.namanbansal.forge.core.pdf.fill.FillSaveOptions
@@ -94,13 +100,16 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     private val modeChosen = persistedBool("viewer.modeChosen", false)
     /** The active mode of the mode bar; survives rotation and process death. */
     val mode: StateFlow<ViewerModeId> = modeState.flow.map { ViewerModeId.entries.getOrElse(it) { ViewerModeId.READ } }.stateIn(viewModelScope, SharingStarted.Eagerly, ViewerModeId.READ)
-    fun setMode(m: ViewerModeId) { if (!m.staysInViewer) return; modeState.value = m.ordinal; modeChosen.value = true; if (m != ViewerModeId.ANNOTATE) annotate.select(null); if (m != ViewerModeId.FILL_SIGN) fill.select(null) }
+    fun setMode(m: ViewerModeId) { if (!m.staysInViewer) return; modeState.value = m.ordinal; modeChosen.value = true; if (m != ViewerModeId.ANNOTATE) annotate.select(null); if (m != ViewerModeId.FILL_SIGN) fill.select(null); if (m != ViewerModeId.EDIT) { edit.select(null); edit.setTool(EditTool.SELECT) } }
     /** Opens in [m] the first time only (P17 opens Annotate); later rotations and restores keep whatever the user chose. */
     fun startIn(m: ViewerModeId) { if (!modeChosen.value) setMode(m) }
+    /** P16 / P18 / P19: opens Edit with [tool] preselected, the first time only. */
+    fun startInEdit(tool: EditTool) { if (!modeChosen.value) { edit.setTool(tool); setMode(ViewerModeId.EDIT) } }
 
     val annotate = AnnotateController(AnnotPrefs(application), viewModelScope) { pageText(it) }
     private val pendingStore by lazy { PendingStore(File(app.filesDir, "annot-pending")) }
     private val fillPendingStore by lazy { FillPendingStore(File(app.filesDir, "fill-pending")) }
+    private val editPendingStore by lazy { EditPendingStore(File(app.filesDir, "edit-pending")) }
 
     // ---- Fill & Sign ---------------------------------------------------------------------------------------------------
     /** The signature library lives in the app's private files, never in Downloads. */
@@ -117,11 +126,52 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         pageAspect = { _aspects.value?.getOrNull(it) ?: 0.707f }, currentPage = { pageState.value },
         sigAspect = { id -> _sigEntries.value.firstOrNull { it.id == id }?.aspect }, message = { notify(it) },
     )
+    // ---- Edit (P16 / P18 / P19) ------------------------------------------------------------------------------------
+    val edit = EditController(
+        pageAspect = { _aspects.value?.getOrNull(it) ?: 0.707f }, currentPage = { pageState.value }, pageCount = { source.value?.pageCount ?: 0 },
+        scope = viewModelScope, pageText = { pageText(it) }, sampleColor = { p, x, y -> sampleColor(p, x, y) }, message = { notify(it) },
+    )
+    /** Pictures placed in Edit mode live in the app's private files until they are saved into the PDF. */
+    val editImages by lazy { EditImageStore(File(app.filesDir, "edit-images")) }
+    private val imageBitmaps = HashMap<String, ImageBitmap>()
+    private val _imageRev = MutableStateFlow(0)
+    /** Bumped when a picture finishes loading, so the page overlay draws it. */
+    val imageRev: StateFlow<Int> = _imageRev.asStateFlow()
+    fun editImage(id: String): ImageBitmap? = imageBitmaps[id] ?: run {
+        viewModelScope.launch {
+            val bmp = withContext(Dispatchers.IO) { editImages.bytes(id)?.let { b -> runCatching { android.graphics.BitmapFactory.decodeByteArray(b, 0, b.size)?.asImageBitmap() }.getOrNull() } }
+            if (bmp != null) { imageBitmaps[id] = bmp; _imageRev.value++ }
+        }
+        null
+    }
+    private val _pageWidths = MutableStateFlow(FloatArray(0))
+    /** Width of a page in points (595 until known); strokes drawn in the overlay scale with it. */
+    fun pageWidthPt(p: Int): Float = _pageWidths.value.getOrNull(p)?.takeIf { it > 0f } ?: 595f
+
+    /** Adds a picture the user picked or photographed to the current page. */
+    fun addImage(uri: Uri) {
+        viewModelScope.launch {
+            val stored = withContext(Dispatchers.IO) { editImages.import { app.contentResolver.openInputStream(uri) } }
+            if (stored == null) { notify("Couldn't read that picture. Try another one."); return@launch }
+            edit.placeImage(stored)
+        }
+    }
+
+    private suspend fun sampleColor(page: Int, x: Float, y: Float): Int? {
+        val bmp = thumbnails.value?.render(page, 480) ?: return null
+        val px = (x * (bmp.width - 1)).toInt().coerceIn(0, bmp.width - 1); val py = (y * (bmp.height - 1)).toInt().coerceIn(0, bmp.height - 1)
+        return bmp.getPixel(px, py)
+    }
+
+    private val _editPermissionProblem = MutableStateFlow<String?>(null)
+    /** Why this document's content can't be changed in place (its author's permissions), or null. */
+    val editPermissionProblem: StateFlow<String?> = _editPermissionProblem.asStateFlow()
+
     /** Why this document can't be filled (its author's permissions), or null. */
     private val _permissionProblem = MutableStateFlow<String?>(null)
     val permissionProblem: StateFlow<String?> = _permissionProblem.asStateFlow()
     /** Unsaved changes in any mode. */
-    val anyDirty: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(annotate.session.dirty, fill.session.dirty) { a, b -> a || b }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val anyDirty: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(annotate.session.dirty, fill.session.dirty, edit.session.dirty) { a, b, c -> a || b || c }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun saveSignature(kind: SigKind, bitmap: android.graphics.Bitmap, label: String = "") {
         viewModelScope.launch {
@@ -178,7 +228,17 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         }
     }
 
-    init { keepPendingOnDisk(); keepFillPendingOnDisk(); refreshSignatures() }
+    @OptIn(FlowPreview::class)
+    private fun keepEditPendingOnDisk() {
+        viewModelScope.launch {
+            edit.session.state.debounce(300).collect { st ->
+                val key = docKey ?: return@collect
+                withContext(Dispatchers.IO) { if (edit.session.dirty.value) editPendingStore.save(key, st) else editPendingStore.clear(key) }
+            }
+        }
+    }
+
+    init { keepPendingOnDisk(); keepFillPendingOnDisk(); keepEditPendingOnDisk(); refreshSignatures() }
 
     override suspend fun renderFileFor(source: PdfSource): File {
         val dst = File(source.file.parentFile, "render-${UUID.randomUUID()}.pdf")
@@ -190,7 +250,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     }
 
     /** Writes the annotations into the PDF (backup + overwrite, or a copy), tells the user which, and reloads in place. */
-    fun saveAnnotations(options: FillSaveOptions = FillSaveOptions(), onDone: (Boolean) -> Unit = {}) {
+    fun saveAnnotations(options: FillSaveOptions = FillSaveOptions(), redact: RedactOptions? = null, onDone: (Boolean) -> Unit = {}) {
         val src = source.value ?: return
         val input = inputs.value.firstOrNull() ?: return
         if (_saving.value) return
@@ -201,14 +261,23 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
                 val saver = AnnotSaver(app.documentWriter, File(app.cacheDir, PdfLoader.WORK_DIR))
                 val session = annotate.session
                 val fillState = fill.session.current
-                val problem = if (fillState.isEmpty) null else _permissionProblem.value
-                val extra: ((File) -> Unit)? = if (fillState.isEmpty) null else { f -> FillIo.applyInPlace(f, fillState, options) { signatures.png(it) } }
+                val editState = edit.session.current
+                if (editState.marks.isNotEmpty() && redact == null) throw IllegalStateException("Redactions must be applied from the Apply dialog.")
+                val problem = (if (editState.isEmpty) null else _editPermissionProblem.value) ?: (if (fillState.isEmpty) null else _permissionProblem.value)
+                var report: RedactionReport? = null
+                val extra: ((File) -> Unit)? = if (fillState.isEmpty && editState.isEmpty) null else { f ->
+                    if (!fillState.isEmpty) FillIo.applyInPlace(f, fillState, options) { signatures.png(it) }
+                    if (editState.items.isNotEmpty()) EditIo.applyObjectsInPlace(f, editState) { editImages.bytes(it) }
+                    if (editState.marks.isNotEmpty()) report = Redactor.redactInPlace(f, editState.marks, redact ?: RedactOptions())
+                }
                 val out = saver.save(input.uri, input.name, src.file, src.protection, session.baseline, session.current, extra, copyOnly = problem != null, copyReason = problem?.let { "$it Your changes were saved as a copy." }.orEmpty())
+                val savedImages = editState.items.mapNotNull { it.imageId.takeIf { id -> id.isNotEmpty() } }.toSet()
                 val oldKey = docKey
                 reloading = true
                 reopen(out.reloadFile, src.protection)
-                withContext(Dispatchers.IO) { oldKey?.let { pendingStore.clear(it); fillPendingStore.clear(it) }; docKey?.let { pendingStore.clear(it); fillPendingStore.clear(it) } }
-                notify(out.message)
+                withContext(Dispatchers.IO) { oldKey?.let { pendingStore.clear(it); fillPendingStore.clear(it); editPendingStore.clear(it) }; docKey?.let { pendingStore.clear(it); fillPendingStore.clear(it); editPendingStore.clear(it) }; editImages.retainOnly(emptySet()) }
+                imageBitmaps.keys.removeAll(savedImages)
+                notify(out.message + (report?.let { " " + it.summary } ?: ""))
                 ok = true
             } catch (e: CancellationException) {
                 throw e
@@ -225,8 +294,9 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     fun discardAnnotations() {
         annotate.load(baselineAnnots)
         fill.reset()
+        edit.reset()
         val key = docKey
-        if (key != null) viewModelScope.launch(Dispatchers.IO) { pendingStore.clear(key); fillPendingStore.clear(key) }
+        viewModelScope.launch(Dispatchers.IO) { if (key != null) { pendingStore.clear(key); fillPendingStore.clear(key); editPendingStore.clear(key) }; editImages.retainOnly(emptySet()) }
     }
 
     // ---- layout settings (global) ----------------------------------------------------------------------------------
@@ -296,6 +366,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         }
         if (key != null) withContext(Dispatchers.IO) { pendingStore.load(key) }?.let { if (it != baselineAnnots) annotate.load(baselineAnnots, it) }
         if (key != null) withContext(Dispatchers.IO) { fillPendingStore.load(key) }?.let { if (!it.isEmpty) fill.reset(it) }
+        if (key != null) withContext(Dispatchers.IO) { editPendingStore.load(key) }?.let { if (!it.isEmpty) edit.reset(it) }
         _restored.value = true
         if (key != null) {
             persistPosition()
@@ -405,7 +476,9 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         _tiles.value = runCatching { TileRenderer(PageRasterizers.factory(renderFile ?: source.file), focusPage = { pageState.value }) }.getOrNull()
         annotate.load(baselineAnnots)
         fill.reset()
+        edit.reset()
         _permissionProblem.value = FillIo.permissionProblem(source.protection?.permissionBytes)
+        _editPermissionProblem.value = source.protection?.permissionBytes?.let { if (com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission(it).canModify()) null else "The author of this PDF doesn't allow changing its content." }
         viewModelScope.launch { fill.setForm(withContext(Dispatchers.IO) { runCatching { FormReader.read(source.file) }.getOrDefault(FormInfo()) }) }
         if (reload) { runCatching { docIndex?.close() }; docIndex = null; runCatching { search?.close() }; search = null }
         viewModelScope.launch { if (reload) afterReload(source) else afterOpen(source) }
@@ -418,13 +491,15 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
             val out = FloatArray(n) { 0.707f }
             val first = thumbs.pageSize(0)
             if (first != null) java.util.Arrays.fill(out, first.first.toFloat() / first.second.coerceAtLeast(1))
+            val widths = FloatArray(n) { first?.first?.toFloat() ?: 595f }
+            _pageWidths.value = widths.copyOf()
             _aspects.value = out.copyOf()
             var i = 0
             while (i < n) {
                 ensureActive()
-                thumbs.pageSize(i)?.let { out[i] = it.first.toFloat() / it.second.coerceAtLeast(1) }
+                thumbs.pageSize(i)?.let { out[i] = it.first.toFloat() / it.second.coerceAtLeast(1); widths[i] = it.first.toFloat() }
                 i++
-                if (i % 24 == 0 || i == n) _aspects.value = out.copyOf()
+                if (i % 24 == 0 || i == n) { _aspects.value = out.copyOf(); _pageWidths.value = widths.copyOf() }
             }
         }
     }
@@ -496,7 +571,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         searchJob?.cancel(); aspectJob?.cancel(); saveJob?.cancel()
         _tiles.value?.close(); _tiles.value = null
         runCatching { docIndex?.close() }; docIndex = null
-        _outline.value = null; _selection.value = null; _restored.value = false; docKey = null; baselineAnnots = emptyList(); renderFile = null; annotate.load(emptyList()); fill.reset(); fill.setForm(FormInfo()); _permissionProblem.value = null
+        _outline.value = null; _selection.value = null; _restored.value = false; docKey = null; baselineAnnots = emptyList(); renderFile = null; annotate.load(emptyList()); fill.reset(); edit.reset(); fill.setForm(FormInfo()); _permissionProblem.value = null; _editPermissionProblem.value = null
         runCatching { search?.close() }; search = null
         _hits.value = emptyList(); _current.value = -1; _query.value = ""; _searching.value = false; _aspects.value = null
         super.onInputsReset()

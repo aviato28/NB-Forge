@@ -29,7 +29,7 @@ class FormReaderTest {
         val byName = info.fields.groupBy { it.name }
         assertEquals(FieldKind.TEXT, byName.getValue("person.name").single().kind)
         assertTrue(byName.getValue("person.name").single().required)
-        assertEquals("name", byName.getValue("person.name").single().title)
+        assertEquals("Name", byName.getValue("person.name").single().title)
         assertEquals(FieldKind.MULTILINE, byName.getValue("notes").single().kind)
         assertEquals(FieldKind.CHECKBOX, byName.getValue("agree").single().kind)
         assertEquals(2, byName.getValue("colour").size)

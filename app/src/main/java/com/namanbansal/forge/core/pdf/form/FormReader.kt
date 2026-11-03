@@ -58,6 +58,7 @@ object FormReader {
         val name = field.fullyQualifiedName ?: field.partialName ?: id
         val ro = field.isReadOnly
         val req = field.isRequired
+        val tip = runCatching { field.alternateFieldName }.getOrNull().orEmpty().trim()
         return when (field) {
             is PDTextField -> {
                 val multi = field.isMultiline
@@ -73,7 +74,7 @@ object FormReader {
             is PDListBox -> FormField(id, name, FieldKind.LIST, page, rect, ro, req, options = displayOptions(field), multiSelect = field.isMultiSelect, value = field.value.joinToString("\n"))
             is PDSignatureField -> FormField(id, name, FieldKind.SIGNATURE, page, rect, ro, req, signed = field.signature != null)
             else -> null // push buttons and unknown types are left alone
-        }
+        }?.copy(tooltip = tip)
     }
 
     private fun displayOptions(c: PDChoice): List<String> = try { c.options } catch (_: Exception) { emptyList() }

@@ -136,7 +136,7 @@ object FillIo {
     }
 
     /** Draws [img] in a displayed frame of [dw] x [dh], turned [turns] quarter turns clockwise (the frame already has the turned size). */
-    private fun drawTurned(cs: PDPageContentStream, img: PDImageXObject, dw: Float, dh: Float, turns: Int) {
+    internal fun drawTurned(cs: PDPageContentStream, img: PDImageXObject, dw: Float, dh: Float, turns: Int) {
         val t = ((turns % 4) + 4) % 4
         val iw = if (t % 2 == 0) dw else dh; val ih = if (t % 2 == 0) dh else dw
         cs.saveGraphicsState()

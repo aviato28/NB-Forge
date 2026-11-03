@@ -27,9 +27,11 @@ data class FormField(
     val value: String = "",
     val hint: KeyHint = KeyHint.TEXT,
     val signed: Boolean = false,
+    /** The field's tooltip (/TU), the author's own label for it. */
+    val tooltip: String = "",
 ) {
-    /** The title for a sheet: the field's own name without its parents (`form.person.name` -> `name`). */
-    val title: String get() = name.substringAfterLast('.').ifBlank { name }
+    /** The title for a sheet: the tooltip when the PDF has one, else the humanised partial name (`form.full_name` -> `Full name`). */
+    val title: String get() = tooltip.ifBlank { com.namanbansal.forge.core.pdf.edit.FieldLabels.humanise(name) }
     val isToggle: Boolean get() = kind == FieldKind.CHECKBOX || kind == FieldKind.RADIO
     val isText: Boolean get() = kind == FieldKind.TEXT || kind == FieldKind.MULTILINE
 }

@@ -2,4 +2,6 @@
 <paths>
     <!-- The bundled sample PDF used by Settings > "Make Forge your PDF viewer" > Test it. -->
     <cache-path name="sample" path="shared/" />
+    <!-- Photos taken for Edit > Image land here before Forge reads them. -->
+    <cache-path name="camera" path="camera/" />
 </paths>
