@@ -169,7 +169,11 @@ object ToolRegistry {
         return order.mapNotNull { g -> tools.filter { it.group == g }.takeIf { it.isNotEmpty() }?.let { g to it } }
     }
 
-    val DEFAULT_PINS = listOf("P9", "P1", "P43", "D1")
+    /** Merge, Split, Viewer, Page manager: the tools that exist and are used most. */
+    val DEFAULT_PINS = listOf("P1", "P2", "P40", "P3")
+
+    /** The defaults of releases before the visual page tools; users still on exactly these are moved to [DEFAULT_PINS]. */
+    val LEGACY_DEFAULT_PINS = listOf("P9", "P1", "P43", "D1")
 
     /** Hard cap on pinned tools. */
     const val MAX_PINS = 8

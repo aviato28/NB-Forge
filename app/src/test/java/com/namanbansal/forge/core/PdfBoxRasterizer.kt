@@ -32,6 +32,12 @@ class PdfBoxRasterizer(file: File) : PageRasterizer {
         Canvas(bitmap).drawBitmap(full, null, Rect(0, 0, bitmap.width, bitmap.height), Paint(Paint.FILTER_BITMAP_FLAG))
     }
 
+    override fun renderTile(page: Int, bitmap: Bitmap, pageWidthPx: Int, left: Int, top: Int, w: Int, h: Int) {
+        val pts = pageSize(page) ?: return
+        val full = renderer.renderImage(page, pageWidthPx.toFloat() / pts.first)
+        Canvas(bitmap).drawBitmap(full, Rect(left, top, left + w, top + h), Rect(0, 0, w, h), Paint(Paint.FILTER_BITMAP_FLAG))
+    }
+
     override fun close() = doc.close()
 
     companion object {

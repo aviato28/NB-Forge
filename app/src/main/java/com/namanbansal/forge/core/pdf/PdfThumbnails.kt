@@ -20,6 +20,11 @@ interface PageRasterizer : Closeable {
     fun pageSize(page: Int): Pair<Int, Int>?
     /** Renders 0-based [page] scaled to fill the whole [bitmap] (already white-filled by the caller). */
     fun render(page: Int, bitmap: Bitmap)
+    /**
+     * Renders one tile: the page drawn [pageWidthPx] pixels wide, of which the region starting at ([left], [top]) of size
+     * [w] x [h] goes to the top-left of [bitmap] (white-filled by the caller; pixels outside w x h are left alone).
+     */
+    fun renderTile(page: Int, bitmap: Bitmap, pageWidthPx: Int, left: Int, top: Int, w: Int, h: Int)
 }
 
 /** [PdfRenderer]-backed rasterizer (one open page at a time; callers serialise access). */
@@ -38,6 +43,14 @@ class AndroidPageRasterizer(file: File) : PageRasterizer {
 
     override fun render(page: Int, bitmap: Bitmap) {
         renderer.openPage(page).use { it.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY) }
+    }
+
+    override fun renderTile(page: Int, bitmap: Bitmap, pageWidthPx: Int, left: Int, top: Int, w: Int, h: Int) {
+        renderer.openPage(page).use { p ->
+            val s = pageWidthPx.toFloat() / p.width.coerceAtLeast(1)
+            val m = android.graphics.Matrix().apply { setScale(s, s); postTranslate(-left.toFloat(), -top.toFloat()) }
+            p.render(bitmap, android.graphics.Rect(0, 0, w, h), m, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+        }
     }
 
     override fun close() {

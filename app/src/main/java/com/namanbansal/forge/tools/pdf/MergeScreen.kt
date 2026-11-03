@@ -9,7 +9,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.namanbansal.forge.core.pdf.PdfThumbnails
+import com.namanbansal.forge.ui.toolkit.GridPage
+import com.namanbansal.forge.ui.toolkit.PagePeek
+import com.namanbansal.forge.ui.toolkit.PageThumb
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -89,11 +100,26 @@ private fun ColumnScope.MergeOptions(items: List<MergeItem>, blank: Boolean, vm:
         TextAction("Add files", onAdd, icon = ForgeIcons.Plus)
     }
     Spacer(Modifier.height(4.dp))
+    val expanded by vm.expanded.collectAsStateWithLifecycle()
+    var peekId by rememberSaveable { mutableLongStateOf(-1L) }
+    var peekIndex by rememberSaveable { mutableIntStateOf(0) }
     ReorderableColumn(
         items = items, key = { it.id }, modifier = Modifier.weight(1f).fillMaxWidth(),
         onMove = vm::move, onDragStart = {}, onDragEnd = vm::dragFinished,
     ) { item, index, dragging, handle ->
-        MergeRow(item, index + 1, dragging, handle, onRemove = { vm.remove(item.id) })
+        val open = item.id in expanded && item.status == MergeStatus.Ready
+        MergeRow(
+            item, index + 1, dragging, handle, onRemove = { vm.remove(item.id) },
+            expanded = open, thumbs = if (open) vm.thumbnailsFor(item) else null,
+            onToggle = { vm.toggleExpanded(item.id) }, onPeek = { page -> peekId = item.id; peekIndex = page },
+        )
+    }
+    items.firstOrNull { it.id == peekId }?.let { item ->
+        val thumbs = vm.thumbnailsFor(item)
+        if (thumbs != null) {
+            val pages = remember(item.id, thumbs) { List(item.pages) { GridPage("m$it", thumbs, it, "${it + 1}", description = "${item.file.name}, page ${it + 1}") } }
+            PagePeek(pages, peekIndex, onIndexChange = { peekIndex = it }, onClose = { peekId = -1L })
+        }
     }
     val protection = PdfProtection.forAll(ready.mapNotNull { it.source })
     val anyLocked = ready.any { it.source?.wasEncrypted == true }
@@ -108,10 +134,14 @@ private fun ColumnScope.MergeOptions(items: List<MergeItem>, blank: Boolean, vm:
 }
 
 @Composable
-private fun MergeRow(item: MergeItem, number: Int, dragging: Boolean, handle: Modifier, onRemove: () -> Unit) {
+private fun MergeRow(
+    item: MergeItem, number: Int, dragging: Boolean, handle: Modifier, onRemove: () -> Unit,
+    expanded: Boolean, thumbs: PdfThumbnails?, onToggle: () -> Unit, onPeek: (Int) -> Unit,
+) {
     val c = ForgeTheme.colors
     val failed = item.status is MergeStatus.Failed
     ForgeCard(Modifier.fillMaxWidth().let { if (dragging) it.border(1.5.dp, c.accent, com.namanbansal.forge.ui.theme.ForgeShapes.Card) else it }) {
+      Column {
         Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 handle.size(48.dp).semantics { contentDescription = "Drag to reorder ${item.file.name}" },
@@ -129,12 +159,29 @@ private fun MergeRow(item: MergeItem, number: Int, dragging: Boolean, handle: Mo
                 }
                 Text(text, style = ForgeType.Small, color = color, maxLines = if (failed) 3 else 1, overflow = TextOverflow.Ellipsis)
             }
+            if (item.status == MergeStatus.Ready) Box(
+                Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable(onClick = onToggle)
+                    .semantics { contentDescription = (if (expanded) "Hide pages of " else "Show pages of ") + item.file.name },
+                contentAlignment = Alignment.Center,
+            ) { Icon(if (expanded) ForgeIcons.ChevronUp else ForgeIcons.ChevronDown, null, tint = c.text2, modifier = Modifier.size(20.dp)) }
             Box(
                 Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable(onClick = onRemove)
                     .semantics { contentDescription = "Remove ${item.file.name}" },
                 contentAlignment = Alignment.Center,
             ) { Icon(ForgeIcons.Close, null, tint = c.text2, modifier = Modifier.size(18.dp)) }
         }
+        if (expanded) {
+            if (thumbs == null) Text("Pages can't be previewed for this file.", style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(start = 16.dp, bottom = 12.dp))
+            else LazyRow(
+                Modifier.fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(item.pages, key = { it }) { page ->
+                    PageThumb(page, "${page + 1}", thumbs, Modifier.width(60.dp), onClick = { onPeek(page) }, description = "${item.file.name}, page ${page + 1}. Tap to preview")
+                }
+            }
+        }
+      }
     }
 }
 

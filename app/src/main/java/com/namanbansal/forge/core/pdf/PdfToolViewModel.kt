@@ -44,7 +44,8 @@ abstract class PdfToolViewModel(application: Application, saved: SavedStateHandl
 
     override suspend fun onInputsReady(files: List<PickedFile>) {
         val file = files.first()
-        if (file.kind != FileKind.PDF) throw ToolException("\"${file.name}\" isn't a PDF. Please choose a PDF file.")
+        // Some providers (chat apps, cloud drives) hand out no name or a generic type; the file itself tells the truth.
+        if (file.kind != FileKind.PDF && !PdfLoader.looksLikePdf(app, file.uri)) throw ToolException("\"${file.name}\" isn't a PDF. Please choose a PDF file.")
         val copy = PdfLoader.copyToWork(app, file.uri)
         workFiles += copy
         handle(copy, file.name, PdfLoader.open(copy, workDir(), null))

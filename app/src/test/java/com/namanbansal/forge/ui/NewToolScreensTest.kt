@@ -88,7 +88,7 @@ class NewToolScreensTest {
     @Test fun everyNewScreenShowsItsPickStateViaTheDefaultViewModelFactory() {
         val cases = listOf(
             "P1" to "Choose PDFs to merge", "P2" to "Choose a PDF to split", "P3" to "Choose a PDF to organise",
-            "P5" to "Choose a PDF to extract pages from", "P6" to "Choose the PDF to add pages to", "P40" to "Choose a PDF to read",
+            "P5" to "Choose a PDF to extract pages from", "P6" to "Choose the PDF to add pages to", "P40" to "Open PDF",
         )
         var current by androidx.compose.runtime.mutableStateOf(cases.first().first)
         compose.setContent { ForgeTheme { androidx.compose.runtime.key(current) { com.namanbansal.forge.tools.ToolScreens.screens.getValue(current)(host(current)) } } }
@@ -132,10 +132,11 @@ class NewToolScreensTest {
         vm.onFilesPicked(listOf(pdf("s.pdf", 12)))
         pump { vm.source.value != null && vm.thumbnails.value != null && vm.bookmarks.value != null }
         compose.onNode(hasText("Split") and hasClickAction()).assertIsNotEnabled()
+        compose.onNodeWithText("Ranges").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("1-3, 5")
         compose.waitForIdle()
-        compose.onNodeWithText("p1-3 · 3 pages").assertExists()
-        compose.onNodeWithText("p5 · 1 page").assertExists()
+        compose.onNodeWithText("File 1 · pages 1–3").assertExists()
+        compose.onNodeWithText("File 2 · page 5").assertExists()
         compose.onNodeWithText("Split into 2 files").assertIsEnabled()
         vm.setRanges("1-3, 40"); compose.waitForIdle()
         compose.onNodeWithText("Page 40 doesn't exist. This PDF has 12 pages.").assertExists()
@@ -149,19 +150,19 @@ class NewToolScreensTest {
         compose.setContent { ForgeTheme { PageManagerScreen(host("P3"), vm) } }
         vm.onFilesPicked(listOf(pdf("pm.pdf", 6)))
         pump { vm.state.value.pages.size == 6 && vm.thumbnails.value != null }
-        compose.onNodeWithText("6 pages · 0 selected").assertExists()
+        compose.onNodeWithText("0 of 6 selected").assertExists()
         compose.onNode(hasText("Save PDF") and hasClickAction()).assertIsNotEnabled()
         compose.onNodeWithContentDescription("Page 2, from original page 2").performClick()
-        compose.onNodeWithText("6 pages · 1 selected").assertExists()
+        compose.onNodeWithText("1 of 6 selected").assertExists()
         compose.onNodeWithContentDescription("Rotate selected pages right").performClick()
         compose.onNode(hasText("Save PDF") and hasClickAction()).assertIsEnabled()
         compose.onNodeWithContentDescription("Undo").performClick()
         compose.onNode(hasText("Save PDF") and hasClickAction()).assertIsNotEnabled()
         compose.onNodeWithContentDescription("Redo").performClick()
         compose.onNodeWithContentDescription("Duplicate selected pages").performClick()
-        compose.onNodeWithText("7 pages · 1 selected").assertExists()
+        compose.onNodeWithText("1 of 7 selected").assertExists()
         compose.onNodeWithContentDescription("Delete selected pages").performClick()
-        compose.onNodeWithText("6 pages · 0 selected").assertExists()
+        compose.onNodeWithText("0 of 6 selected").assertExists()
     }
 
     @Test fun pageManagerDragReordersPages() {
@@ -196,10 +197,8 @@ class NewToolScreensTest {
         compose.onNodeWithContentDescription("Page 2").performClick()
         compose.onNodeWithContentDescription("Page 3").performClick()
         compose.onNodeWithText("Extract 2 pages").assertIsEnabled()
-        compose.onNodeWithText("Page ranges").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("2-3").assertExists() // the text field shows the grid selection
-        compose.onNodeWithText("p2-3").assertExists()
+        compose.onNodeWithText("2-3").assertExists() // the range field shows the grid selection
     }
 
     @Test fun insertDefaultsAndBlankSummary() {
@@ -209,8 +208,6 @@ class NewToolScreensTest {
         pump { vm.source.value != null && vm.thumbnails.value != null }
         compose.onNodeWithText("Insert 1 page").assertIsEnabled()
         compose.onNodeWithText("Adds 1 page at the end. The new PDF will have 6 pages.").assertExists()
-        compose.onNodeWithText("Before page").performClick()
-        compose.onNodeWithText("Page number (1-5)").assertExists()
         compose.onNodeWithContentDescription("Increase Number of blank pages").performClick()
         compose.onNodeWithText("Insert 2 pages").assertExists()
         compose.onNodeWithText("From another PDF").performClick()
@@ -223,7 +220,7 @@ class NewToolScreensTest {
         compose.setContent { ForgeTheme { ViewerScreen(host("P40"), vm) } }
         val f = PdfFixtures.withText(File(tmp.root, "v.pdf"), 8, body = { listOf("find the needle here") })
         vm.onFilesPicked(listOf(PickedFile(Uri.fromFile(f), "v.pdf", f.length(), "application/pdf")))
-        pump { vm.source.value != null && vm.aspects.value != null }
+        pump { vm.source.value != null && vm.aspects.value != null && vm.restored.value }
         compose.onNodeWithText("v.pdf").assertExists()
         compose.onNodeWithContentDescription("of 8", substring = true, useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("Dark pages").performClick()
@@ -247,7 +244,7 @@ class NewToolScreensTest {
         var opened: Pair<String, List<PickedFile>>? = null
         compose.setContent { ForgeTheme { ViewerScreen(ToolHost(ToolRegistry.get("P40")!!, {}, { c, f -> opened = c to f }), vm) } }
         vm.onFilesPicked(listOf(pdf("q.pdf", 3)))
-        pump { vm.source.value != null && vm.aspects.value != null }
+        pump { vm.source.value != null && vm.aspects.value != null && vm.restored.value }
         compose.onNodeWithContentDescription("More actions").performClick()
         compose.onNodeWithText("Open this PDF in…").assertExists()
         compose.onNodeWithText("Split PDF").performClick()

@@ -17,6 +17,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.namanbansal.forge.ui.toolkit.GridPage
+import com.namanbansal.forge.ui.toolkit.PagePeek
+import com.namanbansal.forge.ui.toolkit.SelectionBar
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +41,6 @@ import com.namanbansal.forge.core.pdf.EditorState
 import com.namanbansal.forge.core.pdf.PdfThumbnails
 import com.namanbansal.forge.tools.ToolHost
 import com.namanbansal.forge.ui.components.InfoNote
-import com.namanbansal.forge.ui.components.TextAction
 import com.namanbansal.forge.ui.icons.ForgeIcons
 import com.namanbansal.forge.ui.theme.ForgeTheme
 import com.namanbansal.forge.ui.theme.ForgeType
@@ -73,16 +79,13 @@ fun PageManagerScreen(host: ToolHost, vm: PageManagerViewModel = viewModel()) {
 private fun ColumnScope.PageManagerOptions(vm: PageManagerViewModel, state: EditorState, thumbs: PdfThumbnails, protectionNote: String?) {
     val c = ForgeTheme.colors
     val selectedCount = state.selected.size
-    val all = selectedCount == state.pages.size
-    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            "${pagesLabel(state.pages.size)} · $selectedCount selected",
-            style = ForgeType.Small, color = c.text2, modifier = Modifier.weight(1f),
-        )
+    var peek by rememberSaveable { mutableIntStateOf(-1) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(pagesLabel(state.pages.size), style = ForgeType.Small, color = c.text2, modifier = Modifier.weight(1f))
         IconAction(ForgeIcons.Undo, "Undo", state.canUndo, vm::undo)
         IconAction(ForgeIcons.Redo, "Redo", state.canRedo, vm::redo)
-        TextAction(if (all) "None" else "All", if (all) vm::selectNone else vm::selectAll)
     }
+    SelectionBar(selectedCount, state.pages.size, vm::selectAll, vm::selectNone, vm::invertSelection, Modifier.padding(bottom = 4.dp))
     ReorderableGrid(
         items = state.pages, key = { it.id }, columns = 3,
         onMove = { from, to -> vm.dragMove(from, to) }, onDragStart = vm::dragStart, onDragEnd = vm::dragEnd,
@@ -103,6 +106,15 @@ private fun ColumnScope.PageManagerOptions(vm: PageManagerViewModel, state: Edit
         ToolbarAction(ForgeIcons.Trash, "Delete", "Delete selected pages", has && selectedCount < state.pages.size, Modifier.weight(1f), danger = true, onClick = vm::deleteSelected)
         ToolbarAction(ForgeIcons.Copy, "Duplicate", "Duplicate selected pages", has, Modifier.weight(1f), onClick = vm::duplicateSelected)
         ToolbarAction(ForgeIcons.Extract, "Extract", "Save selected pages as a new PDF", has, Modifier.weight(1f), onClick = vm::extractSelected)
+        ToolbarAction(ForgeIcons.Eye, "Preview", "Preview the selected pages full screen", has, Modifier.weight(1f), onClick = {
+            peek = state.pages.indexOfFirst { it.id in state.selected }.coerceAtLeast(0)
+        })
+    }
+    if (peek in state.pages.indices) {
+        val pages = remember(state.pages, thumbs) {
+            state.pages.mapIndexed { i, p -> GridPage("m${p.id}", thumbs, p.source, "${i + 1}", rotation = p.rotation, description = "Page ${i + 1}, from original page ${p.source + 1}") }
+        }
+        PagePeek(pages, peek, onIndexChange = { peek = it }, onClose = { peek = -1 })
     }
 }
 

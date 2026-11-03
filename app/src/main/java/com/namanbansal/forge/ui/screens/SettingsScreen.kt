@@ -1,5 +1,14 @@
 package com.namanbansal.forge.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +21,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.namanbansal.forge.core.DefaultPdfViewer
+import com.namanbansal.forge.core.DefaultViewer
+import com.namanbansal.forge.ui.components.ForgeButton
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -51,6 +68,18 @@ fun SettingsScreen(app: ForgeApp, settings: Settings, onLicenses: () -> Unit) {
                     options = listOf("System", "Light", "Dark"),
                     selected = settings.theme.ordinal,
                     onSelect = { i -> scope.launch { app.settings.setTheme(ThemeMode.entries[i]) } },
+                )
+            }
+            item {
+                GroupLabel("PDF viewer")
+                val context = LocalContext.current
+                var state by remember { mutableStateOf(DefaultPdfViewer.detect(context)) }
+                LifecycleResumeEffect(Unit) { state = DefaultPdfViewer.detect(context); onPauseOrDispose {} } // coming back from App info / the chooser
+                PdfViewerSettings(
+                    state = state, keepScreenOn = settings.viewer.keepScreenOn,
+                    onKeepScreenOn = { v -> scope.launch { app.settings.setViewerPrefs(settings.viewer.copy(keepScreenOn = v)) } },
+                    onOpenAppInfo = { pkg -> runCatching { context.startActivity(DefaultPdfViewer.appInfoIntent(pkg)) } },
+                    onTest = { runCatching { context.startActivity(DefaultPdfViewer.testIntent(context)) } },
                 )
             }
             item {
@@ -101,5 +130,63 @@ fun SettingsScreen(app: ForgeApp, settings: Settings, onLicenses: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+/**
+ * "Make Forge your PDF viewer": a check when Forge already opens PDFs, otherwise two short steps with buttons for each
+ * (App info of the current default app > Open by default > Clear defaults, then Test it and pick Forge > Always).
+ */
+@Composable
+fun PdfViewerSettings(
+    state: DefaultViewer,
+    keepScreenOn: Boolean,
+    onKeepScreenOn: (Boolean) -> Unit,
+    onOpenAppInfo: (String) -> Unit,
+    onTest: () -> Unit,
+) {
+    val c = ForgeTheme.colors
+    ForgeCard(Modifier.fillMaxWidth()) {
+        when (state) {
+            DefaultViewer.Forge -> ListRow(
+                "Forge is your PDF viewer", subtitle = "PDFs you tap in other apps open here.", icon = ForgeIcons.Check,
+                trailing = {
+                    Box(Modifier.size(28.dp).clip(CircleShape).background(c.accent), contentAlignment = Alignment.Center) {
+                        Icon(ForgeIcons.Check, "Default", tint = Color.White, modifier = Modifier.size(16.dp))
+                    }
+                },
+            )
+            else -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Make Forge your PDF viewer", style = ForgeType.Section, color = c.text)
+                Text(
+                    if (state is DefaultViewer.Other) "PDFs currently open in ${state.label}. Switch in two steps:" else "Android asks which app to use each time. Fix that in one step:",
+                    style = ForgeType.Small, color = c.text2,
+                )
+                if (state is DefaultViewer.Other) {
+                    Step("1", "Open App info, tap Open by default, then Clear defaults.")
+                    Step("2", "Come back and tap Test it. Choose Forge, then Always.")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ForgeButton("Open App info", { onOpenAppInfo(state.packageName) }, Modifier.weight(1f), secondary = true)
+                        ForgeButton("Test it", onTest, Modifier.weight(1f))
+                    }
+                } else {
+                    Step("1", "Tap Test it. Choose Forge, then Always.")
+                    ForgeButton("Test it", onTest, Modifier.fillMaxWidth())
+                }
+            }
+        }
+        HorizontalDivider(Modifier.padding(horizontal = 12.dp), thickness = 1.dp, color = c.border)
+        ListRow("Keep screen on while reading", subtitle = "Stops the screen from sleeping in the viewer", icon = ForgeIcons.Sun, showDivider = false, trailing = {
+            ForgeSwitch(keepScreenOn, onKeepScreenOn)
+        })
+    }
+}
+
+@Composable
+private fun Step(n: String, text: String) {
+    val c = ForgeTheme.colors
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+        Box(Modifier.size(22.dp).clip(CircleShape).background(c.tint), contentAlignment = Alignment.Center) { Text(n, style = ForgeType.Tiny, color = c.accent) }
+        Text(text, style = ForgeType.Small, color = c.text, modifier = Modifier.weight(1f))
     }
 }
