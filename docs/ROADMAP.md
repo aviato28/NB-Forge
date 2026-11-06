@@ -53,12 +53,12 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
   - [x] final gradle check (test, assemble, lint, R8) + CI green
 
 ## Round 2D — Edit existing content (P15, Acrobat-style)
-- [ ] Paragraph detection from PageText (lines → blocks; font, size, colour, alignment)
-- [ ] In-place text editing: remove the old glyphs (Redactor engine), write the new text re-wrapped in the block box
-- [ ] Font handling: reuse the embedded font when its subset has every glyph, else the closest bundled OFL font (sans/serif/mono) + notice
-- [ ] Existing images: select, move, resize, replace, delete (content-stream matrix edits)
-- [ ] Existing vector paths: select + delete
-- [ ] Tests (re-extract text, pixel-probe renders), screenshots, full gradle gate + CI green
+- [x] Paragraph detection from PageText (lines → blocks; font, size, colour, alignment)
+- [x] In-place text editing: remove the old glyphs (Redactor engine), write the new text re-wrapped in the block box
+- [x] Font handling: reuse the embedded font when its subset has every glyph, else the closest bundled OFL font (sans/serif/mono) + notice
+- [x] Existing images: select, move, resize, replace, delete (content-stream matrix edits)
+- [x] Existing vector paths: select + delete
+- [x] Tests (re-extract text, pixel-probe renders), screenshots, full gradle gate + CI green
 
 ## Round 3 — Remaining PDF tools
 - [ ] Compress (P9), Protect / Unlock (P29/P30), Watermark (P20), Page numbers (P21), PDF→images (P31), Images→PDF (P32) — each with a live preview
