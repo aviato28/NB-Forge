@@ -111,7 +111,10 @@ class ExistingUiTest {
 
     @Test fun blocksAreOutlinedAndTappingSelectsThenOpensTheInlineEditor() {
         val c = controller(page())
-        compose.setContent { ForgeTheme { Box(Modifier.size(411.dp, 530.dp)) { EditMode(c, interactive = true, pageWidthPt = { 612f }).PageOverlay(0, 1233, 1596, false) } } }
+        compose.setContent { ForgeTheme { androidx.compose.foundation.layout.Column {
+            Box(Modifier.size(411.dp, 530.dp)) { EditMode(c, interactive = true, pageWidthPt = { 612f }).PageOverlay(0, 1233, 1596, false) }
+            EditToolbar(c, false, {}, {}, {})
+        } } }
         settle(c)
         compose.onNodeWithContentDescription("3 text blocks, 0 pictures, 0 drawings you can edit").assertExists()
         val o = c.existing.objects.value[0]!!
@@ -124,7 +127,7 @@ class ExistingUiTest {
         assertEquals(ExBlockRef(0, b.key), c.existing.editing.value)
         compose.onNodeWithTag("existing-editor").assertIsDisplayed()
         compose.onNodeWithTag("existing-editor").performTextReplacement("The committee rejected the budget.")
-        compose.onNodeWithTag("existing-editor-done").performClick(); compose.waitForIdle()
+        compose.onNodeWithContentDescription("Finish editing the text").performClick(); compose.waitForIdle()
         assertEquals(null, c.existing.editing.value)
         val e = c.session.current.existing.single()
         assertEquals("The committee rejected the budget.", e.text); assertEquals(para, e.origText)
@@ -156,6 +159,26 @@ class ExistingUiTest {
         compose.onNodeWithContentDescription("Bold").assertIsSelected()
         compose.onNodeWithContentDescription("Undo my changes to this paragraph").performClick()
         assertTrue(c.session.current.existing.isEmpty())
+    }
+
+    private fun embeddedSimple(): File {
+        val f = tmp.newFile("simple${n++}.pdf")
+        PDDocument().use { d ->
+            val p = PDPage(); d.addPage(p)
+            val font = fonts.open("fonts/NotoSerif-Regular.ttf").use { com.tom_roush.pdfbox.pdmodel.font.PDTrueTypeFont.load(d, it, com.tom_roush.pdfbox.pdmodel.font.encoding.WinAnsiEncoding.INSTANCE) }
+            PDPageContentStream(d, p).use { cs -> cs.beginText(); cs.setFont(font, 14f); cs.newLineAtOffset(72f, 700f); cs.showText("Hello embedded font"); cs.endText() }
+            d.save(f)
+        }
+        return f
+    }
+
+    @Test fun anEmbeddedSimpleFontIsReusedWhenItHasTheGlyphsAndReplacedWhenItDoesNot() {
+        val c = controller(embeddedSimple()); settle(c)
+        val b = c.existing.objects.value[0]!!.blocks.single(); val r = ExBlockRef(0, b.key)
+        c.existing.openEditor(r); c.existing.draft = "Hello café, still the same font"; c.existing.closeEditor(true)
+        assertTrue(messages.toString(), messages.none { it.startsWith("Used") })
+        c.existing.openEditor(r); c.existing.draft = "Hello \u015D\u0153"; c.existing.closeEditor(true) // not in WinAnsi / the encoding
+        assertTrue(messages.toString(), messages.any { it.startsWith("Used Noto Serif") })
     }
 
     private fun subsetPage(): File {

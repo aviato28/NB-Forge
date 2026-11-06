@@ -227,22 +227,5 @@ private fun InlineEditor(controller: EditController, page: Int, block: ExBlock, 
                     .focusRequester(focus).testTag("existing-editor").semantics { contentDescription = "Edit paragraph text" },
             )
         }
-        Row(
-            Modifier.offset { IntOffset((x - 4.dp.toPx()).toInt(), (block.rect.bottom * heightPx + 8.dp.toPx()).toInt()) },
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-        ) {
-            EditorChip("Done", true, "existing-editor-done") { ex.closeEditor(true) }
-            EditorChip("Cancel", false, "existing-editor-cancel") { ex.closeEditor(false) }
-        }
     }
-}
-
-@Composable
-private fun EditorChip(label: String, primary: Boolean, tag: String, onClick: () -> Unit) {
-    val c = ForgeTheme.colors
-    Box(
-        Modifier.heightIn(min = 48.dp).widthIn(min = 72.dp).clip(RoundedCornerShape(24.dp)).background(if (primary) c.accent else c.surface).border(1.dp, if (primary) c.accent else c.border, RoundedCornerShape(24.dp))
-            .clickable(onClick = onClick).padding(horizontal = 16.dp).testTag(tag).semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) { Text(label, style = ForgeType.Label, color = if (primary) Color.White else c.text) }
 }

@@ -67,9 +67,12 @@ class ExistingScreenshotTest {
 
     /** A report page: title, two paragraphs, a picture, a rectangle and a line. */
     private fun report(name: String = "report.pdf"): File = ExistingFixtures.doc(File(tmp.root, name)) { d, _, cs ->
-        cs.line(ExistingFixtures.HELV_B, 24f, 54f, 730f, "Annual Budget Review")
-        cs.paragraph(ExistingFixtures.TIMES, 13f, 54f, 695f, 500f, intro)
-        cs.paragraph(ExistingFixtures.TIMES, 13f, 54f, 625f, 500f, second)
+        // embedded fonts, so the PDFBox render (and the editor) really use them
+        val sans = fonts.open("fonts/NotoSans-Bold.ttf").use { com.tom_roush.pdfbox.pdmodel.font.PDTrueTypeFont.load(d, it, com.tom_roush.pdfbox.pdmodel.font.encoding.WinAnsiEncoding.INSTANCE) }
+        val serif = fonts.open("fonts/NotoSerif-Regular.ttf").use { com.tom_roush.pdfbox.pdmodel.font.PDTrueTypeFont.load(d, it, com.tom_roush.pdfbox.pdmodel.font.encoding.WinAnsiEncoding.INSTANCE) }
+        cs.line(sans, 24f, 54f, 730f, "Annual Budget Review")
+        cs.paragraph(serif, 12f, 54f, 695f, 500f, intro)
+        cs.paragraph(serif, 12f, 54f, 625f, 500f, second)
         val bmp = Bitmap.createBitmap(300, 200, Bitmap.Config.ARGB_8888)
         Canvas(bmp).apply { drawColor(AColor.rgb(250, 214, 160)); val p = Paint(Paint.ANTI_ALIAS_FLAG); p.color = AColor.rgb(46, 125, 50); drawCircle(90f, 120f, 70f, p); p.color = AColor.rgb(31, 79, 216); drawRect(150f, 40f, 280f, 170f, p) }
         cs.drawImage(LosslessFactory.createFromImage(d, bmp), 54f, 380f, 240f, 160f)
@@ -120,12 +123,18 @@ class ExistingScreenshotTest {
     @Test fun fontNotice() {
         val vm = viewer(subset())
         val b = block(vm, "Quick")
-        vm.edit.existing.openEditor(ExBlockRef(0, b.key))
-        vm.edit.existing.draft = "Lazy zebra quiz jumps"
-        vm.edit.existing.closeEditor(true)
-        vm.edit.existing.select(ExBlockRef(0, b.key))
-        compose.pumpUntil { vm.edit.existing.previews.value.isNotEmpty() }
-        compose.shootBoth("edit-existing-font-notice", settle = settle) { ViewerScreen(host(), vm, startMode = ViewerModeId.EDIT, startTool = EditTool.EXISTING) }
+        // the notice is a snackbar shown when the edit is committed, so commit again after each theme flip
+        val commit = {
+            vm.edit.reset()
+            vm.edit.existing.ensure(0); compose.pumpUntil { vm.edit.existing.objects.value[0] != null }
+            vm.edit.existing.openEditor(ExBlockRef(0, b.key))
+            vm.edit.existing.draft = "Lazy zebra quiz jumps"
+            vm.edit.existing.closeEditor(true)
+            vm.edit.existing.select(ExBlockRef(0, b.key))
+            compose.pumpUntil { vm.edit.existing.previews.value.isNotEmpty() }
+            settle()
+        }
+        compose.shootBoth("edit-existing-font-notice", settle = commit) { ViewerScreen(host(), vm, startMode = ViewerModeId.EDIT, startTool = EditTool.EXISTING) }
     }
 
     @Test fun imageSelected() {
@@ -138,7 +147,7 @@ class ExistingScreenshotTest {
         val vm = viewer(report())
         val c = vm.edit
         c.existing.setLasso(true)
-        c.onStart(PageHit(0, 0.05f, 0.40f, 0.77f)); c.onMove(0.95f, 0.69f); c.onEnd()
+        c.onStart(PageHit(0, 0.05f, 0.29f, 0.77f)); c.onMove(0.95f, 0.71f); c.onEnd()
         compose.shootBoth("edit-existing-lasso", settle = settle) { ViewerScreen(host(), vm, startMode = ViewerModeId.EDIT, startTool = EditTool.EXISTING) }
     }
 
