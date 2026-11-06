@@ -33,8 +33,8 @@ class ToolRegistryTest {
 
     @Test fun availableToolsAreTheOrganiseSetPlusEditAnnotateFillSignAndViewer() {
         val available = ToolRegistry.all.filter { it.status == ToolStatus.Available }
-        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P16", "P17", "P18", "P19", "P25", "P27", "P40"), available.map { it.code })
-        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P16", "P17", "P18", "P19", "P25", "P27", "P40"), ToolRegistry.availableFor(setOf(FileKind.PDF)).map { it.code })
+        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P25", "P27", "P40"), available.map { it.code })
+        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P25", "P27", "P40"), ToolRegistry.availableFor(setOf(FileKind.PDF)).map { it.code })
         assertTrue(ToolRegistry.availableFor(setOf(FileKind.IMAGE)).isEmpty())
         assertTrue(ToolRegistry.availableFor(emptySet()).isEmpty())
         assertTrue(ToolRegistry.availableFor(setOf(FileKind.PDF, FileKind.IMAGE)).isEmpty()) // mixed: no tool takes both
