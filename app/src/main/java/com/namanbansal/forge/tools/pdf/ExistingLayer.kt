@@ -167,7 +167,7 @@ private fun DrawScope.drawPicture(bmp: ImageBitmap?, to: NormRect, turns: Int, a
 
 private fun typefaceFor(serif: Boolean, mono: Boolean, bold: Boolean, italic: Boolean): Typeface {
     val base = when { mono -> Typeface.MONOSPACE; serif -> Typeface.SERIF; else -> Typeface.SANS_SERIF }
-    val style = (if (bold) Typeface.BOLD else 0) or (if (italic) Typeface.ITALIC else 0)
+    val style = when { bold && italic -> Typeface.BOLD_ITALIC; bold -> Typeface.BOLD; italic -> Typeface.ITALIC; else -> Typeface.NORMAL }
     return Typeface.create(base, style)
 }
 
