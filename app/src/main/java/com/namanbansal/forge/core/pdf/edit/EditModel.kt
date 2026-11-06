@@ -68,8 +68,8 @@ data class RedactMark(val id: String, val page: Int, val rect: NormRect, val ori
 }
 
 /** Everything unsaved in Edit mode. Order of [items] is the stacking order (last = in front). */
-data class EditState(val items: List<EditObject> = emptyList(), val marks: List<RedactMark> = emptyList()) {
-    val isEmpty: Boolean get() = items.isEmpty() && marks.isEmpty()
+data class EditState(val items: List<EditObject> = emptyList(), val marks: List<RedactMark> = emptyList(), val existing: List<ExistingEdit> = emptyList()) {
+    val isEmpty: Boolean get() = items.isEmpty() && marks.isEmpty() && existing.isEmpty()
 }
 
 /** [EditState] with undo / redo, the same shape as the fill and annotate sessions. Pure Kotlin. */
@@ -119,6 +119,12 @@ class EditSession(initial: EditState = EditState(), private val maxHistory: Int 
         return copy.id
     }
 
+    /** Adds a change to existing content, replacing an earlier change to the same object. */
+    fun upsertExisting(e: ExistingEdit) = commit(current.copy(existing = current.existing.filter { !it.sameTarget(e) } + e))
+    fun upsertExisting(list: List<ExistingEdit>) { if (list.isNotEmpty()) commit(current.copy(existing = current.existing.filter { o -> list.none { it.sameTarget(o) } } + list)) }
+    fun removeExisting(id: String) = commit(current.copy(existing = current.existing.filter { it.id != id }))
+    fun findExisting(page: Int, kind: ExistingKind, key: Int): ExistingEdit? = current.existing.firstOrNull { it.page == page && it.kind == kind && it.key == key }
+
     fun addMark(m: RedactMark) = commit(current.copy(marks = current.marks + m))
     fun addMarks(ms: List<RedactMark>) { if (ms.isNotEmpty()) commit(current.copy(marks = current.marks + ms)) }
     fun removeMark(id: String) = commit(current.copy(marks = current.marks.filter { it.id != id }))
@@ -155,6 +161,7 @@ object EditJson {
                 })
             }
         })
+        put("existing", JSONArray().also { arr -> s.existing.forEach { arr.put(ExistingJson.encode(it)) } })
         put("marks", JSONArray().also { arr ->
             s.marks.forEach { m -> arr.put(JSONObject().apply { put("id", m.id); put("page", m.page); rect(m.rect); put("origin", m.origin) }) }
         })
@@ -175,7 +182,9 @@ object EditJson {
         }
         val ma = o.getJSONArray("marks")
         val marks = (0 until ma.length()).map { k -> ma.getJSONObject(k).let { j -> RedactMark(j.getString("id"), j.getInt("page"), j.rect(), j.getString("origin")) } }
-        EditState(items, marks)
+        val ea = o.optJSONArray("existing")
+        val existing = if (ea == null) emptyList() else (0 until ea.length()).map { ExistingJson.decode(ea.getJSONObject(it)) }
+        EditState(items, marks, existing)
     } catch (_: Exception) { EditState() }
 }
 

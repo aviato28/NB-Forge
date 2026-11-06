@@ -68,7 +68,7 @@ data class Aff(val a: Float, val b: Float, val c: Float, val d: Float, val e: Fl
 
 /** One character the page shows, in the order of the content stream (index = its identity for edits). */
 class Glyph(
-    val index: Int, val code: Int, val text: String, val font: PDFont, val fontId: Int, val fontName: String,
+    val index: Int, val code: Int, val codeLen: Int, val text: String, val font: PDFont, val fontId: Int, val fontName: String,
     /** Size on the page in points (font size scaled by the text matrix and CTM). */
     val size: Float, val color: Int,
     val baseX: Float, val baseY: Float, val box: Box,
@@ -225,7 +225,7 @@ object ContentWalker {
                     uni.isNullOrEmpty() -> { note = "no Unicode mapping"; false }
                     else -> true
                 }
-                ps.glyphs += Glyph(index, code, uni ?: "", font, ps.fontId(font), fname, size, gs.fill, m.x(0f, gs.rise), m.y(0f, gs.rise), box, editable, note)
+                ps.glyphs += Glyph(index, code, len, uni ?: "", font, ps.fontId(font), fname, size, gs.fill, m.x(0f, gs.rise), m.y(0f, gs.rise), box, editable, note)
                 if (index in ch.removeGlyphs) {
                     flushKeep(); any = true
                     gap += -(dx * 1000f + 1000f * extra / gs.fs)

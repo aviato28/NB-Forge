@@ -151,7 +151,7 @@ object TextBlocks {
         var prev: Glyph? = null
         for (g in glyphs) {
             val p = prev
-            if (p != null && g.text == p.text && abs(g.baseX - p.baseX) < 0.3f * g.size && abs(g.baseY - p.baseY) < 0.2f * g.size) { extra += g.index; continue } // drawn twice (fake bold, shadow)
+            if (p != null && g.text == p.text && abs(g.baseX - p.baseX) < 0.08f * g.size && abs(g.baseY - p.baseY) < 0.2f * g.size) { extra += g.index; continue } // drawn twice (fake bold, shadow)
             if (p != null && g.text.isNotBlank() && p.text.isNotBlank() && g.box.l - p.box.r > 0.17f * g.size) sb.append(' ')
             sb.append(g.text); used += g
             prev = g
