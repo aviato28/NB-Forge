@@ -116,6 +116,8 @@ object ContentWalker {
     private class Pass(val doc: PDDocument, val changes: ContentChanges) {
         val glyphs = ArrayList<Glyph>(); val images = ArrayList<ImageRef>(); val paths = ArrayList<PathRef>()
         var type3 = false; var invisible = 0
+        /** Page-space area pictures were moved into while inside a form: the form's clip must grow to show them. */
+        var needBox: Box? = null
         val seen = IdentityHashMap<Any, Boolean>()
         val fontIds = IdentityHashMap<Any, Int>()
         fun fontId(f: PDFont): Int = fontIds.getOrPut(f.cosObject) { fontIds.size }
@@ -267,6 +269,7 @@ object ContentWalker {
                     val inv = ctm.inverse()
                     if (target == null || inv == null) { if (repl == null) drawTokens() else operands.clear(); return }
                     val corr = target.then(inv)
+                    target.bounds(0f, 0f, 1f, 1f).let { tb -> ps.needBox = ps.needBox?.union(tb) ?: tb }
                     out.add(op("q")); listOf(corr.a, corr.b, corr.c, corr.d, corr.e, corr.f).forEach { out.add(COSFloat(it)) }; out.add(op("cm"))
                     if (repl != null) {
                         val name = repl(res)
@@ -383,7 +386,10 @@ object ContentWalker {
                             ps.seen[xo.cosObject] = true
                             val fres = xo.resources ?: res
                             val inner = PDFStreamParser(xo).also { it.parse() }.tokens
+                            val outerNeed = ps.needBox; ps.needBox = null
                             val (nt, c) = process(ps, inner, fres, gs.copy().also { it.ctm = child }, depth + 1)
+                            val need = ps.needBox
+                            ps.needBox = if (need == null) outerNeed else outerNeed?.union(need) ?: need
                             ps.seen.remove(xo.cosObject)
                             if (!c) pass(tok)
                             else {
@@ -391,7 +397,14 @@ object ContentWalker {
                                 cs.addAll(xo.cosObject)
                                 cs.removeItem(COSName.LENGTH); cs.removeItem(COSName.FILTER); cs.removeItem(COSName.DECODE_PARMS)
                                 cs.createOutputStream(COSName.FLATE_DECODE).use { ContentStreamWriter(it).writeTokens(nt) }
-                                out.add(res.add(PDFormXObject(cs))); out.add(tok); operands.clear(); changed = true
+                                val copy = PDFormXObject(cs)
+                                val bb = xo.bBox
+                                val inv = child.inverse()
+                                if (need != null && bb != null && inv != null) {
+                                    val nb = inv.bounds(need.l, need.b, need.r, need.t)
+                                    copy.bBox = com.tom_roush.pdfbox.pdmodel.common.PDRectangle(min(bb.lowerLeftX, nb.l), min(bb.lowerLeftY, nb.b), max(bb.upperRightX, nb.r) - min(bb.lowerLeftX, nb.l), max(bb.upperRightY, nb.t) - min(bb.lowerLeftY, nb.b))
+                                }
+                                out.add(res.add(copy)); out.add(tok); operands.clear(); changed = true
                             }
                         }
                         else -> pass(tok)
