@@ -31,7 +31,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /** The tools of the Edit strip. */
-enum class EditTool(val label: String) { SELECT("Select"), TEXT("Text"), IMAGE("Image"), SHAPE("Shape"), WHITEOUT("Whiteout"), REDACT("Redact") }
+enum class EditTool(val label: String) { EXISTING("Existing"), SELECT("Select"), TEXT("Text"), IMAGE("Image"), SHAPE("Shape"), WHITEOUT("Whiteout"), REDACT("Redact") }
 
 /** How Redact marks are made: by dragging a box, or by selecting text. */
 enum class RedactHow { DRAW, TEXT }
@@ -55,16 +55,22 @@ class EditController(
     private val pageText: suspend (Int) -> PageText?,
     private val sampleColor: suspend (Int, Float, Float) -> Int?,
     private val message: (String) -> Unit,
+    loadObjects: suspend (Int) -> com.namanbansal.forge.core.pdf.edit.content.PageObjects? = { null },
+    previewOf: suspend (Int, com.namanbansal.forge.core.pdf.edit.content.ExBlock, com.namanbansal.forge.core.pdf.edit.ExistingEdit) -> com.namanbansal.forge.core.pdf.edit.content.TextPreview? = { _, _, _ -> null },
 ) : PageInput {
     val session = EditSession()
+    /** Edit existing: the PDF's own text, pictures and drawings. */
+    val existing = ExistingController(session, scope, pageAspect, loadObjects, previewOf, message)
+    init { scope.launch { session.state.collect { existing.onSessionChanged() } } }
 
-    private val _tool = MutableStateFlow(EditTool.SELECT)
+    private val _tool = MutableStateFlow(EditTool.EXISTING)
     val tool: StateFlow<EditTool> = _tool.asStateFlow()
     fun setTool(t: EditTool) {
         _tool.value = t
         _eyedropper.value = false
         if (t != EditTool.SELECT) _selectedId.value = null
         if (t != EditTool.REDACT) _selectedMark.value = null
+        if (t != EditTool.EXISTING) { existing.clearSelection(); existing.setLassoQuiet() }
     }
 
     private val _redactHow = MutableStateFlow(RedactHow.DRAW)
@@ -300,9 +306,15 @@ class EditController(
     private val drawing: Boolean get() = _tool.value == EditTool.SHAPE || _tool.value == EditTool.WHITEOUT
     private val marking: Boolean get() = _tool.value == EditTool.REDACT && _redactHow.value == RedactHow.DRAW
 
-    override val claimsDrag: Boolean get() = drawing || marking || _selectedId.value != null
+    /** The page being viewed (for hints that depend on it). */
+    fun currentPageNow(): Int = currentPage()
+
+    private val onExisting: Boolean get() = _tool.value == EditTool.EXISTING
+
+    override val claimsDrag: Boolean get() = if (onExisting) existing.claimsDrag() else drawing || marking || _selectedId.value != null
 
     override fun claimsAt(hit: PageHit): Boolean {
+        if (onExisting) return existing.claimsAt(hit)
         if (drawing || marking) return true
         val s = selected() ?: return false
         return s.page == hit.page && (nearHandle(s, hit) || Placement.contains(s.rect, hit.x, hit.y, 0.01f))
@@ -314,6 +326,7 @@ class EditController(
     }
 
     override fun onStart(hit: PageHit) {
+        if (onExisting) { existing.onStart(hit); return }
         val s = selected()
         lastX = hit.x; lastY = hit.y; startX = hit.x; startY = hit.y; startPage = hit.page
         if (s != null && s.page == hit.page && (nearHandle(s, hit) || Placement.contains(s.rect, hit.x, hit.y, 0.01f))) {
@@ -335,6 +348,7 @@ class EditController(
     }
 
     override fun onMove(x: Float, y: Float) {
+        if (onExisting) { existing.onMove(x, y); return }
         when (mode) {
             1, 2 -> {
                 val s = live ?: return
@@ -352,6 +366,7 @@ class EditController(
     }
 
     override fun onEnd() {
+        if (onExisting) { existing.onEnd(); return }
         when (mode) {
             1, 2 -> live?.let { l -> if (session.find(l.id) != l) session.replace(refit(l)) }
             3 -> live?.let { l ->
@@ -366,7 +381,7 @@ class EditController(
         live = null; liveMark = null; mode = 0
     }
 
-    override fun onCancel() { live = null; liveMark = null; mode = 0 }
+    override fun onCancel() { live = null; liveMark = null; mode = 0; existing.onCancel() }
 
     override fun onTap(hit: PageHit): Boolean {
         if (_eyedropper.value) {
@@ -376,6 +391,11 @@ class EditController(
                 if (c == null) message("Couldn't read that colour.") else setWhiteColor(c or 0xFF000000.toInt())
             }
             return true
+        }
+        if (onExisting) {
+            val own = session.current.items.lastOrNull { it.page == hit.page && Placement.contains(it.rect, hit.x, hit.y, 0.004f) }
+            if (own != null && existing.editing.value == null) { existing.clearSelection(); select(own.id); _tool.value = EditTool.SELECT; return true }
+            return existing.onTap(hit)
         }
         when (_tool.value) {
             EditTool.TEXT -> { addTextAt(hit.page, hit.x, hit.y); return true }
@@ -409,7 +429,9 @@ class EditController(
 
     /** Back to a clean slate (a document opened, saved or changes discarded). */
     fun reset(state: EditState = EditState()) {
+        existing.reset()
         session.reset(state)
+        existing.onSessionChanged()
         _selectedId.value = null; _selectedMark.value = null; _editingId.value = null; live = null; liveMark = null; freshId = null
         _applyConfirm.value = false; closeSearch(); sizePinned.clear()
     }

@@ -135,8 +135,9 @@ private fun ShapeChip(kind: EditKind, on: Boolean, label: String, onClick: () ->
     ) { ShapeGlyph(kind, tint); Text(label, style = ForgeType.Label, color = tint) }
 }
 
-private fun hintFor(tool: EditTool, sel: EditObject?, how: RedactHow, marks: Int, eyedropper: Boolean): String = when {
+private fun hintFor(tool: EditTool, sel: EditObject?, how: RedactHow, marks: Int, eyedropper: Boolean, pageHint: String?): String = when {
     eyedropper -> "Tap the page where you want to copy the colour from."
+    tool == EditTool.EXISTING && sel == null -> pageHint ?: "Tap a paragraph, picture or drawing in the PDF to select it. Tap a selected paragraph to edit its text."
     sel != null -> when (sel.kind) {
         EditKind.IMAGE -> "Drag to move, drag the dot to resize."
         EditKind.WHITEOUT -> "Whiteout covers the page. To really remove content use Redact."
@@ -169,13 +170,16 @@ fun EditToolbar(controller: EditController, hasTextSelection: Boolean, onMarkSel
     // the look shown: the selected object's, else the template's (new objects)
     val look = sel ?: template
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).semantics { contentDescription = "Edit tools" }) {
-        if (sel == null || eyedropper) Text(hintFor(tool, sel, how, state.marks.size, eyedropper), style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp), maxLines = 2)
+        val exObjects by controller.existing.objects.collectAsState()
+        val pageHint = exObjects[controller.currentPageNow()]?.hint
+        if (sel == null || eyedropper) Text(hintFor(tool, sel, how, state.marks.size, eyedropper, pageHint), style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp), maxLines = 2)
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            ToolTab("Text", ForgeIcons.Type, tool == EditTool.TEXT) { controller.setTool(if (tool == EditTool.TEXT) EditTool.SELECT else EditTool.TEXT) }
-            ToolTab("Image", ForgeIcons.Image, tool == EditTool.IMAGE) { controller.setTool(if (tool == EditTool.IMAGE) EditTool.SELECT else EditTool.IMAGE) }
-            ToolTab("Shape", ForgeIcons.Layers, tool == EditTool.SHAPE) { controller.setTool(if (tool == EditTool.SHAPE) EditTool.SELECT else EditTool.SHAPE) }
-            ToolTab("Whiteout", ForgeIcons.Eraser, tool == EditTool.WHITEOUT) { controller.setTool(if (tool == EditTool.WHITEOUT) EditTool.SELECT else EditTool.WHITEOUT) }
-            ToolTab("Redact", ForgeIcons.Shield, tool == EditTool.REDACT) { controller.setTool(if (tool == EditTool.REDACT) EditTool.SELECT else EditTool.REDACT) }
+            ToolTab("Existing", ForgeIcons.Pointer, tool == EditTool.EXISTING) { controller.setTool(EditTool.EXISTING) }
+            ToolTab("Text", ForgeIcons.Type, tool == EditTool.TEXT) { controller.setTool(if (tool == EditTool.TEXT) EditTool.EXISTING else EditTool.TEXT) }
+            ToolTab("Image", ForgeIcons.Image, tool == EditTool.IMAGE) { controller.setTool(if (tool == EditTool.IMAGE) EditTool.EXISTING else EditTool.IMAGE) }
+            ToolTab("Shape", ForgeIcons.Layers, tool == EditTool.SHAPE) { controller.setTool(if (tool == EditTool.SHAPE) EditTool.EXISTING else EditTool.SHAPE) }
+            ToolTab("Whiteout", ForgeIcons.Eraser, tool == EditTool.WHITEOUT) { controller.setTool(if (tool == EditTool.WHITEOUT) EditTool.EXISTING else EditTool.WHITEOUT) }
+            ToolTab("Redact", ForgeIcons.Shield, tool == EditTool.REDACT) { controller.setTool(if (tool == EditTool.REDACT) EditTool.EXISTING else EditTool.REDACT) }
         }
         when (kind) {
             EditKind.TEXT -> TextOptions(controller, look)
@@ -188,6 +192,7 @@ fun EditToolbar(controller: EditController, hasTextSelection: Boolean, onMarkSel
             EditKind.RECT, EditKind.ELLIPSE, EditKind.LINE, EditKind.ARROW -> ShapeOptions(controller, look, shapeKind, sel)
             null -> Unit
         }
+        if (tool == EditTool.EXISTING && sel == null) ExistingOptions(controller, onPickImage)
         if (tool == EditTool.REDACT && sel == null) RedactOptions(controller, how, state.marks.size, selectedMark != null, hasTextSelection, onMarkSelection)
         if (sel != null) Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
             IconAction(ForgeIcons.Minus, "Make smaller") { controller.scaleSelected(0.88f) }
@@ -366,4 +371,79 @@ fun ApplyRedactionsDialog(marks: Int, pages: Int, removeInfo: Boolean, onRemoveI
         confirmButton = { TextButton(onClick = onApply, enabled = !busy) { Text(if (busy) "Applying…" else "Apply redactions", color = Color(0xFFE53935)) } },
         dismissButton = { TextButton(onClick = onCancel, enabled = !busy) { Text("Cancel", color = c.text2) } },
     )
+}
+
+private val EXISTING_SIZES = listOf(8f, 10f, 12f, 14f, 18f, 24f)
+
+/** Options of Edit existing: the selected paragraph's style, the selected picture's actions, or "Select area". */
+@Composable
+private fun ExistingOptions(controller: EditController, onPickImage: () -> Unit) {
+    val ex = controller.existing
+    val c = ForgeTheme.colors
+    val selection by ex.selection.collectAsState()
+    val state by controller.session.state.collectAsState()
+    val objects by ex.objects.collectAsState()
+    val editing by ex.editing.collectAsState()
+    val lasso by ex.lasso.collectAsState()
+    val lock by ex.lockAspect.collectAsState()
+    val single = selection.singleOrNull()
+    val changeCount = state.existing.size // read here so the options follow every change
+    val pending = single?.let { ex.hasPending(it) } == true
+    when {
+        editing != null -> Row1 {
+            Text("Typing in the paragraph on the page", style = ForgeType.Small, color = c.text2)
+            Chip("Done", ForgeIcons.Check, true, description = "Finish editing the text") { ex.closeEditor(true) }
+            Chip("Cancel", null, false, description = "Discard the typed text") { ex.closeEditor(false) }
+        }
+        single is ExBlockRef -> {
+            val look = ex.lookOf(single)
+            if (look != null) {
+                Row1 {
+                    Chip("B", null, look.bold, description = "Bold") { ex.toggleBold() }
+                    Chip("I", null, look.italic, description = "Italic") { ex.toggleItalic() }
+                    IconAction(ForgeIcons.Minus, "Smaller text") { ex.sizeBy(0.9f) }
+                    Text("${"%.0f".format(look.sizePt)} pt", style = ForgeType.Label, color = c.text, modifier = Modifier.semantics { contentDescription = "Text size ${"%.0f".format(look.sizePt)} points" })
+                    IconAction(ForgeIcons.Plus, "Bigger text") { ex.sizeBy(1.1f) }
+                    com.namanbansal.forge.core.pdf.edit.content.Align.names.forEachIndexed { i, n -> Chip(n.take(1), null, look.align == i, description = "Align $n") { ex.setAlign(i) } }
+                }
+                Row1 {
+                    Dots(EditStyle.palette.dropLast(1), EditStyle.paletteNames.dropLast(1), look.color, "text") { ex.setColor(it) }
+                    Chip("Edit text", ForgeIcons.Type, false, description = "Edit the paragraph text") { ex.editSelectedText() }
+                }
+                Row1 {
+                    if (pending) Chip("Revert", ForgeIcons.Undo, false, description = "Undo my changes to this paragraph") { ex.revertSelected() }
+                    IconAction(ForgeIcons.Trash, "Delete paragraph") { ex.deleteSelected() }
+                    IconAction(ForgeIcons.Check, "Done") { ex.clearSelection() }
+                }
+            }
+        }
+        single is ExImageRef -> { Row1 {
+            IconAction(ForgeIcons.Minus, "Make picture smaller") { ex.scaleSelected(0.88f) }
+            IconAction(ForgeIcons.Plus, "Make picture bigger") { ex.scaleSelected(1.14f) }
+            IconAction(ForgeIcons.Rotate, "Rotate a quarter turn") { ex.rotateSelected() }
+            Chip("Replace", ForgeIcons.Image, false, description = "Replace this picture") { ex.awaitingReplacement = true; onPickImage() }
+            Chip("Keep shape", ForgeIcons.Lock, lock, description = "Lock the aspect ratio") { ex.setLockAspect(!lock) }
+        }
+            Row1 {
+                if (pending) Chip("Revert", ForgeIcons.Undo, false, description = "Undo my changes to this picture") { ex.revertSelected() }
+                IconAction(ForgeIcons.Trash, "Delete picture") { ex.deleteSelected() }
+                IconAction(ForgeIcons.Check, "Done") { ex.clearSelection() }
+            }
+        }
+        single is ExPathRef -> Row1 {
+            Text("Drawing", style = ForgeType.Label, color = c.text)
+            IconAction(ForgeIcons.Trash, "Delete drawing") { ex.deleteSelected() }
+            IconAction(ForgeIcons.Check, "Done") { ex.clearSelection() }
+        }
+        selection.size > 1 -> Row1 {
+            Text("${selection.size} selected", style = ForgeType.Label, color = c.text)
+            Chip("Delete all", ForgeIcons.Trash, false, description = "Delete everything selected") { ex.deleteSelected() }
+            Chip("Clear", null, false, description = "Clear the selection") { ex.clearSelection() }
+        }
+        else -> Row1 {
+            Chip("Select area", ForgeIcons.Crop, lasso, description = "Select several objects by dragging a box") { ex.setLasso(!lasso) }
+            val n = changeCount
+            if (n > 0) Text("$n change${if (n == 1) "" else "s"} to the PDF's own content", style = ForgeType.Small, color = c.text2)
+        }
+    }
 }

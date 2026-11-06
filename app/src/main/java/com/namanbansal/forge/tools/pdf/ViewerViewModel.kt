@@ -22,6 +22,10 @@ import com.namanbansal.forge.core.pdf.edit.EditPendingStore
 import com.namanbansal.forge.core.pdf.edit.RedactOptions
 import com.namanbansal.forge.core.pdf.edit.RedactionReport
 import com.namanbansal.forge.core.pdf.edit.Redactor
+import com.namanbansal.forge.core.pdf.edit.ExistingApplier
+import com.namanbansal.forge.core.pdf.edit.ExistingReport
+import com.namanbansal.forge.core.pdf.edit.content.ExistingIndex
+import com.namanbansal.forge.core.pdf.edit.content.FontOpener
 import com.namanbansal.forge.core.pdf.fill.FillIo
 import com.namanbansal.forge.core.pdf.fill.FillPendingStore
 import com.namanbansal.forge.core.pdf.fill.FillSaveOptions
@@ -100,7 +104,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     private val modeChosen = persistedBool("viewer.modeChosen", false)
     /** The active mode of the mode bar; survives rotation and process death. */
     val mode: StateFlow<ViewerModeId> = modeState.flow.map { ViewerModeId.entries.getOrElse(it) { ViewerModeId.READ } }.stateIn(viewModelScope, SharingStarted.Eagerly, ViewerModeId.READ)
-    fun setMode(m: ViewerModeId) { if (!m.staysInViewer) return; modeState.value = m.ordinal; modeChosen.value = true; if (m != ViewerModeId.ANNOTATE) annotate.select(null); if (m != ViewerModeId.FILL_SIGN) fill.select(null); if (m != ViewerModeId.EDIT) { edit.select(null); edit.setTool(EditTool.SELECT) } }
+    fun setMode(m: ViewerModeId) { if (!m.staysInViewer) return; modeState.value = m.ordinal; modeChosen.value = true; if (m != ViewerModeId.ANNOTATE) annotate.select(null); if (m != ViewerModeId.FILL_SIGN) fill.select(null); if (m != ViewerModeId.EDIT) { edit.select(null); edit.setTool(EditTool.EXISTING) } }
     /** Opens in [m] the first time only (P17 opens Annotate); later rotations and restores keep whatever the user chose. */
     fun startIn(m: ViewerModeId) { if (!modeChosen.value) setMode(m) }
     /** P16 / P18 / P19: opens Edit with [tool] preselected, the first time only. */
@@ -130,7 +134,25 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     val edit = EditController(
         pageAspect = { _aspects.value?.getOrNull(it) ?: 0.707f }, currentPage = { pageState.value }, pageCount = { source.value?.pageCount ?: 0 },
         scope = viewModelScope, pageText = { pageText(it) }, sampleColor = { p, x, y -> sampleColor(p, x, y) }, message = { notify(it) },
+        loadObjects = { p -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.page(p) } } },
+        previewOf = { p, b, e -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.preview(p, b, e.text, e.sizePt, e.align, e.bold.takeIf { it >= 0 }?.let { it == 1 }, e.italic.takeIf { it >= 0 }?.let { it == 1 }) } } },
     )
+    private val fontOpener = FontOpener { app.assets.open(it) }
+    private var existingIndex: ExistingIndex? = null
+    private val existingLock = kotlinx.coroutines.sync.Mutex()
+    private suspend fun existingIdx(): ExistingIndex? = existingLock.withLock {
+        existingIndex ?: source.value?.file?.let { f -> withContext(Dispatchers.IO) { runCatching { ExistingIndex(f, fontOpener) }.getOrNull() } }?.also { existingIndex = it }
+    }
+    private fun closeExistingIndex() { val ix = existingIndex; existingIndex = null; if (ix != null) viewModelScope.launch(Dispatchers.IO) { runCatching { ix.close() } } }
+    private val existingBitmaps = HashMap<String, ImageBitmap>()
+    /** The picture [key] of [page] as the file has it, for the preview of a moved picture (null until read). */
+    fun existingImage(page: Int, key: Int): ImageBitmap? = existingBitmaps["$page:$key"] ?: run {
+        viewModelScope.launch {
+            val bmp = existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.imageBitmap(page, key) } }?.asImageBitmap()
+            if (bmp != null) { existingBitmaps["$page:$key"] = bmp; _imageRev.value++ }
+        }
+        null
+    }
     /** Pictures placed in Edit mode live in the app's private files until they are saved into the PDF. */
     val editImages by lazy { EditImageStore(File(app.filesDir, "edit-images")) }
     private val imageBitmaps = HashMap<String, ImageBitmap>()
@@ -153,7 +175,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         viewModelScope.launch {
             val stored = withContext(Dispatchers.IO) { editImages.import { app.contentResolver.openInputStream(uri) } }
             if (stored == null) { notify("Couldn't read that picture. Try another one."); return@launch }
-            edit.placeImage(stored)
+            if (edit.existing.awaitingReplacement) { edit.existing.awaitingReplacement = false; edit.existing.replaceSelectedWith(stored) } else edit.placeImage(stored)
         }
     }
 
@@ -265,19 +287,21 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
                 if (editState.marks.isNotEmpty() && redact == null) throw IllegalStateException("Redactions must be applied from the Apply dialog.")
                 val problem = (if (editState.isEmpty) null else _editPermissionProblem.value) ?: (if (fillState.isEmpty) null else _permissionProblem.value)
                 var report: RedactionReport? = null
+                var existingReport: ExistingReport? = null
                 val extra: ((File) -> Unit)? = if (fillState.isEmpty && editState.isEmpty) null else { f ->
                     if (!fillState.isEmpty) FillIo.applyInPlace(f, fillState, options) { signatures.png(it) }
                     if (editState.items.isNotEmpty()) EditIo.applyObjectsInPlace(f, editState) { editImages.bytes(it) }
+                    if (editState.existing.isNotEmpty()) existingReport = ExistingApplier.applyInPlace(f, editState.existing, fontOpener) { editImages.bytes(it) }
                     if (editState.marks.isNotEmpty()) report = Redactor.redactInPlace(f, editState.marks, redact ?: RedactOptions())
                 }
                 val out = saver.save(input.uri, input.name, src.file, src.protection, session.baseline, session.current, extra, copyOnly = problem != null, copyReason = problem?.let { "$it Your changes were saved as a copy." }.orEmpty())
-                val savedImages = editState.items.mapNotNull { it.imageId.takeIf { id -> id.isNotEmpty() } }.toSet()
+                val savedImages = (editState.items.map { it.imageId } + editState.existing.map { it.replaceImageId }).filter { it.isNotEmpty() }.toSet()
                 val oldKey = docKey
                 reloading = true
                 reopen(out.reloadFile, src.protection)
                 withContext(Dispatchers.IO) { oldKey?.let { pendingStore.clear(it); fillPendingStore.clear(it); editPendingStore.clear(it) }; docKey?.let { pendingStore.clear(it); fillPendingStore.clear(it); editPendingStore.clear(it) }; editImages.retainOnly(emptySet()) }
                 imageBitmaps.keys.removeAll(savedImages)
-                notify(out.message + (report?.let { " " + it.summary } ?: ""))
+                notify(out.message + (report?.let { " " + it.summary } ?: "") + (existingReport?.summary?.takeIf { it.isNotEmpty() }?.let { " $it" } ?: ""))
                 ok = true
             } catch (e: CancellationException) {
                 throw e
@@ -480,7 +504,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         _permissionProblem.value = FillIo.permissionProblem(source.protection?.permissionBytes)
         _editPermissionProblem.value = source.protection?.permissionBytes?.let { if (com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission(it).canModify()) null else "The author of this PDF doesn't allow changing its content." }
         viewModelScope.launch { fill.setForm(withContext(Dispatchers.IO) { runCatching { FormReader.read(source.file) }.getOrDefault(FormInfo()) }) }
-        if (reload) { runCatching { docIndex?.close() }; docIndex = null; runCatching { search?.close() }; search = null }
+        if (reload) { runCatching { docIndex?.close() }; docIndex = null; closeExistingIndex(); existingBitmaps.clear(); runCatching { search?.close() }; search = null }
         viewModelScope.launch { if (reload) afterReload(source) else afterOpen(source) }
         if (!reload) _aspects.value = null
         _revision.value++
@@ -570,7 +594,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
     override fun onInputsReset() {
         searchJob?.cancel(); aspectJob?.cancel(); saveJob?.cancel()
         _tiles.value?.close(); _tiles.value = null
-        runCatching { docIndex?.close() }; docIndex = null
+        runCatching { docIndex?.close() }; docIndex = null; closeExistingIndex(); existingBitmaps.clear()
         _outline.value = null; _selection.value = null; _restored.value = false; docKey = null; baselineAnnots = emptyList(); renderFile = null; annotate.load(emptyList()); fill.reset(); edit.reset(); fill.setForm(FormInfo()); _permissionProblem.value = null; _editPermissionProblem.value = null
         runCatching { search?.close() }; search = null
         _hits.value = emptyList(); _current.value = -1; _query.value = ""; _searching.value = false; _aspects.value = null

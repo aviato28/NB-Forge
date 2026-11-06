@@ -35,6 +35,7 @@ object ToolScreens {
         "P40" to { host -> ViewerScreen(host) },
         "P25" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.FILL_SIGN) },
         "P27" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.FILL_SIGN) },
+        "P15" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.EDIT, startTool = com.namanbansal.forge.tools.pdf.EditTool.EXISTING) },
         "P16" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.EDIT, startTool = com.namanbansal.forge.tools.pdf.EditTool.TEXT) },
         "P18" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.EDIT, startTool = com.namanbansal.forge.tools.pdf.EditTool.WHITEOUT) },
         "P19" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.EDIT, startTool = com.namanbansal.forge.tools.pdf.EditTool.REDACT) },

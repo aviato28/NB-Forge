@@ -77,7 +77,7 @@ class Glyph(
 )
 
 /** A picture drawn on the page. [ctm] maps the unit square to the page; [index] counts pictures in drawing order. */
-class ImageRef(val index: Int, val ctm: Aff, val box: Box, val inline: Boolean, val pixelsW: Int, val pixelsH: Int, val inForm: Boolean)
+class ImageRef(val index: Int, val ctm: Aff, val box: Box, val inline: Boolean, val pixelsW: Int, val pixelsH: Int, val inForm: Boolean, val xobject: PDImageXObject? = null)
 
 /** A vector path that is painted (not just a clip). */
 class PathRef(val index: Int, val box: Box, val filled: Boolean, val stroked: Boolean, val inForm: Boolean)
@@ -85,6 +85,8 @@ class PathRef(val index: Int, val box: Box, val filled: Boolean, val stroked: Bo
 /** Everything on one page that Edit existing can select. */
 class PageScan(val glyphs: List<Glyph>, val images: List<ImageRef>, val paths: List<PathRef>, val hasType3: Boolean, val invisibleText: Int) {
     val editableGlyphs: List<Glyph> get() = glyphs.filter { it.editable }
+    /** Visible characters we leave alone (outlined, rotated, no Unicode mapping, Type 3). */
+    val lockedGlyphs: Int get() = glyphs.count { !it.editable && it.note != null }
 }
 
 /** What to do to a picture: [delete] it, or draw it with [target] (a page-space matrix from the current one), or [replace] it. */
@@ -377,7 +379,7 @@ object ContentWalker {
                     when {
                         xo is PDImageXObject -> {
                             val idx = ps.images.size
-                            ps.images += ImageRef(idx, gs.ctm, gs.ctm.bounds(0f, 0f, 1f, 1f), false, xo.width, xo.height, inForm)
+                            ps.images += ImageRef(idx, gs.ctm, gs.ctm.bounds(0f, 0f, 1f, 1f), false, xo.width, xo.height, inForm, xo)
                             picture(idx, { pass(tok) }, gs.ctm)
                         }
                         xo is PDFormXObject && depth < MAX_DEPTH && ps.seen[xo.cosObject] != true -> {

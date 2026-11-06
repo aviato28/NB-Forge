@@ -167,6 +167,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     val editState by vm.edit.session.state.collectAsStateWithLifecycle()
     val editSelected by vm.edit.selectedId.collectAsStateWithLifecycle()
     val editTool by vm.edit.tool.collectAsStateWithLifecycle()
+    val exSel by vm.edit.existing.selection.collectAsStateWithLifecycle()
     val editingId by vm.edit.editingId.collectAsStateWithLifecycle()
     val applyConfirm by vm.edit.applyConfirm.collectAsStateWithLifecycle()
     val removeInfo by vm.edit.removeInfo.collectAsStateWithLifecycle()
@@ -197,7 +198,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
         try { takePhoto.launch(uri) } catch (_: Exception) { cameraUri = null; snack("No camera app is available on this phone.") }
     }
     val editMode = remember(vm, editing, imageRev, selection != null) {
-        EditMode(vm.edit, interactive = editing, pageWidthPt = vm::pageWidthPt, imageOf = vm::editImage, hasTextSelection = editing && selection != null,
+        EditMode(vm.edit, interactive = editing, pageWidthPt = vm::pageWidthPt, imageOf = vm::editImage, existingImage = vm::existingImage, hasTextSelection = editing && selection != null,
             onMarkSelection = { vm.selection.value?.let { s -> vm.edit.markSelection(s); vm.clearSelection() } }, onPickImage = pickImage, onTakePhoto = launchCamera)
     }
     val canUndo = if (editing) editCanUndo else if (filling) fillCanUndo else annotCanUndo
@@ -243,7 +244,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     DisposableEffect(Unit) { onDispose { vm.flushPosition() } }
 
     // System back: peel off one layer at a time (selection, contents, menu, search) before leaving the document.
-    BackHandler(enabled = selection != null || panelOpen || menu || searchOpen || selectedId != null || (filling && fillSelected != null) || (editing && (editSelected != null || editTool != EditTool.SELECT)) || dirty) {
+    BackHandler(enabled = selection != null || panelOpen || menu || searchOpen || selectedId != null || (filling && fillSelected != null) || (editing && (editSelected != null || exSel.isNotEmpty() || (editTool != EditTool.SELECT && editTool != EditTool.EXISTING))) || dirty) {
         when {
             selection != null -> vm.clearSelection()
             menu -> menu = false
@@ -252,7 +253,8 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
             selectedId != null -> vm.annotate.select(null)
             filling && fillSelected != null -> vm.fill.select(null)
             editing && editSelected != null -> vm.edit.select(null)
-            editing && editTool != EditTool.SELECT -> vm.edit.setTool(EditTool.SELECT)
+            editing && exSel.isNotEmpty() -> vm.edit.existing.clearSelection()
+            editing && editTool != EditTool.SELECT && editTool != EditTool.EXISTING -> vm.edit.setTool(EditTool.EXISTING)
             else -> guard(host.onBack)
         }
     }
