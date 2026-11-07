@@ -46,13 +46,13 @@ class EditUiTest {
 
     @Test fun toolbarListsTheToolsAndSwitchesBetweenThem() {
         val c = controller(); show(c)
-        listOf("Text", "Image", "Shape", "Whiteout", "Redact").forEach { compose.onNodeWithContentDescription(it).assertIsDisplayed() }
+        listOf("Existing", "Text", "Image", "Shape", "Whiteout", "Redact").forEach { compose.onNodeWithContentDescription(it).assertIsDisplayed() }
         compose.onNodeWithContentDescription("Text").performClick()
         assertEquals(EditTool.TEXT, c.tool.value)
         compose.onNodeWithContentDescription("Text").assertIsSelected()
         compose.onNodeWithContentDescription("Serif font").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Text").performClick()   // tapping the active tool again leaves it
-        assertEquals(EditTool.SELECT, c.tool.value)
+        compose.onNodeWithContentDescription("Text").performClick()   // tapping the active tool again leaves it (back to Edit existing)
+        assertEquals(EditTool.EXISTING, c.tool.value)
         compose.onNodeWithContentDescription("Serif font").assertDoesNotExist()
     }
 

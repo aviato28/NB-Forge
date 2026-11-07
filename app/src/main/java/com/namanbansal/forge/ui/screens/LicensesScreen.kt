@@ -34,6 +34,7 @@ private val libs = listOf(
     Lib("Dancing Script typeface (signatures)", "The Dancing Script Project Authors", "SIL Open Font License 1.1", "licenses/DancingScript-OFL.txt"),
     Lib("Caveat typeface (signatures)", "The Caveat Project Authors", "SIL Open Font License 1.1", "licenses/Caveat-OFL.txt"),
     Lib("Sacramento typeface (signatures)", "Brian J. Bonislawsky DBA Astigmatic", "SIL Open Font License 1.1", "licenses/Sacramento-OFL.txt"),
+    Lib("Noto Sans, Noto Serif, Noto Sans Mono typefaces (editing PDF text)", "The Noto Project Authors", "SIL Open Font License 1.1", "licenses/Noto-OFL.txt"),
     Lib("Jetpack Compose & AndroidX", "The Android Open Source Project", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("Kotlin & kotlinx.serialization / coroutines", "JetBrains s.r.o.", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("OkHttp & Okio", "Square, Inc.", "Apache License 2.0", "licenses/Apache-2.0.txt"),

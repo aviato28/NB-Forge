@@ -68,3 +68,9 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 ## Workflow (2026-11-02)
 - Owner has authorised Claude to open PRs, merge to `main` and publish releases autonomously.
 - Signing secrets are configured in GitHub. First release: v0.1.104.
+
+## OCR / ML (decided 2026-11-05, owner delegated)
+- Use **Google ML Kit** for OCR (P37, text recognition, bundled model, works offline), document scanning (P43), barcode/QR (D8) and background removal (I4, subject segmentation).
+- Rationale: much better quality than Tesseract, on-device and free, and its terms don't force us to open-source Forge (unlike the AGPL libraries we avoid), so a paid tier stays possible.
+- The licence rule is now: Apache/MIT/BSD/OFL, or free proprietary SDKs with no copyleft (ML Kit only so far).
+- Prefer bundled models over Play Services-delivered ones where both exist, so they work offline and on de-Googled phones. The document scanner needs Play Services: detect that, and if it's missing, fall back to a plain camera capture + manual crop.

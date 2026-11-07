@@ -46,6 +46,7 @@ class EditMode(
     private val interactive: Boolean,
     private val pageWidthPt: (Int) -> Float = { 595f },
     private val imageOf: (String) -> ImageBitmap? = { null },
+    private val existingImage: (Int, Int) -> ImageBitmap? = { _, _ -> null },
     private val hasTextSelection: Boolean = false,
     private val onMarkSelection: () -> Unit = {},
     private val onPickImage: () -> Unit = {},
@@ -69,6 +70,8 @@ class EditMode(
         val marks = state.marks.filter { it.page == page }
         val accent = c.accent
         val ptScale = widthPx / pageWidthPt(page).coerceAtLeast(1f)
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+        ExistingLayer(controller, page, widthPx, heightPx, invert, interactive, pageWidthPt(page), imageOf, existingImage)
         Canvas(Modifier.fillMaxSize()) {
             for (o in items) drawObject(o, invert, ptScale)
             if (drawingNew != null) drawObject(drawingNew, invert, ptScale)
@@ -76,6 +79,7 @@ class EditMode(
             if (interactive && sel != null) drawSelection(sel, accent)
             for (m in marks) drawMark(m.rect, m.id == selectedMark, interactive)
             if (liveMark != null && liveMark.page == page) drawMark(liveMark.rect, true, true)
+        }
         }
     }
 
