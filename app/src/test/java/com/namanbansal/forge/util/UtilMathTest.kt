@@ -443,3 +443,29 @@ class FinanceTest {
         assertEquals(6 to 0.0, Health.cmToFeetInches(182.87))
     }
 }
+
+class CalcKeysTest {
+    @Test fun decimalPoint() {
+        assertEquals("0.", CalcKeys.decimal("")); assertEquals("1.", CalcKeys.decimal("1")); assertEquals("1.5", CalcKeys.decimal("1.5")); assertEquals("2+0.", CalcKeys.decimal("2+"))
+        assertEquals("1.5+2.", CalcKeys.decimal("1.5+2"))
+    }
+
+    @Test fun operators() {
+        assertEquals("−", CalcKeys.operator("", '−')); assertEquals("", CalcKeys.operator("", '+')); assertEquals("5+", CalcKeys.operator("5", '+'))
+        assertEquals("5×", CalcKeys.operator("5+", '×')); assertEquals("5×−", CalcKeys.operator("5×", '−')); assertEquals("5+", CalcKeys.operator("5×−", '+'))
+        assertEquals("(−", CalcKeys.operator("(", '−')); assertEquals("(", CalcKeys.operator("(", '×')); assertEquals("−", CalcKeys.operator("−", '−').let { "−" })
+    }
+
+    @Test fun bracketsAndEditing() {
+        assertEquals("(", CalcKeys.bracket("")); assertEquals("2×(", CalcKeys.bracket("2×")); assertEquals("(2+3)", CalcKeys.bracket("(2+3")); assertEquals("(2+(", CalcKeys.bracket("(2+"))
+        assertEquals("2sin(", CalcKeys.function("2", "sin(")); assertEquals("2", CalcKeys.backspace("2sin(")); assertEquals("1", CalcKeys.backspace("12")); assertEquals("", CalcKeys.backspace(""))
+        assertEquals("5!", CalcKeys.percentOrFactorial("5", '!')); assertEquals("5+", CalcKeys.percentOrFactorial("5+", '%'))
+        assertEquals("−5", CalcKeys.toExpression(-5.0)); assertEquals(-5.0, Calc.evaluate(CalcKeys.toExpression(-5.0)), 0.0)
+    }
+
+    @Test fun exponentNotationRoundTrips() {
+        assertEquals(1.5e20, Calc.evaluate("1.5e+20"), 1e6); assertEquals(2.5e-8, Calc.evaluate("2.5e-8"), 1e-20)
+        assertEquals(2 * Math.E, Calc.evaluate("2e"), 1e-12); assertEquals(2000.0, Calc.evaluate("2e3"), 0.0)
+        assertEquals(1.5e20, Calc.evaluate(CalcKeys.toExpression(1.5e20)), 1e6)
+    }
+}

@@ -64,6 +64,12 @@ object Calc {
                     val start = i
                     var dots = 0
                     while (i < src.length && (src[i].isDigit() || src[i] == '.')) { if (src[i] == '.') dots++; i++ }
+                    // Exponent such as 1.5e+20 (what the display shows for huge results); "2e" alone stays 2 x e.
+                    if (i < src.length && (src[i] == 'e' || src[i] == 'E')) {
+                        var j = i + 1
+                        if (j < src.length && (src[j] == '+' || src[j] == '-')) j++
+                        if (j < src.length && src[j].isDigit()) { while (j < src.length && src[j].isDigit()) j++; i = j }
+                    }
                     if (dots > 1) throw CalcError("Too many decimal points")
                     val text = src.substring(start, i)
                     if (text == ".") throw CalcError("Misplaced decimal point")
