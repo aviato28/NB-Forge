@@ -26,6 +26,16 @@ class ToolHost(
  */
 object ToolScreens {
     val screens: Map<String, @Composable (ToolHost) -> Unit> = mapOf(
+        "D1" to { host -> com.namanbansal.forge.tools.device.LevelScreen(host) },
+        "D2" to { host -> com.namanbansal.forge.tools.device.RulerScreen(host) },
+        "D3" to { host -> com.namanbansal.forge.tools.device.ProtractorScreen(host) },
+        "D4" to { host -> com.namanbansal.forge.tools.device.CompassScreen(host) },
+        "D5" to { host -> com.namanbansal.forge.tools.device.SoundScreen(host) },
+        "D6" to { host -> com.namanbansal.forge.tools.device.FlashlightScreen(host) },
+        "D7" to { host -> com.namanbansal.forge.tools.device.MagnifierScreen(host) },
+        "D8" to { host -> com.namanbansal.forge.tools.device.ScannerScreen(host) },
+        "D9" to { host -> com.namanbansal.forge.tools.device.LightScreen(host) },
+        "D10" to { host -> com.namanbansal.forge.tools.device.VibrationScreen(host) },
         "P1" to { host -> MergeScreen(host) },
         "P2" to { host -> SplitScreen(host) },
         "P3" to { host -> PageManagerScreen(host) },

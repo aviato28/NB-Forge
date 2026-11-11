@@ -273,3 +273,15 @@ object AngleMath {
         return d.toFloat()
     }
 }
+
+data class Vec3(val x: Float, val y: Float, val z: Float)
+
+/** Fixed-size ring of recent values for a live graph; [snapshot] returns oldest first. */
+class Ring(private val capacity: Int) {
+    private val data = FloatArray(capacity)
+    private var head = 0
+    var size = 0; private set
+    fun push(v: Float) { data[head] = v; head = (head + 1) % capacity; if (size < capacity) size++ }
+    fun clear() { head = 0; size = 0 }
+    fun snapshot(): FloatArray = FloatArray(size) { i -> data[(head - size + i + capacity * 2) % capacity] }
+}

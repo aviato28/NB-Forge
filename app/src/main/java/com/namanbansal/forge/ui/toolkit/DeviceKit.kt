@@ -135,6 +135,7 @@ fun PermissionGate(
     title: String,
     rationale: String,
     modifier: Modifier = Modifier,
+    extra: @Composable ColumnScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val state = rememberPermission(permission)
@@ -157,6 +158,7 @@ fun PermissionGate(
         } else {
             ForgeButton("Allow", onClick = state::request, icon = ForgeIcons.Check, modifier = Modifier.fillMaxWidth())
         }
+        extra()
     }
 }
 
