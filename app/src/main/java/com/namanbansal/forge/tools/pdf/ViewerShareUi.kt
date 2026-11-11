@@ -200,3 +200,27 @@ fun SharePagesContent(thumbs: PdfThumbnails, pageCount: Int, initialPage: Int, o
         Spacer(Modifier.height(8.dp))
     }
 }
+
+/** "Why can't I edit this?": the specific reason for the spot that was tapped, with a button when another tool can handle it. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WhyLockedSheet(why: WhyLocked, onRoute: (ExRoute) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = ForgeTheme.colors.surface) {
+        WhyLockedContent(why, onRoute, onDismiss)
+    }
+}
+
+@Composable
+fun WhyLockedContent(why: WhyLocked, onRoute: (ExRoute) -> Unit, onDismiss: () -> Unit) {
+    val c = ForgeTheme.colors
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp).navigationBarsPadding().semantics { contentDescription = "Why this can't be edited" },
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text("Why can't I edit this?", style = ForgeType.Small, color = c.text2)
+        Text(why.title, style = ForgeType.Title, color = c.text)
+        Text(why.detail, style = ForgeType.Body, color = c.text2)
+        why.route?.let { r -> ForgeButton(why.routeLabel, { onRoute(r) }, Modifier.fillMaxWidth()) }
+        Row(Modifier.fillMaxWidth()) { Spacer(Modifier.weight(1f)); TextButton(onClick = onDismiss) { Text("Got it", color = c.text2) } }
+    }
+}

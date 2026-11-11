@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,6 +62,11 @@ import com.namanbansal.forge.ui.theme.ForgeType
 import kotlin.math.max
 
 private val DELETE_RED = Color(0xFFE53935)
+private val OTHER_MODE = Color(0xFF8E24AA) // form fields and comment boxes: edited in another mode
+private val DEBUG_OK = Color(0xFF2E9E57)
+private val DEBUG_LOCKED = Color(0xFFE53935)
+private val DEBUG_RECOVERED = Color(0xFF1E88E5)
+private val DEBUG_UNMAPPED = Color(0xFFFB8C00)
 
 /**
  * What Edit existing draws on a page: faint outlines of the text blocks, pictures and drawings (while the tool is active),
@@ -80,9 +86,13 @@ fun ExistingLayer(
     val previews by ex.previews.collectAsState()
     val editing by ex.editing.collectAsState()
     val tool by controller.tool.collectAsState()
+    val debugOn by ex.debugOn.collectAsState()
+    val debugAll by ex.debug.collectAsState()
     val pending = state.existing.filter { it.page == page }
     val outlines = active && tool == EditTool.EXISTING
     LaunchedEffect(page, outlines, pending.isNotEmpty()) { if (outlines || pending.isNotEmpty()) ex.ensure(page) }
+    LaunchedEffect(page, outlines, debugOn) { if (outlines && debugOn) ex.ensureDebug(page) }
+    val widgets = if (outlines) ex.formFieldsOf(page).filter { it.isText || it.kind == com.namanbansal.forge.core.pdf.form.FieldKind.COMBO || it.kind == com.namanbansal.forge.core.pdf.form.FieldKind.LIST } else emptyList()
     val obj = objects[page]
     val ptScale = widthPx / pageWidthPt.coerceAtLeast(1f)
     val accent = c.accent
@@ -118,10 +128,19 @@ fun ExistingLayer(
             obj.images.filter { ExistingKind.IMAGE to it.key !in pendingKeys }.forEach { i ->
                 drawRoundRect(accent.copy(alpha = 0.7f), px(i.rect), sz(i.rect), CornerRadius(3.dp.toPx()), style = Stroke(1.6.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 5.dp.toPx()))))
             }
+            // text that belongs to another tool (form fields, comment boxes) and text that is locked: outlined too, so a tap can explain
+            val dash = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 3.dp.toPx()))
+            widgets.forEach { f -> drawRoundRect(OTHER_MODE.copy(alpha = 0.75f), px(f.rect, -1f), sz(f.rect, 2f), CornerRadius(2.dp.toPx()), style = Stroke(1.4.dp.toPx(), pathEffect = dash)) }
+            obj.freeText.forEach { f -> drawRoundRect(OTHER_MODE.copy(alpha = 0.75f), px(f.rect, -1f), sz(f.rect, 2f), CornerRadius(2.dp.toPx()), style = Stroke(1.4.dp.toPx(), pathEffect = dash)) }
+            obj.locked.filter { it.rect.right - it.rect.left < 0.999f }.forEach { l -> drawRoundRect(DELETE_RED.copy(alpha = 0.55f), px(l.rect, -1f), sz(l.rect, 2f), CornerRadius(2.dp.toPx()), style = Stroke(1.dp.toPx(), pathEffect = dash)) }
             obj.blocks.forEach { b ->
                 drawRoundRect(accent.copy(alpha = 0.07f), px(b.rect, -2f), sz(b.rect, 4f), CornerRadius(3.dp.toPx()))
                 drawRoundRect(accent.copy(alpha = 0.55f), px(b.rect, -2f), sz(b.rect, 4f), CornerRadius(3.dp.toPx()), style = Stroke(1.dp.toPx()))
             }
+        }
+        if (outlines && debugOn) for (g in debugAll[page].orEmpty()) {
+            val col = when { !g.editable -> DEBUG_LOCKED; g.unmapped -> DEBUG_UNMAPPED; g.recovered -> DEBUG_RECOVERED; else -> DEBUG_OK }
+            drawRect(col.copy(alpha = 0.28f), px(g.rect), sz(g.rect))
         }
         // selection
         for (r in selection.filter { it.page == page }) {
@@ -138,6 +157,7 @@ fun ExistingLayer(
             drawRect(accent, px(liveLasso), sz(liveLasso), style = Stroke(1.6.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 5.dp.toPx()))))
         }
     }
+    if (outlines && debugOn) DebugLegend()
     val ed = editing?.takeIf { it.page == page }
     val block = ed?.let { ex.blockOf(it) }
     if (ed != null && block != null) InlineEditor(controller, page, block, widthPx, heightPx, ptScale, invert)
@@ -213,6 +233,7 @@ private fun InlineEditor(controller: EditController, page: Int, block: ExBlock, 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val paper = if (invert) Color(0xFF121212) else Color.White
+    val replaceOnly by ex.replaceOnly.collectAsState()
     with(density) {
         Box(Modifier.offset { IntOffset((x - 4.dp.toPx()).toInt(), (y - 4.dp.toPx()).toInt()) }) {
             BasicTextField(
@@ -222,10 +243,33 @@ private fun InlineEditor(controller: EditController, page: Int, block: ExBlock, 
                     fontWeight = if (look?.bold == true) FontWeight.Bold else FontWeight.Normal, fontStyle = if (look?.italic == true) FontStyle.Italic else FontStyle.Normal,
                 ),
                 cursorBrush = SolidColor(c.accent),
+                decorationBox = { inner ->
+                    Box {
+                        if (replaceOnly && ex.draft.isEmpty()) androidx.compose.material3.Text("Type the new text. The old, unreadable text will be removed.", style = com.namanbansal.forge.ui.theme.ForgeType.Small, color = c.text2)
+                        inner()
+                    }
+                },
                 modifier = Modifier.width((boxW + 8.dp.toPx()).toDp()).heightIn(min = (block.rect.bottom * heightPx - y + 8.dp.toPx()).toDp())
                     .background(paper).border(1.5.dp, c.accent, RoundedCornerShape(3.dp)).padding(4.dp)
                     .focusRequester(focus).testTag("existing-editor").semantics { contentDescription = "Edit paragraph text" },
             )
+        }
+    }
+}
+
+/** Key for the developer overlay colours. */
+@Composable
+private fun DebugLegend() {
+    val c = ForgeTheme.colors
+    androidx.compose.foundation.layout.Row(
+        Modifier.padding(4.dp).background(c.surface.copy(alpha = 0.92f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 3.dp).semantics { contentDescription = "Debug overlay key" },
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+    ) {
+        for ((col, label) in listOf(DEBUG_OK to "editable", DEBUG_RECOVERED to "read from font", DEBUG_UNMAPPED to "replace only", DEBUG_LOCKED to "locked")) {
+            androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(3.dp)) {
+                Box(Modifier.size(8.dp).background(col.copy(alpha = 0.6f)))
+                androidx.compose.material3.Text(label, style = com.namanbansal.forge.ui.theme.ForgeType.Tiny, color = c.text)
+            }
         }
     }
 }

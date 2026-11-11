@@ -165,6 +165,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     val fillJump by vm.fill.jump.collectAsStateWithLifecycle()
     val permissionProblem by vm.permissionProblem.collectAsStateWithLifecycle()
     val origin by vm.origin.collectAsStateWithLifecycle()
+    val why by vm.edit.existing.why.collectAsStateWithLifecycle()
     val savedTo by vm.savedTo.collectAsStateWithLifecycle()
     val bannerDismissed by vm.bannerDismissed.collectAsStateWithLifecycle()
     val pdfInfo by vm.info.collectAsStateWithLifecycle()
@@ -468,6 +469,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
         onShareImage = { page -> sharePagesOpen = false; scope.launch { shareStaged(vm.stagePages(listOf(page), true), "image/png") } },
         onDismiss = { sharePagesOpen = false },
     )
+    why?.let { w -> WhyLockedSheet(w, onRoute = { r -> vm.edit.existing.dismissWhy(); vm.edit.existing.onRoute(r) }, onDismiss = vm.edit.existing::dismissWhy) }
     FillSignHost(vm)
     editingId?.let { id ->
         val item = editState.items.firstOrNull { it.id == id }

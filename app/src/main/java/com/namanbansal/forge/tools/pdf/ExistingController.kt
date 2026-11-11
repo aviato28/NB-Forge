@@ -30,6 +30,15 @@ data class ExBlockRef(override val page: Int, override val key: Int) : ExRef()
 data class ExImageRef(override val page: Int, override val key: Int) : ExRef()
 data class ExPathRef(override val page: Int, override val key: Int) : ExRef()
 
+/** Where tapping something that isn't page text takes the user. */
+sealed interface ExRoute {
+    data class FillSign(val field: com.namanbansal.forge.core.pdf.form.FormField) : ExRoute
+    data object Annotate : ExRoute
+}
+
+/** The "Why can't I edit this?" sheet: [title] and [detail] in plain words, plus an optional [route] button. */
+class WhyLocked(val title: String, val detail: String, val route: ExRoute? = null, val routeLabel: String = "")
+
 /**
  * The "Edit existing" tool without Compose: finds what is on the page ([load]), selects it, opens the inline editor for a text
  * block, keeps the pending changes in the shared [session] (so undo, redo, the unsaved-changes guard and the pending store all
@@ -42,7 +51,33 @@ class ExistingController(
     private val load: suspend (Int) -> PageObjects?,
     private val previewOf: suspend (Int, ExBlock, ExistingEdit) -> TextPreview?,
     private val message: (String) -> Unit,
+    private val loadDebug: suspend (Int) -> List<com.namanbansal.forge.core.pdf.edit.content.DebugBox> = { emptyList() },
 ) {
+    /** Form fields of a page (text, drop-down and list fields), set by the viewer; tapping one opens Fill & Sign. */
+    var formFieldsOf: (Int) -> List<com.namanbansal.forge.core.pdf.form.FormField> = { emptyList() }
+    /** Takes the user to another mode (Fill & Sign, Annotate). Set by the viewer. */
+    var onRoute: (ExRoute) -> Unit = {}
+
+    private val _why = MutableStateFlow<WhyLocked?>(null)
+    val why: StateFlow<WhyLocked?> = _why.asStateFlow()
+    fun dismissWhy() { _why.value = null }
+
+    private val _debugOn = MutableStateFlow(false)
+    /** Developer overlay (Settings > Developer): tint editable and locked characters. */
+    val debugOn: StateFlow<Boolean> = _debugOn.asStateFlow()
+    fun setDebug(on: Boolean) { _debugOn.value = on }
+    private val _debug = MutableStateFlow<Map<Int, List<com.namanbansal.forge.core.pdf.edit.content.DebugBox>>>(emptyMap())
+    val debug: StateFlow<Map<Int, List<com.namanbansal.forge.core.pdf.edit.content.DebugBox>>> = _debug.asStateFlow()
+    private val debugLoading = HashSet<Int>()
+    fun ensureDebug(p: Int) {
+        if (p in _debug.value || !debugLoading.add(p)) return
+        scope.launch { _debug.value = _debug.value + (p to loadDebug(p)); debugLoading.remove(p) }
+    }
+
+    /** The block being edited has no readable text: the editor starts empty and what is typed replaces it. */
+    private val _replaceOnly = MutableStateFlow(false)
+    val replaceOnly: StateFlow<Boolean> = _replaceOnly.asStateFlow()
+
     private val _objects = MutableStateFlow<Map<Int, PageObjects>>(emptyMap())
     val objects: StateFlow<Map<Int, PageObjects>> = _objects.asStateFlow()
     private val loading = HashSet<Int>()
@@ -119,7 +154,10 @@ class ExistingController(
 
     fun openEditor(r: ExBlockRef) {
         val b = blockOf(r) ?: return
-        draft = editOf(r)?.takeIf { !it.delete }?.text ?: b.text
+        val pending = editOf(r)?.takeIf { !it.delete }
+        _replaceOnly.value = b.unreadable && pending == null
+        if (_replaceOnly.value) message("Forge can't read this text (the PDF has no text map for its font). Type what it should say: the old characters are removed and your text takes their place.")
+        draft = pending?.text ?: if (b.unreadable) "" else b.text
         _selection.value = listOf(r); _editing.value = r
     }
 
@@ -131,6 +169,7 @@ class ExistingController(
         _editing.value = null
         if (!save) return
         val b = blockOf(r) ?: return
+        if (_replaceOnly.value && draft.isBlank()) return // nothing typed: leave the old text alone
         val cur = editOf(r)
         val base = cur ?: newTextEdit(r, b)
         announce += base.id
@@ -341,19 +380,38 @@ class ExistingController(
         return p?.let { ExPathRef(hit.page, it.key) }
     }
 
+    /** A tap on something that is not editable page text: routes form fields and comment boxes, explains locked text. */
+    private fun explain(hit: PageHit): Boolean {
+        val o = _objects.value[hit.page] ?: return false
+        val field = formFieldsOf(hit.page).filter { (it.isText || it.kind == com.namanbansal.forge.core.pdf.form.FieldKind.COMBO || it.kind == com.namanbansal.forge.core.pdf.form.FieldKind.LIST) && Placement.contains(it.rect, hit.x, hit.y, 0.004f) }.minByOrNull { (it.rect.right - it.rect.left) * (it.rect.bottom - it.rect.top) }
+        if (field != null) { message("This is a form field: opened in Fill & Sign."); onRoute(ExRoute.FillSign(field)); return true }
+        val ft = o.freeText.firstOrNull { Placement.contains(it.rect, hit.x, hit.y, 0.004f) }
+        if (ft != null) {
+            _why.value = WhyLocked("This is a comment box", "This text belongs to a comment box (a FreeText annotation) that sits on top of the page, not to the page's own text. Annotate mode shows the page's notes, highlights and drawings; changing the words of a text box is not supported yet. You can cover it with Whiteout and add your own text.", ExRoute.Annotate, "Open Annotate")
+            return true
+        }
+        val spot = o.locked.filter { it.rect.right - it.rect.left < 0.999f && Placement.contains(it.rect, hit.x, hit.y, 0.006f) }.minByOrNull { (it.rect.right - it.rect.left) * (it.rect.bottom - it.rect.top) }
+            ?: o.locked.firstOrNull { it.rect.right - it.rect.left >= 0.999f }
+        if (spot != null) { _why.value = WhyLocked(spot.reason.title, spot.reason.detail); return true }
+        return false
+    }
+
     /** A tap. Returns true when used. */
     fun onTap(hit: PageHit): Boolean {
         ensure(hit.page)
         if (_editing.value != null) { closeEditor(true); return true }
         val t = hitTest(hit)
-        if (t == null) { if (_selection.value.isNotEmpty()) { clearSelection(); return true }; return false }
+        if (t == null) {
+            if (_selection.value.isNotEmpty()) { clearSelection(); return true }
+            return explain(hit)
+        }
         if (t is ExBlockRef && single == t) { openEditor(t); return true }
         _selection.value = listOf(t)
         return true
     }
 
     fun reset() {
-        _objects.value = emptyMap(); loading.clear(); _previews.value = emptyMap(); _selection.value = emptyList(); _editing.value = null
+        _objects.value = emptyMap(); _debug.value = emptyMap(); debugLoading.clear(); _why.value = null; loading.clear(); _previews.value = emptyMap(); _selection.value = emptyList(); _editing.value = null
         liveImage = null; liveLasso = null; mode = 0; _lasso.value = false; announce.clear(); toldNotice.clear()
     }
 
