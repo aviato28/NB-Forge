@@ -226,8 +226,8 @@ fun ResultCard(content: ScanContent, onClose: () -> Unit, modifier: Modifier = M
         is ScanContent.Wifi -> buildList {
             if (ScanActions.canSuggest(content)) add(Act("Add network", ForgeIcons.Globe, true) { go(ScanActions.wifiSuggestion(content), "Could not open the Wi-Fi settings") })
             if (content.password.isNotEmpty()) {
-                add(Act(if (showPassword) "Hide password" else "Show password", ForgeIcons.Eye) { showPassword = !showPassword })
-                add(Act("Copy password", ForgeIcons.Copy) { copy(content.password, "Password") })
+                add(Act(if (showPassword) "Hide" else "Show", ForgeIcons.Eye) { showPassword = !showPassword })
+                add(Act("Copy", ForgeIcons.Copy) { copy(content.password, "Password") })
             }
         }
         is ScanContent.Contact -> listOf(

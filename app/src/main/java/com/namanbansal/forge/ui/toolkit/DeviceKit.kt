@@ -171,9 +171,9 @@ object Perms {
 
 /** Big tabular number with a small caption underneath (readouts on the sensor tools). */
 @Composable
-fun Readout(value: String, caption: String, modifier: Modifier = Modifier, size: Int = 56, emphasised: Boolean = false) {
+fun Readout(value: String, caption: String, modifier: Modifier = Modifier, size: Int = 56, emphasised: Boolean = false, fill: Boolean = true) {
     val c = ForgeTheme.colors
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(if (fill) modifier.fillMaxWidth() else modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             value,
             style = ForgeType.Display.copy(fontSize = size.sp, lineHeight = (size * 1.1f).sp, fontFeatureSettings = "tnum"),

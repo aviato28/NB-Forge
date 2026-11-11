@@ -143,7 +143,7 @@ fun LevelScreen(host: ToolHost) {
 
 @Composable
 private fun AxisValue(label: String, v: Float) {
-    Readout(LevelMath.tenths(v), label, size = 22)
+    Readout(LevelMath.tenths(v), label, size = 22, fill = false)
 }
 
 @Composable
