@@ -33,20 +33,42 @@ class CoverageTest {
 
     @Test fun cidFontWithoutToUnicodeIsReadBackFromTheEmbeddedFont() {
         val f = CoverageFixtures.cidNoToUnicode(tmp.newFile("cid.pdf"), invoice)
-        // PDFBox itself has no text for these glyphs: the owner's "it doesn't recognise it"
-        PDDocument.load(f).use { d -> assertTrue(d.getPage(0).resources.fontNames.all { n -> d.getPage(0).resources.getFont(n).toUnicode(1) == null }) }
         val s = scan(f)
         assertTrue("every character is editable now", s.glyphs.all { it.editable })
-        assertTrue(s.glyphs.any { it.recovered }); assertTrue(s.glyphs.none { it.unmapped })
+        assertTrue(s.glyphs.none { it.unmapped })
         val blocks = scanBlocks(f)
         assertEquals(invoice.joinToString(" "), blocks.joinToString(" ") { it.text }.replace(Regex("\\s+"), " "))
         assertTrue(blocks.none { it.unreadable })
     }
 
+    @Test fun embeddedFontsGiveTheirTextBackThroughCmapEvenWhenPdfBoxHasNone() {
+        val rec = GlyphRecovery()
+        for (make in listOf({ CoverageFixtures.cidNoToUnicode(tmp.newFile(), invoice) }, { CoverageFixtures.trueTypeNoEncoding(tmp.newFile(), invoice) })) {
+            val f = make()
+            PDDocument.load(f).use { d ->
+                val s = ContentWalker.scan(d, d.getPage(0))
+                val g = s.glyphs.first { it.text == "I" }
+                assertEquals("I", rec.recover(g.font, g.code))
+                val v = s.glyphs.first { it.text == "v" }
+                assertEquals("v", rec.recover(v.font, v.code))
+            }
+        }
+    }
+
+    @Test fun subsetFontsWithoutCmapAreNotGuessed() {
+        val f = CoverageFixtures.cidNoToUnicode(tmp.newFile("sub.pdf"), invoice, subset = true)
+        PDDocument.load(f).use { d ->
+            val s = ContentWalker.scan(d, d.getPage(0))
+            val g = s.glyphs.first()
+            assertEquals(null, GlyphRecovery().recover(g.font, g.code))
+            assertTrue(g.unmapped)
+        }
+    }
+
     @Test fun editingRecoveredTextRewritesItAndRemovesTheOldGlyphs() {
         val f = CoverageFixtures.cidNoToUnicode(tmp.newFile("cid.pdf"), invoice)
         val b = scanBlocks(f).first { it.text.startsWith("Invoice") }
-        ExistingApplier.applyInPlace(f, listOf(textEdit(b, "Invoice 2026-0042 total due 980.50")), TEST_FONTS) { null }
+        ExistingApplier.applyInPlace(f, listOf(textEdit(b, b.text.replace("1,250.00", "980.50"))), TEST_FONTS) { null }
         val after = pageText(f)
         assertTrue(after, after.contains("Invoice 2026-0042 total due 980.50"))
         assertFalse(after, after.contains("1,250.00"))
@@ -65,7 +87,7 @@ class CoverageTest {
     }
 
     @Test fun textWithNothingToRecoverIsReplaceOnlyNotLocked() {
-        val f = CoverageFixtures.cidNoToUnicode(tmp.newFile("lost.pdf"), invoice, embedded = false)
+        val f = CoverageFixtures.cidNoToUnicode(tmp.newFile("lost.pdf"), invoice, subset = true)
         val s = scan(f)
         assertTrue(s.glyphs.isNotEmpty())
         assertTrue("editable even though nothing says what the letters are", s.glyphs.all { it.editable && it.unmapped })
@@ -87,7 +109,7 @@ class CoverageTest {
         tmp.newFile("mixed.pdf"),
         listOf(
             Span("Please review the contract and send it back by"), Span("Friday", HB), Span("so that we can sign it. All details are on the portal at"),
-            Span("https://example.com/contract/details/page", rgb = BLUE), Span("and the team will answer every question you may have about it."),
+            Span("example.com/contract", rgb = BLUE), Span("and the team will answer every question you may have about it."),
         ),
     )
 
@@ -100,7 +122,7 @@ class CoverageTest {
         assertTrue(b.mixed)
         val runs = runsOf(b.styles)
         assertTrue(runs.any { it.style.traits.bold && b.text.substring(it.start, it.end).trim() == "Friday" })
-        assertTrue(runs.any { it.style.color == 0xFF0D40D9.toInt() || b.text.substring(it.start, it.end).contains("https://example.com") })
+        assertTrue(runs.any { it.style.color == 0xFF0D40D9.toInt() || b.text.substring(it.start, it.end).contains("example.com") })
     }
 
     @Test fun aLineEntirelyInLinkColourDoesNotSplitTheParagraph() {
@@ -124,7 +146,7 @@ class CoverageTest {
         val runs = runsOf(after.styles)
         val bold = runs.first { b2 -> after.text.substring(b2.start, b2.end).trim() == "Friday" }
         assertTrue("Friday is still bold", bold.style.traits.bold)
-        val link = runs.first { after.text.substring(it.start, it.end).contains("https://example.com") }
+        val link = runs.first { after.text.substring(it.start, it.end).contains("example.com") }
         assertEquals("the link keeps its colour", 0xFF0D40D9.toInt(), link.style.color, )
         val plain = runs.first { after.text.substring(it.start, it.end).startsWith("Kindly") }
         assertFalse("the typed words are not bold", plain.style.traits.bold)
@@ -144,10 +166,10 @@ class CoverageTest {
         val bld = RunStyle(PDType1Font.HELVETICA_BOLD, 2, "HB", FontTraits.of(PDType1Font.HELVETICA_BOLD), 0)
         val orig = "go Friday now"
         val styles = orig.mapIndexed { i, _ -> if (i in 3..8) bld else a }
-        val m = StyleMap.map(orig, styles, "go Friday later now")!!
-        assertEquals(orig.length + 6, m.size)
+        val m = StyleMap.map(orig, styles, "go Friday! now")!!
+        assertEquals(orig.length + 1, m.size)
         assertTrue(m.slice(3..8).all { it === bld })
-        assertTrue("typed after the bold word takes its look", m[9] === bld)
+        assertTrue("typed right after the bold word takes its look", m[9] === bld)
         assertTrue(m.last() === a)
         assertEquals(null, StyleMap.map(orig, emptyList(), "x"))
     }

@@ -21,11 +21,14 @@ object CoverageFixtures {
     val NOTO = File("src/main/assets/fonts/NotoSans-Regular.ttf")
     val BLUE = Triple(0.05f, 0.25f, 0.85f)
 
-    /** Writes [text] lines with a Noto subset (Identity-H CID font), then removes every /ToUnicode, like many invoice generators do. */
-    fun cidNoToUnicode(file: File, lines: List<String>, embedded: Boolean = true): File {
+    /**
+ * Writes [lines] with an embedded Noto CID font (Identity-H), then removes every /ToUnicode, like many invoice generators do.
+ * A [subset] font keeps no cmap or glyph names (PDFBox's subsetter), so nothing can say what its letters are; the whole font keeps its cmap.
+ */
+    fun cidNoToUnicode(file: File, lines: List<String>, subset: Boolean = false): File {
         PDDocument().use { d ->
             val page = PDPage(PDRectangle.LETTER); d.addPage(page)
-            val font = PDType0Font.load(d, NOTO.inputStream(), true)
+            val font = PDType0Font.load(d, NOTO.inputStream(), subset)
             PDPageContentStream(d, page).use { cs ->
                 lines.forEachIndexed { i, t -> cs.beginText(); cs.setFont(font, 12f); cs.newLineAtOffset(72f, 700f - i * 14.4f); cs.showText(t); cs.endText() }
             }
@@ -33,14 +36,7 @@ object CoverageFixtures {
         }
         PDDocument.load(file).use { d ->
             val res = d.getPage(0).resources
-            for (n in res.fontNames) {
-                val f = res.getFont(n).cosObject
-                f.removeItem(COSName.TO_UNICODE)
-                if (!embedded) {
-                    val desc = (f.getDictionaryObject(COSName.DESCENDANT_FONTS) as com.tom_roush.pdfbox.cos.COSArray).getObject(0) as com.tom_roush.pdfbox.cos.COSDictionary
-                    (desc.getDictionaryObject(COSName.FONT_DESC) as com.tom_roush.pdfbox.cos.COSDictionary).removeItem(COSName.getPDFName("FontFile2"))
-                }
-            }
+            for (n in res.fontNames) res.getFont(n).cosObject.removeItem(COSName.TO_UNICODE)
             d.save(file)
         }
         return file
