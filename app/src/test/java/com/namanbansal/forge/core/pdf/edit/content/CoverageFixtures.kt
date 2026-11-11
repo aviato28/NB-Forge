@@ -67,19 +67,22 @@ object CoverageFixtures {
     class Span(val text: String, val font: PDFont = PDType1Font.HELVETICA, val rgb: Triple<Float, Float, Float> = Triple(0f, 0f, 0f))
 
     /** A paragraph of mixed spans (a bold word, a link...) wrapped to [width]; every word is shown in its own span's font and colour. */
-    fun mixedParagraph(file: File, spans: List<Span>, size: Float = 12f, width: Float = 380f, left: Float = 72f, top: Float = 700f, extra: (PDPageContentStream) -> Unit = {}): File {
+    fun mixedParagraph(file: File, spans: List<Span>, size: Float = 12f, width: Float = 380f, left: Float = 72f, top: Float = 700f, embed: Boolean = false, extra: (PDPageContentStream) -> Unit = {}): File {
         PDDocument().use { d ->
+            fun noto(n: String) = NOTO.parentFile.resolve(n).inputStream().use { com.tom_roush.pdfbox.pdmodel.font.PDTrueTypeFont.load(d, it, com.tom_roush.pdfbox.pdmodel.font.encoding.WinAnsiEncoding.INSTANCE) }
+            val reg = if (embed) noto("NotoSans-Regular.ttf") else null; val bld = if (embed) noto("NotoSans-Bold.ttf") else null
+            fun fontOf(sp: Span): PDFont = if (!embed) sp.font else if (sp.font === PDType1Font.HELVETICA_BOLD) bld!! else reg!!
             val page = PDPage(PDRectangle.LETTER); d.addPage(page)
             PDPageContentStream(d, page).use { cs ->
-                class W(val t: String, val s: Span)
-                val words = spans.flatMap { sp -> sp.text.split(' ').filter { it.isNotEmpty() }.map { W(it, sp) } }
-                fun wd(w: W) = w.s.font.getStringWidth(w.t) / 1000f * size
+                class W(val t: String, val s: Span, val f: PDFont)
+                val words = spans.flatMap { sp -> sp.text.split(' ').filter { it.isNotEmpty() }.map { W(it, sp, fontOf(sp)) } }
+                fun wd(w: W) = w.f.getStringWidth(w.t) / 1000f * size
                 val space = PDType1Font.HELVETICA.getStringWidth(" ") / 1000f * size
                 var y = top; var x = left
                 for (w in words) {
                     if (x > left && x + wd(w) > left + width) { x = left; y -= size * 1.2f }
                     cs.setNonStrokingColor(w.s.rgb.first, w.s.rgb.second, w.s.rgb.third)
-                    cs.beginText(); cs.setFont(w.s.font, size); cs.newLineAtOffset(x, y); cs.showText(w.t); cs.endText()
+                    cs.beginText(); cs.setFont(w.f, size); cs.newLineAtOffset(x, y); cs.showText(w.t); cs.endText()
                     x += wd(w) + space
                 }
                 extra(cs)

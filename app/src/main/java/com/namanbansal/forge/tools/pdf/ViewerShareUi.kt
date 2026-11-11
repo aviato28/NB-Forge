@@ -77,7 +77,7 @@ fun FileMenuItems(a: FileMenuActions, onDone: () -> Unit) {
 
 /** Slim strip under the top bar for a temporary file. */
 @Composable
-fun TemporaryBanner(from: String, onSave: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+fun TemporaryBanner(onSave: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val c = ForgeTheme.colors
     Row(
         modifier.fillMaxWidth().background(c.tint).padding(start = 16.dp).semantics { contentDescription = "Not saved on your phone" },
@@ -86,10 +86,8 @@ fun TemporaryBanner(from: String, onSave: () -> Unit, onDismiss: () -> Unit, mod
         Icon(ForgeIcons.Info, null, tint = c.accent, modifier = Modifier.size(16.dp))
         Text(
             "Not saved on your phone", style = ForgeType.Small, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 8.dp).weight(1f, fill = false),
+            modifier = Modifier.padding(start = 8.dp).weight(1f),
         )
-        Text(" · from $from", style = ForgeType.Small, color = c.text2, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        Spacer(Modifier.weight(1f))
         TextButton(onClick = onSave, modifier = Modifier.heightIn(min = 48.dp)) { Text("Save", color = c.accent, style = ForgeType.Label) }
         Box(Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
             Icon(ForgeIcons.Close, "Hide this notice", tint = c.text2, modifier = Modifier.size(16.dp))

@@ -83,17 +83,17 @@ Problem: Forge is now the default PDF viewer, and many PDFs arrive from other ap
 - [x] Recents: offer "Keep a copy" for temporary PDFs so they still open later (app storage, size cap, setting)
 
 **Quality**
-- [ ] Tests for temp-file detection, save/rename/dedupe, share intents (grant flags), print adapter, file-info parsing; screenshots of viewer bar, banner, save sheet, file info, Files row menu
+- [x] Tests for temp-file detection, save/rename/dedupe, share intents (grant flags), print adapter, file-info parsing; screenshots of viewer bar, banner, save sheet, file info, Files row menu
 
 ## Round 2F — Edit-existing coverage (owner feedback 2026-11-11: "some patches it doesn't recognise")
 Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible (OCR layer), outlined, rotated, and **no-Unicode-mapping** glyphs; TextBlocks splits paragraphs on any font-family/colour/size change; text in form widgets and annotations isn't page content, so it's never scanned.
-- [ ] No-Unicode glyphs (common in bank/invoice PDFs): recover text from the embedded font's cmap / glyph names (AGL); if still unknown, allow "Replace text" (remove the exact glyphs, type the new text) instead of locking the block
-- [ ] Mixed-style paragraphs: merge bold/italic/colour runs into one block, keeping per-run styles on rewrite where the text is unchanged
-- [ ] Slightly rotated text (scanner skew, <~2°): treat as upright and keep the rotation on rewrite
-- [ ] Text in form fields / FreeText annotations: show the outline too; tapping routes to Fill & Sign / the annotation editor
-- [ ] "Why can't I edit this?": tapping an uneditable area shows the specific reason (Type 3 / outlines / scanned → OCR later)
-- [ ] Debug overlay (Settings → Developer): tints editable vs locked glyphs, to diagnose owner-supplied PDFs
-- [ ] Regression fixtures from owner-supplied sample PDFs (non-sensitive)
+- [x] No-Unicode glyphs (common in bank/invoice PDFs): recover text from the embedded font's cmap / glyph names (AGL); if still unknown, allow "Replace text" (remove the exact glyphs, type the new text) instead of locking the block
+- [x] Mixed-style paragraphs: merge bold/italic/colour runs into one block, keeping per-run styles on rewrite where the text is unchanged
+- [x] Slightly rotated text (scanner skew, <~2°): treat as upright and keep the rotation on rewrite
+- [x] Text in form fields / FreeText annotations: show the outline too; tapping routes to Fill & Sign / the annotation editor
+- [x] "Why can't I edit this?": tapping an uneditable area shows the specific reason (Type 3 / outlines / scanned → OCR later)
+- [x] Debug overlay (Settings → Developer): tints editable vs locked glyphs, to diagnose owner-supplied PDFs
+- [ ] Regression fixtures from owner-supplied sample PDFs (non-sensitive) — generated stand-ins for every case are in `CoverageFixtures`; swap in the owner's real samples when they arrive
 
 ## Round 3 — Remaining PDF tools
 - [ ] Compress (P9), Protect / Unlock (P29/P30), Watermark (P20), Page numbers (P21), PDF→images (P31), Images→PDF (P32) — each with a live preview

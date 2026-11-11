@@ -362,7 +362,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                             Spacer(Modifier.width(8.dp))
                         }
                         val o = origin
-                        if (o != null && o.temporary && savedTo == null && !bannerDismissed) TemporaryBanner(o.from, onSave = { vm.saveToPhone() }, onDismiss = vm::dismissBanner)
+                        if (o != null && o.temporary && savedTo == null && !bannerDismissed) TemporaryBanner(onSave = { vm.saveToPhone() }, onDismiss = vm::dismissBanner)
                         Fade(searchOpen) {
                             androidx.compose.runtime.key(searchNonce) {
                                 SearchBar(

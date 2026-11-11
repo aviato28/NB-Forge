@@ -94,37 +94,14 @@ fun RecentRow(item: RecentItem, showDivider: Boolean, onRemove: () -> Unit, acti
                     contentAlignment = Alignment.Center,
                 ) { Icon(ForgeIcons.More, "More actions for ${e.name}", tint = c.text2, modifier = Modifier.size(20.dp)) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.surface) {
-                    if (item.exists) {
-                        DropdownMenuItem(
-                            text = { Text("Share") },
-                            leadingIcon = { Icon(ForgeIcons.Share, null, Modifier.size(18.dp)) },
-                            onClick = { menu = false; if (!FileActions.share(context, e.uri.toUri(), e.mime, e.name)) snack("No app available to share this file") },
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Save as…") },
-                            leadingIcon = { Icon(ForgeIcons.Download, null, Modifier.size(18.dp)) },
-                            onClick = { menu = false; saveAs.launch(e.name) },
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Open with…") },
-                            leadingIcon = { Icon(ForgeIcons.Open, null, Modifier.size(18.dp)) },
-                            onClick = { menu = false; if (!FileActions.openWith(context, e.uri.toUri(), e.mime)) snack("No app found to open this file") },
-                        )
-                        if (actions != null) DropdownMenuItem(
-                            text = { Text("Rename") },
-                            leadingIcon = { Icon(ForgeIcons.Pencil, null, Modifier.size(18.dp)) },
-                            onClick = { menu = false; renaming = true },
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text("Remove from list") },
-                        leadingIcon = { Icon(ForgeIcons.Trash, null, Modifier.size(18.dp)) },
-                        onClick = { menu = false; onRemove() },
-                    )
-                    if (actions != null && item.exists) DropdownMenuItem(
-                        text = { Text("Delete file…", color = Danger) },
-                        leadingIcon = { Icon(ForgeIcons.Trash, null, Modifier.size(18.dp), tint = Danger) },
-                        onClick = { menu = false; deleting = true },
+                    RecentMenuItems(
+                        exists = item.exists, canManage = actions != null,
+                        onShare = { menu = false; if (!FileActions.share(context, e.uri.toUri(), e.mime, e.name)) snack("No app available to share this file") },
+                        onSaveAs = { menu = false; saveAs.launch(e.name) },
+                        onOpenWith = { menu = false; if (!FileActions.openWith(context, e.uri.toUri(), e.mime)) snack("No app found to open this file") },
+                        onRename = { menu = false; renaming = true },
+                        onRemove = { menu = false; onRemove() },
+                        onDelete = { menu = false; deleting = true },
                     )
                 }
             }
@@ -155,4 +132,20 @@ fun RenameDialog(current: String, onDismiss: () -> Unit, onRename: (String) -> U
         confirmButton = { androidx.compose.material3.TextButton(onClick = { onRename(text) }, enabled = valid) { Text("Rename", color = c.accent) } },
         dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel", color = c.text2) } },
     )
+}
+
+/** The rows of a Files / Recent row menu (also shown on their own in screenshots). */
+@Composable
+fun RecentMenuItems(exists: Boolean, canManage: Boolean, onShare: () -> Unit, onSaveAs: () -> Unit, onOpenWith: () -> Unit, onRename: () -> Unit, onRemove: () -> Unit, onDelete: () -> Unit) {
+    @Composable
+    fun Row(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color = Color.Unspecified, run: () -> Unit) =
+        DropdownMenuItem(text = { Text(text, color = color) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp), tint = if (color == Color.Unspecified) androidx.compose.material3.LocalContentColor.current else color) }, onClick = run)
+    if (exists) {
+        Row("Share", ForgeIcons.Share, run = onShare)
+        Row("Save as…", ForgeIcons.Download, run = onSaveAs)
+        Row("Open with…", ForgeIcons.Open, run = onOpenWith)
+        if (canManage) Row("Rename", ForgeIcons.Pencil, run = onRename)
+    }
+    Row("Remove from list", ForgeIcons.Trash, run = onRemove)
+    if (canManage && exists) Row("Delete file…", ForgeIcons.Trash, Danger, onDelete)
 }
