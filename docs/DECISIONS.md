@@ -74,3 +74,8 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 - Rationale: much better quality than Tesseract, on-device and free, and its terms don't force us to open-source Forge (unlike the AGPL libraries we avoid), so a paid tier stays possible.
 - The licence rule is now: Apache/MIT/BSD/OFL, or free proprietary SDKs with no copyleft (ML Kit only so far).
 - Prefer bundled models over Play Services-delivered ones where both exist, so they work offline and on de-Googled phones. The document scanner needs Play Services: detect that, and if it's missing, fall back to a plain camera capture + manual crop.
+
+## Parallel tracks (2026-11-11, owner approved)
+- PDF track: branch `ccr-3c0bfd4d-pvi6u0`, worktree /home/user/NB-Forge (chunks A → B → C).
+- Everything-else track: branch `forge-track-2`, worktree /home/user/NB-Forge-t2 (chunks D → E → F → G).
+- Each chunk: PR to main, squash merge, release. Sync the other branch with main after each merge.
