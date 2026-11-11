@@ -26,6 +26,18 @@ class ToolHost(
  */
 object ToolScreens {
     val screens: Map<String, @Composable (ToolHost) -> Unit> = mapOf(
+        "U1" to { host -> com.namanbansal.forge.tools.util.UnitsScreen(host) },
+        "U2" to { host -> com.namanbansal.forge.tools.util.CurrencyScreen(host) },
+        "U3" to { host -> com.namanbansal.forge.tools.util.CalculatorScreen(host) },
+        "U4" to { host -> com.namanbansal.forge.tools.util.PercentScreen(host) },
+        "U5" to { host -> com.namanbansal.forge.tools.util.DateScreen(host) },
+        "U6" to { host -> com.namanbansal.forge.tools.util.ZonesScreen(host) },
+        "U7" to { host -> com.namanbansal.forge.tools.util.TimersScreen(host) },
+        "U8" to { host -> com.namanbansal.forge.tools.util.RandomScreen(host) },
+        "U9" to { host -> com.namanbansal.forge.tools.util.TallyScreen(host) },
+        "U10" to { host -> com.namanbansal.forge.tools.util.LoanScreen(host) },
+        "U11" to { host -> com.namanbansal.forge.tools.util.HealthScreen(host) },
+        "U12" to { host -> com.namanbansal.forge.tools.util.QrGenScreen(host) },
         "D1" to { host -> com.namanbansal.forge.tools.device.LevelScreen(host) },
         "D2" to { host -> com.namanbansal.forge.tools.device.RulerScreen(host) },
         "D3" to { host -> com.namanbansal.forge.tools.device.ProtractorScreen(host) },
