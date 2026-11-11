@@ -122,6 +122,8 @@ object ForgeIcons {
     val Wand by lazy { line("wand", "M4 20L15 9M14 4v2M18 8h2M18.5 4.5l-1.4 1.4M10 5.5l1 1") }
     val Share by lazy { line("share", circle(6f, 12f, 2.5f), circle(18f, 6f, 2.5f), circle(18f, 18f, 2.5f), "M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6") }
     val Trash by lazy { line("trash", "M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6") }
+    val Printer by lazy { line("printer", "M7 9V4h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v6H7z") }
+    val Pencil by lazy { line("pencil", "M4 20l1-4L16 5l3 3L8 19zM14 7l3 3") }
     val Highlight by lazy { line("highlight", "M9 11l7-7 4 4-7 7z", "M9 11l-5 5v4h4l3-3", "M4 21h16") }
     val Underline by lazy { line("underline", "M7 4v7a5 5 0 0 0 10 0V4", "M5 21h14") }
     val Strike by lazy { line("strike", "M4 12h16", "M16.5 7A4.5 3 0 0 0 12 5c-2.8 0-4.5 1.3-4.5 3s1.7 2.7 4.5 3", "M8 17a4.5 3 0 0 0 4 2c2.8 0 4.5-1.3 4.5-3") }

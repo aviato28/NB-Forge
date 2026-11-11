@@ -80,7 +80,17 @@ fun SettingsScreen(app: ForgeApp, settings: Settings, onLicenses: () -> Unit) {
                     onKeepScreenOn = { v -> scope.launch { app.settings.setViewerPrefs(settings.viewer.copy(keepScreenOn = v)) } },
                     onOpenAppInfo = { pkg -> runCatching { context.startActivity(DefaultPdfViewer.appInfoIntent(pkg)) } },
                     onTest = { runCatching { context.startActivity(DefaultPdfViewer.testIntent(context)) } },
+                    keepCopies = settings.keepCopies, onKeepCopies = { v -> scope.launch { app.settings.setKeepCopies(v) } },
                 )
+            }
+            item {
+                GroupLabel("Developer")
+                ForgeCard(Modifier.fillMaxWidth()) {
+                    ListRow(
+                        "Show which text can be edited", subtitle = "In Edit existing, tints editable text green and locked text red, to find out why a PDF can't be edited",
+                        icon = ForgeIcons.Code, showDivider = false, trailing = { ForgeSwitch(settings.debugOverlay) { v -> scope.launch { app.settings.setDebugOverlay(v) } } },
+                    )
+                }
             }
             item {
                 GroupLabel("Updates")
@@ -144,6 +154,8 @@ fun PdfViewerSettings(
     onKeepScreenOn: (Boolean) -> Unit,
     onOpenAppInfo: (String) -> Unit,
     onTest: () -> Unit,
+    keepCopies: Boolean = true,
+    onKeepCopies: (Boolean) -> Unit = {},
 ) {
     val c = ForgeTheme.colors
     ForgeCard(Modifier.fillMaxWidth()) {
@@ -176,8 +188,11 @@ fun PdfViewerSettings(
             }
         }
         HorizontalDivider(Modifier.padding(horizontal = 12.dp), thickness = 1.dp, color = c.border)
-        ListRow("Keep screen on while reading", subtitle = "Stops the screen from sleeping in the viewer", icon = ForgeIcons.Sun, showDivider = false, trailing = {
+        ListRow("Keep screen on while reading", subtitle = "Stops the screen from sleeping in the viewer", icon = ForgeIcons.Sun, trailing = {
             ForgeSwitch(keepScreenOn, onKeepScreenOn)
+        })
+        ListRow("Keep a copy of PDFs from other apps", subtitle = "So a PDF from email or a shopping app still opens from Recent later", icon = ForgeIcons.Copy, showDivider = false, trailing = {
+            ForgeSwitch(keepCopies, onKeepCopies)
         })
     }
 }

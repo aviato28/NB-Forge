@@ -33,9 +33,28 @@ class OutputSaver(context: Context) {
         onSaved: (SavedOutput) -> Unit = {},
         subDir: String = "",
         write: suspend (OutputStream) -> Unit,
+    ): SavedOutput = create(mime, subDir, onSaved, { path -> OutputNaming.build(originalName, action, ext) { exists(it, path) } }, write)
+
+    /**
+     * Saves a file under its own name (`invoice.pdf`, de-duplicated as `invoice (1).pdf`), for "Save to phone".
+     * Same pending / rollback behaviour as [save].
+     */
+    suspend fun saveKeepingName(
+        name: String,
+        mime: String,
+        subDir: String = "",
+        write: suspend (OutputStream) -> Unit,
+    ): SavedOutput = create(mime, subDir, {}, { path -> OutputNaming.keep(name) { exists(it, path) } }, write)
+
+    private suspend fun create(
+        mime: String,
+        subDir: String,
+        onSaved: (SavedOutput) -> Unit,
+        nameFor: (String) -> String,
+        write: suspend (OutputStream) -> Unit,
     ): SavedOutput = withContext(Dispatchers.IO) {
         val path = RELATIVE_PATH + subDir
-        val name = OutputNaming.build(originalName, action, ext) { exists(it, path) }
+        val name = nameFor(path)
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
@@ -56,6 +75,25 @@ class OutputSaver(context: Context) {
             runCatching { resolver.delete(uri, null, null) }
             throw t
         }
+    }
+
+    /**
+     * Renames the file at [uri] to [newName] (the extension is kept when the user leaves it off). Returns the name used, or
+     * null when the provider refuses. Never throws.
+     */
+    suspend fun rename(uri: Uri, newName: String): String? = withContext(Dispatchers.IO) {
+        val name = OutputNaming.renamed(newName) ?: return@withContext null
+        try {
+            val n = resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, name) }, null, null)
+            if (n > 0) name else android.provider.DocumentsContract.renameDocument(resolver, uri, name)?.let { name }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Deletes the file itself (Files tab "Delete file", after the user confirmed). True when it is gone. */
+    suspend fun deleteFile(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        try { resolver.delete(uri, null, null) > 0 } catch (_: Exception) { false }
     }
 
     private fun exists(displayName: String, path: String): Boolean = try {
@@ -83,6 +121,12 @@ class OutputSaver(context: Context) {
 
     /** Removes a file this saver created (used to roll back a half-finished multi-file run). */
     fun delete(uri: Uri) { resolver.delete(uri, null, null) }
+
+    /** Streams [write] into a user-chosen destination (the "Save as…" picker result). */
+    suspend fun writeTo(destination: Uri, write: suspend (OutputStream) -> Unit) = withContext(Dispatchers.IO) {
+        val output = resolver.openOutputStream(destination, "w") ?: throw IOException("Could not write the file")
+        output.use { write(it) }
+    }
 
     /** Copies [source] into a user-chosen destination (the "Save as" action). */
     suspend fun copyTo(source: Uri, destination: Uri) = withContext(Dispatchers.IO) {
