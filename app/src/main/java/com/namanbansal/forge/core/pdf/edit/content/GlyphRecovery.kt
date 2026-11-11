@@ -28,6 +28,8 @@ class GlyphRecovery {
     }
 
     private fun build(font: PDFont): Table? = runCatching {
+        // a font that is not in the file would be a stand-in whose glyph numbers mean something else
+        if (!font.isEmbedded) return null
         val (ttf, toGid) = when (font) {
             is PDTrueTypeFont -> (font.trueTypeFont ?: return null) to { c: Int -> font.codeToGID(c) }
             is PDType0Font -> {

@@ -113,7 +113,7 @@ class PageScan(
 ) {
     val editableGlyphs: List<Glyph> get() = glyphs.filter { it.editable }
     /** Visible characters we leave alone (outlined, rotated, Type 3, vertical). */
-    val lockedGlyphs: Int get() = glyphs.count { !it.editable && it.note != null }
+    val lockedGlyphs: Int get() = glyphs.count { !it.editable && it.note != null && it.note != "hidden text" }
 
     /** A box in the working frame -> the area it covers on the page. */
     fun toPage(b: Box): Box = if (skew == 0f) b else Aff.rotate(skew).bounds(b.l, b.b, b.r, b.t)
@@ -268,7 +268,7 @@ object ContentWalker {
                 val editable = when {
                     type3 -> { note = "Type 3 font"; false }
                     vertical -> { note = "vertical text"; false }
-                    gs.mode == 3 -> { ps.invisible++; false }
+                    gs.mode == 3 -> { ps.invisible++; note = "hidden text"; false }
                     gs.mode != 0 && gs.mode != 2 -> { note = "outlined text"; false }
                     !upright -> { note = "rotated text"; false }
                     gs.fs == 0f || size <= 0.5f -> false

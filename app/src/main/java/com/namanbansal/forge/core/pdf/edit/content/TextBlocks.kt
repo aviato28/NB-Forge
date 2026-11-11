@@ -81,6 +81,7 @@ class TextBlock(
 ) {
     /** More than one font or colour inside the block. */
     val mixed: Boolean get() = styles.isNotEmpty() && styles.any { !it.same(styles[0]) }
+    fun glyphs(): List<Glyph> = lines.flatMap { it.glyphs }
     val lineCount: Int get() = lines.size
     val bottomBaseline: Float get() = lines.last().baseline
 }

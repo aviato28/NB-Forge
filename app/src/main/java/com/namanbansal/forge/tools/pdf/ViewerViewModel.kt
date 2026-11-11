@@ -145,7 +145,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         pageAspect = { _aspects.value?.getOrNull(it) ?: 0.707f }, currentPage = { pageState.value }, pageCount = { source.value?.pageCount ?: 0 },
         scope = viewModelScope, pageText = { pageText(it) }, sampleColor = { p, x, y -> sampleColor(p, x, y) }, message = { notify(it) },
         loadObjects = { p -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.page(p) } } },
-        previewOf = { p, b, e -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.preview(p, b, e.text, e.sizePt, e.align, e.bold.takeIf { it >= 0 }?.let { it == 1 }, e.italic.takeIf { it >= 0 }?.let { it == 1 }) } } },
+        previewOf = { p, b, e -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.preview(p, b, e.text, e.sizePt, e.align, e.bold.takeIf { it >= 0 }?.let { it == 1 }, e.italic.takeIf { it >= 0 }?.let { it == 1 }, e.color.takeIf { e.hasColor }) } } },
     )
     private val fontOpener = FontOpener { app.assets.open(it) }
     private var existingIndex: ExistingIndex? = null
