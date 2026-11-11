@@ -104,19 +104,32 @@ object BarcodeClassifier {
             val colon = line.indexOf(':')
             if (colon < 0) continue
             val key = line.substring(0, colon).substringBefore(';').uppercase().substringAfterLast('.')
-            val value = vUnescape(line.substring(colon + 1))
+            val rawValue = line.substring(colon + 1)
+            val value = vUnescape(rawValue)
             when (key) {
                 "FN" -> name = value
-                "N" -> n = value.split(';').let { p -> listOf(p.getOrNull(3), p.getOrNull(1), p.getOrNull(2), p.getOrNull(0)).filter { !it.isNullOrBlank() }.joinToString(" ") }
+                "N" -> n = splitUnescaped(rawValue).let { p -> listOf(p.getOrNull(3), p.getOrNull(1), p.getOrNull(2), p.getOrNull(0)).filter { !it.isNullOrBlank() }.joinToString(" ") }
                 "TEL" -> if (value.isNotBlank()) phones += value
                 "EMAIL" -> if (value.isNotBlank()) emails += value
-                "ORG" -> org = value.replace(";", ", ")
+                "ORG" -> org = splitUnescaped(rawValue).filter { it.isNotBlank() }.joinToString(", ")
                 "TITLE" -> title = value
-                "ADR" -> adr = value.split(';').filter { it.isNotBlank() }.joinToString(", ")
+                "ADR" -> adr = splitUnescaped(rawValue).filter { it.isNotBlank() }.joinToString(", ")
                 "URL" -> url = value
             }
         }
         return ScanContent.Contact(raw, name.ifBlank { n }, phones, emails, org, title, adr, url)
+    }
+
+    /** Splits a vCard structured value on `;` that is not escaped, then unescapes each part. */
+    private fun splitUnescaped(raw: String): List<String> {
+        val parts = mutableListOf<String>(); val cur = StringBuilder(); var i = 0
+        while (i < raw.length) {
+            if (raw[i] == '\\' && i + 1 < raw.length) { cur.append(raw[i]).append(raw[i + 1]); i += 2 }
+            else if (raw[i] == ';') { parts += vUnescape(cur.toString()); cur.clear(); i++ }
+            else { cur.append(raw[i]); i++ }
+        }
+        parts += vUnescape(cur.toString())
+        return parts
     }
 
     private fun vUnescape(s: String): String {
