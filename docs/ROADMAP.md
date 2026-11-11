@@ -64,23 +64,23 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
 Problem: Forge is now the default PDF viewer, and many PDFs arrive from other apps (Amazon, bank apps, email) as temporary files that aren't saved on the phone. There's no share or save button in the viewer.
 
 **Viewer**
-- [ ] Share button in the viewer top bar (shares the current file with its real name; with unsaved edits, ask "Share with your changes / original")
-- [ ] "Save to phone": one tap → Downloads/Forge; "Save as…" → system picker (choose folder + rename)
-- [ ] Detect temporary files (opened from another app's private storage or a link) and show a slim banner: "Not saved on your phone · Save"
-- [ ] Print (Android print service; also "Save as PDF" via print)
-- [ ] Open with… another app
-- [ ] File info sheet: name, size, pages, where it came from, where it's saved, PDF title/author/producer, encrypted yes/no
-- [ ] Overflow menu groups these; Share + Save stay visible as icons
+- [x] Share button in the viewer top bar (shares the current file with its real name; with unsaved edits, ask "Share with your changes / original")
+- [x] "Save to phone": one tap → Downloads/Forge; "Save as…" → system picker (choose folder + rename)
+- [x] Detect temporary files (opened from another app's private storage or a link) and show a slim banner: "Not saved on your phone · Save"
+- [x] Print (Android print service; also "Save as PDF" via print)
+- [x] Open with… another app
+- [x] File info sheet: name, size, pages, where it came from, where it's saved, PDF title/author/producer, encrypted yes/no
+- [x] Overflow menu groups these; Share + Save stay visible as icons
 
 **Edits on temporary files**
-- [ ] When an edit can't overwrite the original, the save sheet asks where to save (Downloads/Forge default, or Save as…) instead of saving silently
+- [x] When an edit can't overwrite the original, the save sheet asks where to save (Downloads/Forge default, or Save as…) instead of saving silently
 
 **Everywhere else**
-- [ ] Share-to-Forge sheet (files sent from other apps) also offers "Save to phone"
-- [ ] Files tab and Recent rows: Share, Save as…, Open with, Rename, Remove from list, Delete file (with confirm)
-- [ ] Tool result screens: consistent Share / Save as / Open with / Open in viewer
-- [ ] Page manager / viewer page selection: "Share selected pages" (as PDF) and "Share page as image"
-- [ ] Recents: offer "Keep a copy" for temporary PDFs so they still open later (app storage, size cap, setting)
+- [x] Share-to-Forge sheet (files sent from other apps) also offers "Save to phone"
+- [x] Files tab and Recent rows: Share, Save as…, Open with, Rename, Remove from list, Delete file (with confirm)
+- [x] Tool result screens: consistent Share / Save as / Open with / Open in viewer
+- [x] Page manager / viewer page selection: "Share selected pages" (as PDF) and "Share page as image"
+- [x] Recents: offer "Keep a copy" for temporary PDFs so they still open later (app storage, size cap, setting)
 
 **Quality**
 - [ ] Tests for temp-file detection, save/rename/dedupe, share intents (grant flags), print adapter, file-info parsing; screenshots of viewer bar, banner, save sheet, file info, Files row menu

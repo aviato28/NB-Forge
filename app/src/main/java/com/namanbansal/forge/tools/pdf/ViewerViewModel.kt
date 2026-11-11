@@ -551,7 +551,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         val o = classify(f)
         _origin.value = o; _savedTo.value = null; _bannerDismissed.value = false; _info.value = null
         keptUri = null
-        if (o.temporary && key != null && src.protection == null && app.settings.current().keepCopies && f.uri.scheme != "file") {
+        if (o.temporary && key != null && src.protection == null && app.settings.current().keepCopies && f.uri.path?.startsWith(File(app.filesDir, "kept").path) != true) {
             val kept = withContext(Dispatchers.IO) { keptCopies.keep(key, src.file) }
             if (kept) keptUri = Uri.fromFile(keptCopies.fileFor(key)).toString()
         }
