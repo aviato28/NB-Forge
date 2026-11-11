@@ -34,8 +34,32 @@ class FontTraits(val bold: Boolean, val italic: Boolean, val serif: Boolean, val
     }
 }
 
+/** The look of a run of characters: which font, in which colour. Two runs are the same style when both match. */
+class RunStyle(val font: PDFont, val fontId: Int, val fontName: String, val traits: FontTraits, val color: Int) {
+    fun same(o: RunStyle) = fontId == o.fontId && color == o.color
+}
+
+/** Characters [start, end) of a block's text share [style]. */
+class StyleRun(val start: Int, val end: Int, val style: RunStyle)
+
+/** Groups per-character styles into runs. */
+fun runsOf(styles: List<RunStyle>): List<StyleRun> {
+    val out = ArrayList<StyleRun>()
+    var i = 0
+    while (i < styles.size) {
+        var j = i + 1
+        while (j < styles.size && styles[j].same(styles[i])) j++
+        out += StyleRun(i, j, styles[i]); i = j
+    }
+    return out
+}
+
 /** One line of a block: its characters (indices into the page's glyph list) and where it sits, in user space. */
-class TextLine(val glyphs: List<Glyph>, val text: String, val baseline: Float, val left: Float, val right: Float, val size: Float, val extraIds: List<Int> = emptyList()) {
+class TextLine(
+    val glyphs: List<Glyph>, val text: String, val baseline: Float, val left: Float, val right: Float, val size: Float, val extraIds: List<Int> = emptyList(),
+    /** The look of every character of [text] (same length). */
+    val styles: List<RunStyle> = emptyList(),
+) {
     val width: Float get() = right - left
     val cx: Float get() = (left + right) / 2
 }
@@ -50,7 +74,13 @@ class TextBlock(
     val font: PDFont, val fontId: Int, val fontName: String, val size: Float, val color: Int, val align: Int,
     val leading: Float, val box: Box, val left: Float, val maxWidth: Float, val firstBaseline: Float, val firstIndent: Float,
     val traits: FontTraits,
+    /** The look of every character of [text] (same length), so an edit can keep bold words, links and the like. */
+    val styles: List<RunStyle> = emptyList(),
+    /** Some characters have no text in the PDF (see [Glyph.unmapped]): the old text can't be shown, only replaced. */
+    val unreadable: Boolean = false,
 ) {
+    /** More than one font or colour inside the block. */
+    val mixed: Boolean get() = styles.isNotEmpty() && styles.any { !it.same(styles[0]) }
     val lineCount: Int get() = lines.size
     val bottomBaseline: Float get() = lines.last().baseline
 }
@@ -58,9 +88,12 @@ class TextBlock(
 object TextBlocks {
     private fun same(a: Float, b: Float, tol: Float) = abs(a - b) <= tol
 
-    private class Frag(val glyphs: List<Glyph>, val text: String, val baseline: Float, val left: Float, val right: Float, val size: Float, val color: Int, val family: String, val extra: List<Int>) {
+    private class Frag(
+        val glyphs: List<Glyph>, val text: String, val baseline: Float, val left: Float, val right: Float, val size: Float, val color: Int,
+        val family: String, val extra: List<Int>, val styles: List<RunStyle>, val families: Set<String>, val colors: Set<Int>,
+    ) {
         val cx get() = (left + right) / 2
-        fun toLine() = TextLine(glyphs, text, baseline, left, right, size, extra)
+        fun toLine() = TextLine(glyphs, text, baseline, left, right, size, extra, styles)
     }
 
     private class Build(first: Frag) {
@@ -96,7 +129,13 @@ object TextBlocks {
     private fun joins(b: Build, f: Frag, d: Float): Boolean {
         val l = b.last
         val s = max(f.size, l.size)
-        if (abs(f.size - l.size) > 0.12f * l.size || f.family != l.family || f.color != l.color) return false
+        if (abs(f.size - l.size) > 0.12f * l.size) return false
+        // a bold word, a code snippet or a coloured link may change the look inside a paragraph: lines still belong together when
+        // they share a font family, or the paragraph's rhythm (the spacing) says so
+        val sharesFamily = f.families.any { it in l.families }
+        val sharesColor = f.colors.any { it in l.colors }
+        if (!sharesFamily && !(b.frags.size >= 2 && abs(d - b.leading) <= 0.12f * b.leading)) return false
+        if (!sharesColor && d > 1.6f * s) return false
         if (d < 0.8f * s || d > 2.3f * s) return false
         if (b.frags.size >= 2 && abs(d - b.leading) > 0.22f * b.leading) return false
         if (f.left >= b.right || f.right <= b.left) return false
@@ -124,17 +163,17 @@ object TextBlocks {
             if (hit < 0) { lines += mutableListOf(g); refs += g.baseY to g.size } else lines[hit] += g
         }
         val out = ArrayList<Frag>()
+        val styleCache = HashMap<Long, RunStyle>()
         for (line in lines) {
             val gs = line.sortedBy { it.baseX }
             var cur = ArrayList<Glyph>()
-            fun flush() { if (cur.isNotEmpty()) { frag(cur)?.let { out += it }; cur = ArrayList() } }
+            fun flush() { if (cur.isNotEmpty()) { frag(cur, styleCache)?.let { out += it }; cur = ArrayList() } }
             for (g in gs) {
                 val prev = cur.lastOrNull()
                 if (prev != null) {
                     val gap = g.box.l - prev.box.r
                     val split = gap > 2.2f * max(g.size, prev.size) || gap < -3f * g.size && false ||
-                        abs(g.size - prev.size) > 0.15f * prev.size && g.text.isNotBlank() && prev.text.isNotBlank() ||
-                        FontTraits.of(g.font).family != FontTraits.of(prev.font).family && g.text.isNotBlank() && prev.text.isNotBlank()
+                        abs(g.size - prev.size) > 0.15f * prev.size && g.text.isNotBlank() && prev.text.isNotBlank()
                     if (split) flush()
                 }
                 cur += g
@@ -144,23 +183,37 @@ object TextBlocks {
         return out
     }
 
-    private fun frag(glyphs: List<Glyph>): Frag? {
+    private val traitCache = java.util.IdentityHashMap<Any, FontTraits>()
+    private fun traitsOf(f: PDFont): FontTraits = traitCache.getOrPut(f.cosObject) { FontTraits.of(f) }
+    private fun styleOf(g: Glyph, cache: HashMap<Long, RunStyle>): RunStyle = cache.getOrPut(g.fontId.toLong() * 0x1_0000_0000L + (g.color.toLong() and 0xFFFFFFFFL)) { RunStyle(g.font, g.fontId, g.fontName, traitsOf(g.font), g.color) }
+
+    private fun frag(glyphs: List<Glyph>, cache: HashMap<Long, RunStyle>): Frag? {
         val ink = glyphs.filter { it.text.isNotBlank() }
         if (ink.isEmpty()) return null
-        val sb = StringBuilder(); val extra = ArrayList<Int>(); val used = ArrayList<Glyph>()
+        val sb = StringBuilder(); val st = ArrayList<RunStyle>(); val extra = ArrayList<Int>()
+        fun add(t: String, style: RunStyle) { sb.append(t); repeat(t.length) { st += style } }
         var prev: Glyph? = null
         for (g in glyphs) {
             val p = prev
             if (p != null && g.text == p.text && abs(g.baseX - p.baseX) < 0.08f * g.size && abs(g.baseY - p.baseY) < 0.2f * g.size) { extra += g.index; continue } // drawn twice (fake bold, shadow)
-            if (p != null && g.text.isNotBlank() && p.text.isNotBlank() && g.box.l - p.box.r > 0.17f * g.size) sb.append(' ')
-            sb.append(g.text); used += g
+            if (p != null && g.text.isNotBlank() && p.text.isNotBlank() && g.box.l - p.box.r > 0.17f * g.size) add(" ", styleOf(p, cache))
+            add(g.text, styleOf(g, cache))
             prev = g
         }
-        val text = sb.toString().trim().replace(Regex(" {2,}"), " ")
-        val fam = FontTraits.of(dominant(ink) { it.fontId }.font).family
+        // trim, and collapse runs of blanks into one, keeping every character's style
+        val text = StringBuilder(); val styles = ArrayList<RunStyle>()
+        for (i in 0 until sb.length) {
+            val c = sb[i]
+            if (c.isWhitespace()) { if (text.isEmpty() || text.last() == ' ') continue; text.append(' '); styles += st[i] } else { text.append(c); styles += st[i] }
+        }
+        while (text.isNotEmpty() && text.last() == ' ') { text.setLength(text.length - 1); styles.removeAt(styles.size - 1) }
+        val fam = traitsOf(dominant(ink) { it.fontId }.font).family
         val sizeBucket = dominant(ink) { Math.round(it.size * 10f) }.size
         val col = dominant(ink) { it.color }.color
-        return Frag(glyphs.map { it }, text, ink.map { it.baseY }.average().toFloat(), ink.minOf { it.box.l }, ink.maxOf { it.box.r }, sizeBucket, col, fam, extra)
+        return Frag(
+            glyphs.map { it }, text.toString(), ink.map { it.baseY }.average().toFloat(), ink.minOf { it.box.l }, ink.maxOf { it.box.r }, sizeBucket, col, fam, extra,
+            styles, ink.map { traitsOf(it.font).family }.toSet(), ink.map { it.color }.toSet(),
+        )
     }
 
     private fun <K> dominant(gs: List<Glyph>, key: (Glyph) -> K): Glyph = gs.groupBy(key).maxByOrNull { it.value.size }!!.value.first()
@@ -192,7 +245,10 @@ object TextBlocks {
         }
         val blockLeft = if (align == Align.LEFT || align == Align.JUSTIFY) (bodyLefts.min()) else lefts.min()
         val wrapped = n > 1 && lines.dropLast(1).all { it.width >= 0.88f * widest }
-        val text = lines.joinToString(if (wrapped) " " else "\n") { it.text }
+        val sep = if (wrapped) " " else "\n"
+        val text = lines.joinToString(sep) { it.text }
+        val styles = ArrayList<RunStyle>(text.length)
+        lines.forEachIndexed { i, ln -> if (i > 0) styles += (lines[i - 1].styles.lastOrNull() ?: ln.styles.firstOrNull() ?: return@forEachIndexed).let { it }; styles += ln.styles }
         val leading = if (n >= 2) lines.zipWithNext { a, c -> a.baseline - c.baseline }.sorted().let { it[it.size / 2] } else s * 1.2f
         val box = all.map { it.box }.reduce { a, c -> a.union(c) }
         val ids = (all.map { it.index } + lines.flatMap { it.extraIds }).distinct().sorted()
@@ -205,7 +261,7 @@ object TextBlocks {
             key = ids.first(), lines = lines, glyphIds = ids, text = text, wrapped = wrapped, font = domFont.font, fontId = domFont.fontId,
             fontName = domFont.fontName, size = size, color = color, align = align, leading = leading, box = box, left = blockLeft,
             maxWidth = max(width, widest), firstBaseline = lines[0].baseline, firstIndent = if (indented && align == Align.LEFT) lines[0].left - blockLeft else 0f,
-            traits = FontTraits.of(domFont.font),
+            traits = traitsOf(domFont.font), styles = if (styles.size == text.length) styles else emptyList(), unreadable = all.any { it.unmapped },
         )
     }
 
@@ -233,6 +289,6 @@ object TextBlocks {
         }
         val width = max(l.width, room)
         val newLeft = when (b.align) { Align.CENTER -> l.cx - width / 2; Align.RIGHT -> l.right - width; else -> b.left }
-        TextBlock(b.key, b.lines, b.glyphIds, b.text, b.wrapped, b.font, b.fontId, b.fontName, b.size, b.color, b.align, b.leading, b.box, newLeft, width, b.firstBaseline, b.firstIndent, b.traits)
+        TextBlock(b.key, b.lines, b.glyphIds, b.text, b.wrapped, b.font, b.fontId, b.fontName, b.size, b.color, b.align, b.leading, b.box, newLeft, width, b.firstBaseline, b.firstIndent, b.traits, b.styles, b.unreadable)
     }
 }

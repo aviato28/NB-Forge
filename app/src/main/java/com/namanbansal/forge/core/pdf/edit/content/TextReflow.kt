@@ -114,7 +114,7 @@ object TextFonts {
     fun seen(scan: PageScan): Map<Int, Map<String, ByteArray>> {
         val out = HashMap<Int, HashMap<String, ByteArray>>()
         for (g in scan.glyphs) {
-            if (g.text.isEmpty() || !g.editable) continue
+            if (g.text.isEmpty() || !g.editable || g.unmapped) continue
             val m = out.getOrPut(g.fontId) { HashMap() }
             if (g.text !in m) m[g.text] = when (g.codeLen) { 2 -> byteArrayOf((g.code shr 8).toByte(), g.code.toByte()); 3 -> byteArrayOf((g.code shr 16).toByte(), (g.code shr 8).toByte(), g.code.toByte()); 4 -> byteArrayOf((g.code shr 24).toByte(), (g.code shr 16).toByte(), (g.code shr 8).toByte(), g.code.toByte()); else -> byteArrayOf(g.code.toByte()) }
         }

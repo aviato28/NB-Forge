@@ -66,15 +66,38 @@ data class Aff(val a: Float, val b: Float, val c: Float, val d: Float, val e: Fl
     }
 }
 
-/** One character the page shows, in the order of the content stream (index = its identity for edits). */
+/**
+ * One character the page shows, in the order of the content stream (index = its identity for edits).
+ * [box] / [baseX] / [baseY] are in the page's working frame: the page's user space turned by the page's skew (see [PageScan.skew]),
+ * so slightly tilted scans group into straight lines; [pageBox] is where the character really is.
+ */
 class Glyph(
     val index: Int, val code: Int, val codeLen: Int, val text: String, val font: PDFont, val fontId: Int, val fontName: String,
     /** Size on the page in points (font size scaled by the text matrix and CTM). */
     val size: Float, val color: Int,
     val baseX: Float, val baseY: Float, val box: Box,
-    /** False for text we can't edit safely (Type 3, rotated, mirrored, outlines-only render modes, no Unicode mapping). */
+    /** False for text we can't edit safely (Type 3, rotated, mirrored, outlines-only render modes). */
     val editable: Boolean, val note: String? = null,
-)
+    val pageBox: Box = box,
+    /** The font gives no text for this character (no ToUnicode, nothing recoverable): [text] is U+FFFD and the block can only be replaced. */
+    val unmapped: Boolean = false,
+    /** The text was recovered from the embedded font instead of a ToUnicode map. */
+    val recovered: Boolean = false,
+    internal val angle: Float = 0f,
+    internal val m: Aff = Aff.I, internal val lowY: Float = 0f, internal val highY: Float = 0f, internal val width: Float = 0f, internal val rise: Float = 0f,
+) {
+    /** The same character seen in the page's working frame, locked when its angle differs from the page's skew by more than [ROT_TOL]. */
+    internal fun refit(skew: Float): Glyph {
+        val straight = abs(angle - skew) < ROT_TOL
+        val ed = editable && straight
+        val nt = if (editable && !straight) "rotated text" else note
+        if (skew == 0f) return if (ed == editable) this else Glyph(index, code, codeLen, text, font, fontId, fontName, size, color, baseX, baseY, box, ed, nt, pageBox, unmapped, recovered, angle, m, lowY, highY, width, rise)
+        val mm = m.then(Aff.rotate(-skew))
+        return Glyph(index, code, codeLen, text, font, fontId, fontName, size, color, mm.x(0f, rise), mm.y(0f, rise), mm.bounds(0f, lowY, width, highY), ed, nt, pageBox, unmapped, recovered, angle, m, lowY, highY, width, rise)
+    }
+
+    companion object { const val ROT_TOL = 0.03f; const val SKEW_MAX = 0.04f }
+}
 
 /** A picture drawn on the page. [ctm] maps the unit square to the page; [index] counts pictures in drawing order. */
 class ImageRef(val index: Int, val ctm: Aff, val box: Box, val inline: Boolean, val pixelsW: Int, val pixelsH: Int, val inForm: Boolean, val xobject: PDImageXObject? = null)
@@ -83,10 +106,19 @@ class ImageRef(val index: Int, val ctm: Aff, val box: Box, val inline: Boolean, 
 class PathRef(val index: Int, val box: Box, val filled: Boolean, val stroked: Boolean, val inForm: Boolean)
 
 /** Everything on one page that Edit existing can select. */
-class PageScan(val glyphs: List<Glyph>, val images: List<ImageRef>, val paths: List<PathRef>, val hasType3: Boolean, val invisibleText: Int) {
+class PageScan(
+    val glyphs: List<Glyph>, val images: List<ImageRef>, val paths: List<PathRef>, val hasType3: Boolean, val invisibleText: Int,
+    /** The page's text is tilted by this many radians (scanner skew, under about 2 degrees); glyph working frames are turned back by it. */
+    val skew: Float = 0f,
+) {
     val editableGlyphs: List<Glyph> get() = glyphs.filter { it.editable }
-    /** Visible characters we leave alone (outlined, rotated, no Unicode mapping, Type 3). */
+    /** Visible characters we leave alone (outlined, rotated, Type 3, vertical). */
     val lockedGlyphs: Int get() = glyphs.count { !it.editable && it.note != null }
+
+    /** A box in the working frame -> the area it covers on the page. */
+    fun toPage(b: Box): Box = if (skew == 0f) b else Aff.rotate(skew).bounds(b.l, b.b, b.r, b.t)
+    /** A point in the working frame -> the page. */
+    fun toPage(x: Float, y: Float): Pair<Float, Float> = if (skew == 0f) x to y else Aff.rotate(skew).let { it.x(x, y) to it.y(x, y) }
 }
 
 /** What to do to a picture: [delete] it, or draw it with [target] (a page-space matrix from the current one), or [replace] it. */
@@ -122,13 +154,23 @@ object ContentWalker {
         var needBox: Box? = null
         val seen = IdentityHashMap<Any, Boolean>()
         val fontIds = IdentityHashMap<Any, Int>()
+        val recovery = GlyphRecovery()
         fun fontId(f: PDFont): Int = fontIds.getOrPut(f.cosObject) { fontIds.size }
     }
 
     fun scan(doc: PDDocument, page: PDPage): PageScan {
         val ps = Pass(doc, ContentChanges())
         run(ps, page)
-        return PageScan(ps.glyphs, ps.images, ps.paths, ps.type3, ps.invisible)
+        val skew = skewOf(ps.glyphs)
+        return PageScan(ps.glyphs.map { it.refit(skew) }, ps.images, ps.paths, ps.type3, ps.invisible, skew)
+    }
+
+    /** The page's text tilt: the median angle of its nearly upright text, or 0 when it is straight (under 0.2 degrees). */
+    private fun skewOf(glyphs: List<Glyph>): Float {
+        val angles = glyphs.filter { it.editable && it.text.isNotBlank() }.map { it.angle }.sorted()
+        if (angles.isEmpty()) return 0f
+        val med = angles[angles.size / 2]
+        return if (abs(med) < 0.0035f) 0f else med
     }
 
     /** Rewrites the page content with [changes]; returns false when nothing needed to change. */
@@ -214,9 +256,13 @@ object ContentWalker {
                 val m = tm.then(gs.ctm)
                 val gw = dx * gs.fs * gs.th
                 val box = m.bounds(0f, gs.rise + dsc * gs.fs, gw, gs.rise + asc * gs.fs)
-                val uni = runCatching { font.toUnicode(code) }.getOrNull()
+                var uni = runCatching { font.toUnicode(code) }.getOrNull()
+                var recovered = false
+                if (uni.isNullOrEmpty() && len == 1 && code == 32) uni = " "
+                if (uni.isNullOrEmpty() && !type3) { uni = ps.recovery.recover(font, code); recovered = !uni.isNullOrEmpty() }
+                val unmapped = uni.isNullOrEmpty()
                 val angle = atan2(m.b, m.a)
-                val upright = abs(angle) < 0.02f && m.d > 0f && m.a > 0f
+                val upright = abs(angle) < Glyph.SKEW_MAX && m.d > 0f && m.a > 0f
                 val size = gs.fs * hypot(m.c, m.d)
                 var note: String? = null
                 val editable = when {
@@ -226,10 +272,13 @@ object ContentWalker {
                     gs.mode != 0 && gs.mode != 2 -> { note = "outlined text"; false }
                     !upright -> { note = "rotated text"; false }
                     gs.fs == 0f || size <= 0.5f -> false
-                    uni.isNullOrEmpty() -> { note = "no Unicode mapping"; false }
                     else -> true
                 }
-                ps.glyphs += Glyph(index, code, len, uni ?: "", font, ps.fontId(font), fname, size, gs.fill, m.x(0f, gs.rise), m.y(0f, gs.rise), box, editable, note)
+                val shown = if (unmapped) "\uFFFD" else uni!!
+                ps.glyphs += Glyph(
+                    index, code, len, shown, font, ps.fontId(font), fname, size, gs.fill, m.x(0f, gs.rise), m.y(0f, gs.rise), box, editable, note,
+                    pageBox = box, unmapped = unmapped, recovered = recovered, angle = angle, m = m, lowY = gs.rise + dsc * gs.fs, highY = gs.rise + asc * gs.fs, width = gw, rise = gs.rise,
+                )
                 if (index in ch.removeGlyphs) {
                     flushKeep(); any = true
                     gap += -(dx * 1000f + 1000f * extra / gs.fs)
