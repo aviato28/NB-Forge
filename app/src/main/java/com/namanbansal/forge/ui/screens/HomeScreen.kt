@@ -105,6 +105,7 @@ fun HomeScreen(
     onReorderPins: (List<String>) -> Unit,
     onSeeAllRecents: () -> Unit,
     onRemoveRecent: (com.namanbansal.forge.core.RecentEntry) -> Unit,
+    recentActions: RecentActions? = null,
 ) {
     val c = ForgeTheme.colors
     var editing by rememberSaveable { mutableStateOf(false) }
@@ -176,7 +177,7 @@ fun HomeScreen(
                     EmptyState(ForgeIcons.Clock, "Nothing here yet", "Files you process show up here")
                 } else {
                     val shown = recents.take(3)
-                    shown.forEachIndexed { i, item -> RecentRow(item, showDivider = i < shown.lastIndex, onRemove = { onRemoveRecent(item.entry) }) }
+                    shown.forEachIndexed { i, item -> RecentRow(item, showDivider = i < shown.lastIndex, onRemove = { onRemoveRecent(item.entry) }, actions = recentActions) }
                 }
             }
         }

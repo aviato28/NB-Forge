@@ -223,7 +223,10 @@ class NewToolScreensTest {
         pump { vm.source.value != null && vm.aspects.value != null && vm.restored.value }
         compose.onNodeWithText("v.pdf").assertExists()
         compose.onNodeWithContentDescription("of 8", substring = true, useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("Dark pages").performClick()
+        compose.onNodeWithContentDescription("Share").assertExists()
+        compose.onNodeWithContentDescription("Save to phone").assertExists()
+        compose.onNodeWithContentDescription("More actions").performClick()
+        compose.onNodeWithText("Dark pages").performClick()
         assertTrue(vm.invert.value)
         compose.onNodeWithContentDescription("Search in document").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("needle")

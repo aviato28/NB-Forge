@@ -25,7 +25,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.namanbansal.forge.ForgeApp
+import com.namanbansal.forge.core.RecentEntry
+import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 import com.namanbansal.forge.core.FileActions
 import com.namanbansal.forge.core.RecentItem
@@ -38,15 +42,32 @@ import com.namanbansal.forge.ui.theme.ForgeTheme
 import com.namanbansal.forge.ui.theme.ForgeType
 import com.namanbansal.forge.ui.toolkit.rememberSnack
 
-/** One row in Recent: tap opens, the menu has Share / Open / Remove from list. Missing files are greyed out. */
+private val Danger = Color(0xFFE5484D)
+
+/** What the Files / Recent row menu can do beyond opening: rename the file, delete it (the screen asks first). */
+class RecentActions(val onRename: (RecentEntry, String) -> Unit, val onDelete: (RecentEntry) -> Unit)
+
+/**
+ * One row in Recent: tap opens; the menu has Share, Save as…, Open with…, Rename, Remove from list and Delete file (after a
+ * confirmation). Missing files are greyed out and only offer removal.
+ */
 @Composable
-fun RecentRow(item: RecentItem, showDivider: Boolean, onRemove: () -> Unit) {
+fun RecentRow(item: RecentItem, showDivider: Boolean, onRemove: () -> Unit, actions: RecentActions? = null) {
     val c = ForgeTheme.colors
     val context = LocalContext.current
     val snack = rememberSnack()
     var menu by remember { mutableStateOf(false) }
     val e = item.entry
     val toolLabel = ToolRegistry.get(e.toolCode)?.shortLabel ?: e.toolCode
+
+    var renaming by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val saveAs = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument(e.mime)) { dest ->
+        if (dest != null) scope.launch {
+            snack(try { ForgeApp.from(context).outputSaver.copyTo(e.uri.toUri(), dest); "Saved a copy" } catch (_: Exception) { "Couldn't save a copy there" })
+        }
+    }
 
     fun open() {
         if (!item.exists) snack("This file no longer exists") else if (!FileActions.open(context, e.uri.toUri(), e.mime)) snack("No app found to open this file")
@@ -80,9 +101,19 @@ fun RecentRow(item: RecentItem, showDivider: Boolean, onRemove: () -> Unit) {
                             onClick = { menu = false; if (!FileActions.share(context, e.uri.toUri(), e.mime, e.name)) snack("No app available to share this file") },
                         )
                         DropdownMenuItem(
-                            text = { Text("Open") },
+                            text = { Text("Save as…") },
+                            leadingIcon = { Icon(ForgeIcons.Download, null, Modifier.size(18.dp)) },
+                            onClick = { menu = false; saveAs.launch(e.name) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Open with…") },
                             leadingIcon = { Icon(ForgeIcons.Open, null, Modifier.size(18.dp)) },
-                            onClick = { menu = false; open() },
+                            onClick = { menu = false; if (!FileActions.openWith(context, e.uri.toUri(), e.mime)) snack("No app found to open this file") },
+                        )
+                        if (actions != null) DropdownMenuItem(
+                            text = { Text("Rename") },
+                            leadingIcon = { Icon(ForgeIcons.Pencil, null, Modifier.size(18.dp)) },
+                            onClick = { menu = false; renaming = true },
                         )
                     }
                     DropdownMenuItem(
@@ -90,9 +121,38 @@ fun RecentRow(item: RecentItem, showDivider: Boolean, onRemove: () -> Unit) {
                         leadingIcon = { Icon(ForgeIcons.Trash, null, Modifier.size(18.dp)) },
                         onClick = { menu = false; onRemove() },
                     )
+                    if (actions != null && item.exists) DropdownMenuItem(
+                        text = { Text("Delete file…", color = Danger) },
+                        leadingIcon = { Icon(ForgeIcons.Trash, null, Modifier.size(18.dp), tint = Danger) },
+                        onClick = { menu = false; deleting = true },
+                    )
                 }
             }
         }
         if (showDivider) HorizontalDivider(Modifier.padding(horizontal = 12.dp), thickness = 1.dp, color = c.border)
     }
+    if (renaming && actions != null) RenameDialog(e.name, onDismiss = { renaming = false }, onRename = { renaming = false; actions.onRename(e, it) })
+    if (deleting && actions != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { deleting = false }, containerColor = c.surface,
+            title = { Text("Delete this file?", style = ForgeType.Section, color = c.text) },
+            text = { Text("\"${e.name}\" will be deleted from your phone. This can't be undone.", style = ForgeType.Body, color = c.text2) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { deleting = false; actions.onDelete(e) }) { Text("Delete", color = Danger) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { deleting = false }) { Text("Cancel", color = c.text2) } },
+        )
+    }
+}
+
+@Composable
+fun RenameDialog(current: String, onDismiss: () -> Unit, onRename: (String) -> Unit) {
+    val c = ForgeTheme.colors
+    var text by remember { mutableStateOf(current) }
+    val valid = com.namanbansal.forge.core.OutputNaming.renamed(text) != null
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss, containerColor = c.surface,
+        title = { Text("Rename file", style = ForgeType.Section, color = c.text) },
+        text = { com.namanbansal.forge.ui.components.ForgeTextField(text, { text = it }, label = "File name", onDone = { if (valid) onRename(text) }) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { onRename(text) }, enabled = valid) { Text("Rename", color = c.accent) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel", color = c.text2) } },
+    )
 }

@@ -77,6 +77,12 @@ class OutputSaver(context: Context) {
         }
     }
 
+    /** "Save to phone" for a file another app sent: copies [source] into Downloads/Forge under its own name. */
+    suspend fun saveFromUri(source: Uri, name: String, mime: String): SavedOutput = saveKeepingName(name, mime) { out ->
+        val input = resolver.openInputStream(source) ?: throw IOException("Could not read the file")
+        input.use { it.copyTo(out) }
+    }
+
     /**
      * Renames the file at [uri] to [newName] (the extension is kept when the user leaves it off). Returns the name used, or
      * null when the provider refuses. Never throws.
