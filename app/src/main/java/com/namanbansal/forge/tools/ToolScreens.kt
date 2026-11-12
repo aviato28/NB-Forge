@@ -58,6 +58,7 @@ object ToolScreens {
         "I4" to { host -> com.namanbansal.forge.tools.image.BgRemoveScreen(host) },
         "I9" to { host -> com.namanbansal.forge.tools.image.CollageScreen(host) },
         "I10" to { host -> com.namanbansal.forge.tools.image.MemeScreen(host) },
+        "I12" to { host -> com.namanbansal.forge.tools.image.AnnotateScreen(host) },
         "I1" to { host -> com.namanbansal.forge.tools.image.ResizeScreen(host) },
         "P1" to { host -> MergeScreen(host) },
         "P2" to { host -> SplitScreen(host) },
