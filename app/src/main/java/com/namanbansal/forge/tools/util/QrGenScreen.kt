@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -130,7 +131,7 @@ fun QrGenScreen(host: ToolHost) {
                 payload == null -> Text("Fill in the details above and your code appears here.", style = ForgeType.Body, color = Color(0xFF6B6B73))
                 shown == null -> Text("Making your code…", style = ForgeType.Body, color = Color(0xFF6B6B73))
                 shown.isFailure -> Text(shown.exceptionOrNull()?.message ?: "Could not make this code.", style = ForgeType.Body, color = Color(0xFFE5484D))
-                else -> Image(shown.getOrThrow().asImageBitmap(), "QR code preview", Modifier.fillMaxWidth(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.None)
+                else -> Image(shown.getOrThrow().asImageBitmap(), "QR code preview", Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.None)
             }
         }
         val ready = payload != null && preview?.isSuccess == true && !busy

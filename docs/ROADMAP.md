@@ -64,10 +64,10 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
 - [ ] Compress (P9), Protect / Unlock (P29/P30), Watermark (P20), Page numbers (P21), PDF→images (P31), Images→PDF (P32) — each with a live preview
 
 ## Chunk D — Device tools & utilities (track 2)
-- [ ] Deps (CameraX, ML Kit barcode bundled, ZXing core), manifest permissions, shared device toolkit (permission gate, sensor interface, lifecycle sensors)
-- [ ] D1 Spirit level · D2 Ruler · D3 Protractor · D4 Compass · D5 Sound meter
-- [ ] D6 Flashlight (+ Quick Settings tile) · D7 Magnifier · D8 QR / barcode scanner · D9 Light meter · D10 Vibration meter
-- [ ] U1 Unit converter · U2 Currency · U3 Calculator · U4 Percent / tip / split · U5 Date calculator · U6 Timezone / world clock
-- [ ] U7 Timers (foreground service) · U8 Randomiser · U9 Tally · U10 Loan / EMI (+CSV) · U11 BMI / BMR · U12 QR generator
-- [ ] Unit tests for pure logic, Robolectric smoke tests per screen, screenshots (light + dark)
+- [x] Deps (CameraX, ML Kit barcode bundled, ZXing core), manifest permissions, shared device toolkit (permission gate, sensor interface, lifecycle sensors)
+- [x] D1 Spirit level · D2 Ruler · D3 Protractor · D4 Compass · D5 Sound meter
+- [x] D6 Flashlight (+ Quick Settings tile) · D7 Magnifier · D8 QR / barcode scanner · D9 Light meter · D10 Vibration meter
+- [x] U1 Unit converter · U2 Currency · U3 Calculator · U4 Percent / tip / split · U5 Date calculator · U6 Timezone / world clock
+- [x] U7 Timers (foreground service) · U8 Randomiser · U9 Tally · U10 Loan / EMI (+CSV) · U11 BMI / BMR · U12 QR generator
+- [x] Unit tests for pure logic, Robolectric smoke tests per screen, screenshots (light + dark)
 - [ ] Final gradle gate (test, assemble, lint, R8) + CI green
