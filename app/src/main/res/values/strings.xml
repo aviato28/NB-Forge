@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Forge</string>
+    <string name="torch_tile_label">Torch</string>
+    <string name="timer_channel">Timers</string>
+    <string name="timer_channel_alarm">Timer finished</string>
 </resources>

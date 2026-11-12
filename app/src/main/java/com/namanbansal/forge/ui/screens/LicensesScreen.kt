@@ -37,6 +37,9 @@ private val libs = listOf(
     Lib("Noto Sans, Noto Serif, Noto Sans Mono typefaces (editing PDF text)", "The Noto Project Authors", "SIL Open Font License 1.1", "licenses/Noto-OFL.txt"),
     Lib("Jetpack Compose & AndroidX", "The Android Open Source Project", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("Kotlin & kotlinx.serialization / coroutines", "JetBrains s.r.o.", "Apache License 2.0", "licenses/Apache-2.0.txt"),
+    Lib("CameraX", "The Android Open Source Project", "Apache License 2.0", "licenses/Apache-2.0.txt"),
+    Lib("ZXing (QR generation)", "ZXing authors", "Apache License 2.0", "licenses/Apache-2.0.txt"),
+    Lib("Google ML Kit barcode scanning (bundled model)", "Google LLC", "ML Kit terms (free, proprietary SDK)", "licenses/Apache-2.0.txt"),
     Lib("OkHttp & Okio", "Square, Inc.", "Apache License 2.0", "licenses/Apache-2.0.txt"),
 )
 
