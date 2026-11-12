@@ -106,3 +106,20 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] U7 Timers (foreground service) · U8 Randomiser · U9 Tally · U10 Loan / EMI (+CSV) · U11 BMI / BMR · U12 QR generator
 - [x] Unit tests for pure logic, Robolectric smoke tests per screen, screenshots (light + dark)
 - [ ] Final gradle gate (test, assemble, lint, R8) + CI green
+
+## Chunk E — Image tools & zip (track 2)
+- [x] Shared image core: loader (EXIF, sampled decode), codecs, Pictures/Forge saver, batch results, image ViewModel base
+- [x] I1 Resize / crop (+ batch resize)
+- [x] I2 Compress (split preview, target size, batch)
+- [x] I3 Convert (HEIC, WebP, AVIF, PNG, JPG, ICO, SVG; batch)
+- [x] I4 Background remover (ML Kit subject / selfie fallback, refine brush)
+- [x] I5 Strip EXIF / location (lossless JPEG, PNG, WebP; batch)
+- [x] I6 Colour picker / palette
+- [x] I7 Upscale (Lanczos "Enhance")
+- [x] I9 Collage
+- [x] I10 Text overlay / meme
+- [x] I11 Image <-> Base64
+- [x] I12 Annotate / blur (+ face detection)
+- [x] F1 Zip / unzip (+ open .zip via share)
+- [x] Unit tests, Compose smoke tests, screenshots (light + dark)
+- [ ] Final gradle gate (test, assemble, lint, R8) + CI green

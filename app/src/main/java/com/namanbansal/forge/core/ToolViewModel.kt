@@ -66,6 +66,13 @@ class RunScope internal constructor(private val vm: ToolViewModel) {
     /** Stores a new file in Downloads/Forge named `<primary input>_<action>.<ext>`. */
     suspend fun save(action: String, ext: String, mime: String, write: suspend (OutputStream) -> Unit): SavedOutput =
         vm.saver.save(vm.primaryInputName(), action, ext, mime, onSaved = { vm.noteSaved(it) }, write = write)
+
+    /** Like [save] but for a specific [original] name (batch tools) and optionally into the gallery folder `Pictures/Forge`. */
+    suspend fun saveAs(
+        original: String, action: String, ext: String, mime: String,
+        images: Boolean = false, subDir: String = "", rawName: String? = null,
+        write: suspend (OutputStream) -> Unit,
+    ): SavedOutput = vm.saver.save(original, action, ext, mime, onSaved = { vm.noteSaved(it) }, subDir = subDir, images = images, rawName = rawName, write = write)
 }
 
 /**

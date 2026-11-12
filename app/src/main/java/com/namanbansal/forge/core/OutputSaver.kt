@@ -12,7 +12,7 @@ import java.io.FilterOutputStream
 import java.io.OutputStream
 
 /** A file written to `Downloads/Forge/`. */
-data class SavedOutput(val uri: Uri, val displayName: String, val size: Long, val mime: String)
+data class SavedOutput(val uri: Uri, val displayName: String, val size: Long, val mime: String, val folder: String = OutputSaver.FOLDER_LABEL)
 
 /**
  * Writes tool results into `Downloads/Forge/` through MediaStore (no storage permission needed on API 30+).
@@ -32,8 +32,14 @@ class OutputSaver(context: Context) {
         mime: String,
         onSaved: (SavedOutput) -> Unit = {},
         subDir: String = "",
+        /** Images go to `Pictures/Forge/` (gallery) instead of Downloads. */
+        images: Boolean = false,
+        /** Use this exact file name (de-duplicated) instead of `<original>_<action>.<ext>` (unzip keeps entry names). */
+        rawName: String? = null,
         write: suspend (OutputStream) -> Unit,
-    ): SavedOutput = create(mime, subDir, onSaved, { path -> OutputNaming.build(originalName, action, ext) { exists(it, path) } }, write)
+    ): SavedOutput = create(mime, subDir, onSaved, { path, coll ->
+        if (rawName != null) OutputNaming.unique(rawName) { exists(it, path, coll) } else OutputNaming.build(originalName, action, ext) { exists(it, path, coll) }
+    }, write, images)
 
     /**
      * Saves a file under its own name (`invoice.pdf`, de-duplicated as `invoice (1).pdf`), for "Save to phone".
@@ -44,24 +50,27 @@ class OutputSaver(context: Context) {
         mime: String,
         subDir: String = "",
         write: suspend (OutputStream) -> Unit,
-    ): SavedOutput = create(mime, subDir, {}, { path -> OutputNaming.keep(name) { exists(it, path) } }, write)
+    ): SavedOutput = create(mime, subDir, {}, { path, coll -> OutputNaming.keep(name) { exists(it, path, coll) } }, write)
 
     private suspend fun create(
         mime: String,
         subDir: String,
         onSaved: (SavedOutput) -> Unit,
-        nameFor: (String) -> String,
+        nameFor: (String, Uri) -> String,
         write: suspend (OutputStream) -> Unit,
+        images: Boolean = false,
     ): SavedOutput = withContext(Dispatchers.IO) {
-        val path = RELATIVE_PATH + subDir
-        val name = nameFor(path)
+        val base = if (images) PICTURES_PATH else RELATIVE_PATH
+        val path = base + subDir
+        val collection = if (images) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        val name = nameFor(path, collection)
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
             put(MediaStore.MediaColumns.RELATIVE_PATH, path)
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
-        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+        val uri = resolver.insert(collection, values)
             ?: throw IOException("Could not create a file in Downloads/Forge")
         try {
             val out = resolver.openOutputStream(uri, "w") ?: throw IOException("Could not open the output file")
@@ -70,7 +79,7 @@ class OutputSaver(context: Context) {
             resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
             // Reported from inside the IO block: a cancellation arriving right now would otherwise drop the result
             // and leave a finished file nobody knows about.
-            SavedOutput(uri, name, counting.count, mime).also(onSaved)
+            SavedOutput(uri, name, counting.count, mime, if (images) PICTURES_LABEL + subDir.trimEnd('/').let { if (it.isEmpty()) "" else "/$it" } else FOLDER_LABEL + subDir.trimEnd('/').let { if (it.isEmpty()) "" else "/$it" }).also(onSaved)
         } catch (t: Throwable) {
             runCatching { resolver.delete(uri, null, null) }
             throw t
@@ -102,9 +111,9 @@ class OutputSaver(context: Context) {
         try { resolver.delete(uri, null, null) > 0 } catch (_: Exception) { false }
     }
 
-    private fun exists(displayName: String, path: String): Boolean = try {
+    private fun exists(displayName: String, path: String, collection: Uri = MediaStore.Downloads.EXTERNAL_CONTENT_URI): Boolean = try {
         resolver.query(
-            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            collection,
             arrayOf(MediaStore.MediaColumns._ID),
             "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
             arrayOf(displayName, path),
@@ -144,6 +153,8 @@ class OutputSaver(context: Context) {
     companion object {
         const val RELATIVE_PATH = "Download/Forge/"
         const val FOLDER_LABEL = "Downloads/Forge"
+        const val PICTURES_PATH = "Pictures/Forge/"
+        const val PICTURES_LABEL = "Pictures/Forge"
     }
 }
 

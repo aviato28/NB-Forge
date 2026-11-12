@@ -79,3 +79,10 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 - PDF track: branch `ccr-3c0bfd4d-pvi6u0`, worktree /home/user/NB-Forge (chunks A → B → C).
 - Everything-else track: branch `forge-track-2`, worktree /home/user/NB-Forge-t2 (chunks D → E → F → G).
 - Each chunk: PR to main, squash merge, release. Sync the other branch with main after each merge.
+
+## Chunk E: image tools (2026-11-12)
+- **I7 Upscale ships as "Enhance (2x/4x)"**: Lanczos-3 resampling plus an optional unsharp mask, labelled honestly as classic resampling, not AI. No permissively licensed super-resolution model small enough (~15 MB) was found that we could verify and bundle, so none is shipped. Output is capped at 30 MP for memory safety.
+- **I4 Background remover**: ML Kit Subject Segmentation (beta, Play-services delivered) first, ML Kit Selfie Segmentation (bundled, offline, people only) as fallback.
+- **AVIF**: decoded everywhere the platform can, but written only if `Bitmap.CompressFormat` has an AVIF entry (none as of API 37), so the option is hidden today.
+- **Licences added**: Anton (OFL 1.1), AndroidSVG 1.4 (Apache-2.0), ML Kit face detection / segmentation (free SDK terms, same rule as the other ML Kit use).
+- **Metadata stripping** never re-encodes: JPEG segments, PNG chunks and WebP chunks are rewritten; "location only" on PNG/WebP removes all EXIF/XMP (it cannot be edited safely).
