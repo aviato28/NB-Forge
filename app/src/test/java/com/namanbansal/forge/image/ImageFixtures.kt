@@ -36,4 +36,20 @@ object ImageFixtures {
         e.saveAttributes()
         return f.readBytes().also { f.delete() }
     }
+
+    /** A colourful scene (sky, sun, hills) that reads well in screenshots. */
+    fun scene(w: Int = 1200, h: Int = 800): Bitmap {
+        val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(b)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        p.shader = android.graphics.LinearGradient(0f, 0f, 0f, h * 0.7f, Color.rgb(255, 170, 90), Color.rgb(90, 150, 230), android.graphics.Shader.TileMode.CLAMP)
+        c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), p); p.shader = null
+        p.color = Color.rgb(255, 235, 150); c.drawCircle(w * 0.72f, h * 0.28f, h * 0.12f, p)
+        p.color = Color.rgb(60, 110, 80); c.drawOval(-w * 0.2f, h * 0.55f, w * 0.7f, h * 1.4f, p)
+        p.color = Color.rgb(35, 70, 60); c.drawOval(w * 0.3f, h * 0.65f, w * 1.3f, h * 1.5f, p)
+        p.color = Color.rgb(220, 60, 60); c.drawRect(w * 0.18f, h * 0.45f, w * 0.30f, h * 0.62f, p)
+        return b
+    }
+
+    fun write(dir: File, name: String, bmp: Bitmap = scene(), q: Int = 90): File = File(dir, name).also { it.writeBytes(jpeg(bmp, q)) }
 }
