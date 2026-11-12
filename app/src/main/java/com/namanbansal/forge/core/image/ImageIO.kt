@@ -36,7 +36,7 @@ object ImageIO {
     fun info(ctx: Context, uri: Uri): ImageInfo = info(ctx.contentResolver.getType(uri), { open(ctx, uri) })
 
     fun info(mime: String?, openStream: () -> InputStream): ImageInfo {
-        val head = openStream().use { it.readNBytes(512) }
+        val head = openStream().use { ins -> val buf = ByteArray(512); var n = 0; while (n < buf.size) { val r = ins.read(buf, n, buf.size - n); if (r < 0) break; n += r }; buf.copyOf(n) }
         if (looksLikeSvg(mime, head)) {
             val svg = parseSvg(openStream)
             val (w, h) = svgSize(svg)
