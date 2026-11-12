@@ -356,7 +356,7 @@ fun ResultView(
                 IconBox(if (many) ForgeIcons.Copy else ForgeIcons.FileText)
                 Column(Modifier.weight(1f)) {
                     Text(if (many) "${result.outputs.size} files" else out.displayName, style = ForgeType.Item, color = c.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text("${formatBytes(result.afterSize)} · ${OutputSaver.FOLDER_LABEL}", style = ForgeType.Small, color = c.text2)
+                    Text("${formatBytes(result.afterSize)} · ${out.folder}", style = ForgeType.Small, color = c.text2)
                 }
             }
             if (many) {

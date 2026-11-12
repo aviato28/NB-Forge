@@ -20,6 +20,11 @@ roborazzi = "1.77.0"
 camerax = "1.5.3"
 mlkitBarcode = "17.3.0"
 zxing = "3.5.4"
+mlkitSubject = "16.0.0-beta1"
+mlkitSelfie = "16.0.0-beta6"
+mlkitFace = "16.1.7"
+androidsvg = "1.4"
+coroutinesAndroid = "1.10.2"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -53,6 +58,10 @@ androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.r
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
 mlkit-barcode = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcode" }
+mlkit-subject = { module = "com.google.android.gms:play-services-mlkit-subject-segmentation", version.ref = "mlkitSubject" }
+mlkit-selfie = { module = "com.google.mlkit:segmentation-selfie", version.ref = "mlkitSelfie" }
+mlkit-face = { module = "com.google.mlkit:face-detection", version.ref = "mlkitFace" }
+androidsvg = { module = "com.caverock:androidsvg-aar", version.ref = "androidsvg" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 
 [plugins]

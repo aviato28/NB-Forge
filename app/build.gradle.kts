@@ -87,6 +87,10 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.mlkit.barcode)
     implementation(libs.zxing.core)
+    implementation(libs.mlkit.subject)
+    implementation(libs.mlkit.selfie)
+    implementation(libs.mlkit.face)
+    implementation(libs.androidsvg)
     debugImplementation(libs.compose.ui.tooling)
 
     debugImplementation(libs.compose.ui.test.manifest)

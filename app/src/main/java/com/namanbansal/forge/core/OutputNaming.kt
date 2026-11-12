@@ -29,4 +29,18 @@ object OutputNaming {
         }
         return candidate
     }
+
+    /** [raw] kept as the file name (made safe), only de-duplicated: `photo.jpg`, `photo (1).jpg`. */
+    fun unique(raw: String, taken: (String) -> Boolean): String {
+        val clean = raw.replace(illegal, "_").trim().ifBlank { "file" }
+        val stem = clean.substringBeforeLast('.', clean)
+        val ext = clean.substringAfterLast('.', "")
+        var candidate = clean
+        var n = 1
+        while (taken(candidate)) {
+            candidate = if (ext.isEmpty()) "$stem ($n)" else "$stem ($n).$ext"
+            if (++n > 10_000) break
+        }
+        return candidate
+    }
 }

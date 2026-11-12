@@ -71,3 +71,20 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
 - [x] U7 Timers (foreground service) · U8 Randomiser · U9 Tally · U10 Loan / EMI (+CSV) · U11 BMI / BMR · U12 QR generator
 - [x] Unit tests for pure logic, Robolectric smoke tests per screen, screenshots (light + dark)
 - [ ] Final gradle gate (test, assemble, lint, R8) + CI green
+
+## Chunk E — Image tools & zip (track 2)
+- [ ] Shared image core: loader (EXIF, sampled decode), codecs, Pictures/Forge saver, batch results, image ViewModel base
+- [ ] I1 Resize / crop (+ batch resize)
+- [ ] I2 Compress (split preview, target size, batch)
+- [ ] I3 Convert (HEIC, WebP, AVIF, PNG, JPG, ICO, SVG; batch)
+- [ ] I4 Background remover (ML Kit subject / selfie fallback, refine brush)
+- [ ] I5 Strip EXIF / location (lossless JPEG, PNG, WebP; batch)
+- [ ] I6 Colour picker / palette
+- [ ] I7 Upscale (Lanczos "Enhance")
+- [ ] I9 Collage
+- [ ] I10 Text overlay / meme
+- [ ] I11 Image <-> Base64
+- [ ] I12 Annotate / blur (+ face detection)
+- [ ] F1 Zip / unzip (+ open .zip via share)
+- [ ] Unit tests, Compose smoke tests, screenshots (light + dark)
+- [ ] Final gradle gate (test, assemble, lint, R8) + CI green
