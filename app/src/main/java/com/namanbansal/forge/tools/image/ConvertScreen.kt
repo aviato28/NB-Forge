@@ -65,7 +65,7 @@ fun ConvertScreen(host: ToolHost, vm: ConvertViewModel = viewModel()) {
     val fmtName by vm.format.collectAsStateWithLifecycle()
     val q by vm.quality.collectAsStateWithLifecycle()
     val svg by vm.svgSize.collectAsStateWithLifecycle()
-    val fmt = vm.selected()
+    val fmt = ImgFormat.available().firstOrNull { it.name == fmtName } ?: ImgFormat.JPEG
     ToolScaffold(
         tool = host.tool, vm = vm, onBack = host.onBack, onOpenTool = host.onOpenTool,
         pick = PickSpec(listOf(FileKind.IMAGE), multiple = true, title = "Choose pictures to convert", hint = "HEIC, WebP, AVIF, PNG, JPG and SVG all work."),

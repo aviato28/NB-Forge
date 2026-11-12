@@ -124,7 +124,7 @@ fun SplitCompare(before: Bitmap, after: Bitmap, modifier: Modifier = Modifier) {
             }.pointerInput(Unit) { detectTapGestures { f = (it.x / wPx).coerceIn(0f, 1f) } },
         )
         Box(Modifier.offset(x = maxWidth * f - 1.dp).width(2.dp).fillMaxHeight().background(Color.White))
-        Box(Modifier.offset(x = maxWidth * f - 14.dp).align(Alignment.Center).width(28.dp).height(28.dp).clip(RoundedCornerShape(14.dp)).background(accent))
+        Box(Modifier.align(Alignment.CenterStart).offset(x = maxWidth * f - 14.dp).width(28.dp).height(28.dp).clip(RoundedCornerShape(14.dp)).background(accent))
         Text("Original", style = ForgeType.Small, color = Color.White, modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 2.dp))
         Text("Compressed", style = ForgeType.Small, color = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 2.dp))
     }

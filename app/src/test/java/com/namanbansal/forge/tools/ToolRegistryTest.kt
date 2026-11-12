@@ -36,10 +36,10 @@ class ToolRegistryTest {
         assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P25", "P27", "P40"), available.map { it.code }.filter { it.startsWith("P") })
         val deviceAndUtility = (1..10).map { "D$it" } + (1..12).map { "U$it" }
         assertEquals(deviceAndUtility.toSet(), available.map { it.code }.filter { it.startsWith("D") || it.startsWith("U") }.toSet())
-        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P25", "P27", "P40"), ToolRegistry.availableFor(setOf(FileKind.PDF)).map { it.code })
-        assertTrue(ToolRegistry.availableFor(setOf(FileKind.IMAGE)).isEmpty())
+        assertEquals(listOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P25", "P27", "P40"), ToolRegistry.availableFor(setOf(FileKind.PDF)).map { it.code }.filter { it.startsWith("P") })
+        assertTrue(ToolRegistry.availableFor(setOf(FileKind.IMAGE)).map { it.code }.containsAll(listOf("I1", "I2", "I3", "I4", "I5", "I12", "F1")))
         assertTrue(ToolRegistry.availableFor(emptySet()).isEmpty())
-        assertTrue(ToolRegistry.availableFor(setOf(FileKind.PDF, FileKind.IMAGE)).isEmpty()) // mixed: no tool takes both
+        assertEquals(listOf("F1"), ToolRegistry.availableFor(setOf(FileKind.PDF, FileKind.IMAGE)).map { it.code }) // mixed: only Zip takes both
     }
 
     @Test fun nextSuggestionsAreScalableAndExcludeCurrentTool() {

@@ -170,7 +170,7 @@ fun AnnotateScreen(host: ToolHost, vm: AnnotateViewModel = viewModel()) {
     val colour by vm.colour.collectAsStateWithLifecycle()
     val width by vm.width.collectAsStateWithLifecycle()
     val faceMsg by vm.faceMessage.collectAsStateWithLifecycle()
-    val tool = vm.currentTool()
+    val tool = AnnoTool.entries.firstOrNull { it.name == toolName } ?: AnnoTool.ARROW
     val c = ForgeTheme.colors
     val count = remember(marksJson) { vm.marks().size }
     var textAt by remember { mutableStateOf<Offset?>(null) }

@@ -56,7 +56,7 @@ fun ResizeScreen(host: ToolHost, vm: ResizeViewModel = viewModel()) {
     val crop by vm.crop.collectAsStateWithLifecycle()
     val fmt by vm.format.collectAsStateWithLifecycle()
     val quality by vm.quality.collectAsStateWithLifecycle()
-    val mode = vm.currentMode()
+    val mode = ResizeMode.entries.firstOrNull { it.name == modeName } ?: ResizeMode.PIXELS
     val batch = inputs.size > 1
     val c = ForgeTheme.colors
 
