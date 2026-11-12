@@ -82,3 +82,15 @@ fun ComposeContentTestRule.pumpUntil(timeoutMs: Long = 20_000, until: () -> Bool
     org.junit.Assert.assertTrue("condition not reached in time", until())
     waitForIdle()
 }
+
+/** Like [setThemed] but returns a switch for the theme, so one test can capture light then dark with [captureBoth]. */
+fun ComposeContentTestRule.setFlippable(content: @Composable () -> Unit): (Boolean) -> Unit {
+    var dark by mutableStateOf(false)
+    setContent { ShotFrame(dark, content) }
+    return { dark = it; waitForIdle() }
+}
+
+/** Captures `docs/screenshots/<name>-light.png`, flips to dark and captures `<name>-dark.png`. */
+fun ComposeContentTestRule.captureBoth(name: String, flip: (Boolean) -> Unit) {
+    captureShot("$name-light"); flip(true); captureShot("$name-dark"); flip(false)
+}

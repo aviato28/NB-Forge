@@ -18,3 +18,12 @@
 -dontwarn com.google.zxing.**
 -keep class com.namanbansal.forge.tools.device.TorchTileService { *; }
 -keep class com.namanbansal.forge.tools.util.TimerService { *; }
+
+# Image tools: AndroidSVG parses with reflection-free SAX but references optional classes; ML Kit ships consumer rules.
+-dontwarn com.caverock.androidsvg.**
+-keep class com.caverock.androidsvg.** { *; }
+# Serializable overlay / annotation models are stored as JSON in saved state.
+-keep class com.namanbansal.forge.core.image.Mark { *; }
+-keep class com.namanbansal.forge.core.image.Mark$* { *; }
+-keep class com.namanbansal.forge.core.image.TextBox { *; }
+-keep class com.namanbansal.forge.core.image.TextAnchor { *; }
