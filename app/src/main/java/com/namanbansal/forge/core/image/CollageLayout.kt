@@ -1,5 +1,12 @@
 package com.namanbansal.forge.core.image
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
+import android.graphics.RectF
+
 import kotlin.math.max
 import kotlin.math.min
 
@@ -75,5 +82,38 @@ object CollageLayout {
         val l = (cx - cw / 2).coerceIn(0f, max(0f, imgW - cw))
         val t = (cy - ch / 2).coerceIn(0f, max(0f, imgH - ch))
         return FRect(l, t, min(imgW.toFloat(), l + cw), min(imgH.toFloat(), t + ch))
+    }
+}
+
+/** Paints a collage: [images] go into the template cells in order, each with its own zoom / pan, rounded corners and a background. */
+object CollageRenderer {
+    fun render(images: List<Bitmap>, template: CollageTemplate, w: Int, h: Int, spacing: Int, radius: Float, background: Int, transforms: List<CellTransform>): Bitmap {
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        canvas.drawColor(background)
+        val cells = CollageLayout.layout(template, w, h, spacing)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        cells.forEachIndexed { i, cell ->
+            val img = images.getOrNull(i) ?: return@forEachIndexed
+            val src = CollageLayout.sourceRect(img.width, img.height, cell.w, cell.h, transforms.getOrElse(i) { CellTransform() })
+            canvas.save()
+            val r = radius.coerceAtMost(minOf(cell.w, cell.h) / 2f)
+            canvas.clipPath(Path().apply { addRoundRect(RectF(cell.l, cell.t, cell.r, cell.b), r, r, Path.Direction.CW) })
+            canvas.drawBitmap(img, Rect(src.l.toInt(), src.t.toInt(), src.r.toInt().coerceAtLeast(src.l.toInt() + 1), src.b.toInt().coerceAtLeast(src.t.toInt() + 1)), RectF(cell.l, cell.t, cell.r, cell.b), paint)
+            canvas.restore()
+        }
+        return out
+    }
+
+    /** New transform after the finger moved by ([dx], [dy]) px inside a cell of [cellW] x [cellH] px, and scaled by [zoomBy]. */
+    fun gesture(imgW: Int, imgH: Int, cellW: Float, cellH: Float, tr: CellTransform, dx: Float, dy: Float, zoomBy: Float): CellTransform {
+        val zoom = (tr.zoom * zoomBy).coerceIn(1f, 5f)
+        val cur = CollageLayout.sourceRect(imgW, imgH, cellW, cellH, tr.copy(zoom = zoom))
+        val scale = cellW / cur.w
+        val freeX = imgW - cur.w
+        val freeY = imgH - cur.h
+        val px = if (freeX > 0.5f) tr.panX - dx / scale / (freeX / 2f) else 0f
+        val py = if (freeY > 0.5f) tr.panY - dy / scale / (freeY / 2f) else 0f
+        return CellTransform(zoom, px.coerceIn(-1f, 1f), py.coerceIn(-1f, 1f))
     }
 }
