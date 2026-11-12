@@ -246,4 +246,37 @@ class CoverageTest {
             assertNotNull(o.freeText.single().rect)
         } finally { idx.close() }
     }
+
+    // ---- alignment after an edit ------------------------------------------------------------------------------------------------
+
+    @Test fun mixedStyleParagraphStaysLeftAlignedAfterEdit() {
+        val f = mixed()
+        val b = scanBlocks(f).single()
+        assertEquals(Align.LEFT, b.align)
+        ExistingApplier.applyInPlace(f, listOf(textEdit(b, b.text.replace("Please review", "Kindly check carefully"))), TEST_FONTS) { null }
+        assertEquals(Align.LEFT, scanBlocks(f).single().align)
+    }
+
+    private val justifiedText = ExistingFixtures.LOREM + " " + ExistingFixtures.LOREM + " " + ExistingFixtures.LOREM
+    private fun justified(name: String) = ExistingFixtures.doc(tmp.newFile(name)) { _, _, cs ->
+        with(ExistingFixtures) { cs.paragraph(TIMES, 11f, 72f, 700f, 400f, justifiedText, justify = true) }
+    }
+
+    @Test fun genuinelyJustifiedParagraphStaysJustified() {
+        val f = justified("j1.pdf")
+        val b = scanBlocks(f).single()
+        assertEquals(Align.JUSTIFY, b.align)
+        ExistingApplier.applyInPlace(f, listOf(textEdit(b, b.text)), TEST_FONTS) { null }
+        assertEquals(Align.JUSTIFY, scanBlocks(f).single().align)
+    }
+
+    @Test fun changingOneWordKeepsAlignment() {
+        for ((name, make) in listOf<Pair<String, () -> File>>("l" to { mixed() }, "j" to { justified("j2.pdf") })) {
+            val f = make()
+            val b = scanBlocks(f).single()
+            val w = b.text.split(' ').first { it.length > 4 }
+            ExistingApplier.applyInPlace(f, listOf(textEdit(b, b.text.replaceFirst(w, "Xyzzy"))), TEST_FONTS) { null }
+            assertEquals(name, b.align, scanBlocks(f).single().align)
+        }
+    }
 }

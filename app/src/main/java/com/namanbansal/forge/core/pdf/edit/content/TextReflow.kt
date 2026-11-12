@@ -221,7 +221,7 @@ object TextLayout {
         raws.forEachIndexed { i, r ->
             val indent = if (i == 0) firstIndent else 0f
             val natural = r.w
-            val gap = if (align == Align.JUSTIFY && !r.last && r.spaces > 0) ((width - indent - natural) / r.spaces).coerceIn(0f, size * 1.5f) else 0f
+            val gap = if (align == Align.JUSTIFY && !r.last && r.spaces > 0) (((width - indent - natural) / r.spaces).takeIf { it <= 1.5f * spaceW } ?: 0f).coerceAtLeast(0f) else 0f
             val lineW = natural + gap * r.spaces
             val x = when (align) { Align.CENTER -> left + (width - natural) / 2; Align.RIGHT -> left + width - natural; else -> left + indent }
             val y = firstBaseline - i * leading

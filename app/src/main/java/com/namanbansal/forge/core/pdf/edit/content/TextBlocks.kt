@@ -217,6 +217,13 @@ object TextBlocks {
         )
     }
 
+    /** Mean width of the blank gaps between words of [l] (0 when it has a single word). */
+    private fun meanWordGap(l: TextLine): Float {
+        val ink = l.glyphs.filter { it.text.isNotBlank() }.sortedBy { it.box.l }
+        val gaps = ink.zipWithNext { a, b -> b.box.l - a.box.r }.filter { it > 0.17f * l.size }
+        return if (gaps.isEmpty()) 0f else gaps.average().toFloat()
+    }
+
     private fun <K> dominant(gs: List<Glyph>, key: (Glyph) -> K): Glyph = gs.groupBy(key).maxByOrNull { it.value.size }!!.value.first()
 
     private fun toBlock(b: Build, page: Box): TextBlock {
@@ -238,7 +245,9 @@ object TextBlocks {
             n == 1 -> single(lines[0], page)
             leftAligned -> {
                 val inner = rights.dropLast(1)
-                if (n >= 3 && inner.max() - inner.min() <= tol && inner.all { it - bodyLefts.min() > 0.7f * page.w * 0.5f }) Align.JUSTIFY else Align.LEFT
+                // strict: the right edges line up tightly AND the word gaps really were stretched (not just a lucky ragged edge)
+                val stretched = lines.dropLast(1).count { meanWordGap(it) > 0.31f * s }
+                if (n >= 3 && inner.max() - inner.min() <= 0.3f * s && stretched >= 2 && stretched * 2 >= inner.size && inner.all { it - bodyLefts.min() > 0.7f * page.w * 0.5f }) Align.JUSTIFY else Align.LEFT
             }
             lines.all { same(it.cx, lines[0].cx, tol) } -> Align.CENTER
             rights.max() - rights.min() <= tol -> Align.RIGHT

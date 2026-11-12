@@ -151,7 +151,7 @@ fun TextLayout.layoutStyled(
     raws.forEachIndexed { i, r ->
         val indent = if (i == 0) firstIndent else 0f
         val spaces = r.words.size - 1
-        val gap = if (align == Align.JUSTIFY && !r.last && spaces > 0) ((width - indent - r.w) / spaces).coerceIn(0f, size * 1.5f) else 0f
+        val gap = if (align == Align.JUSTIFY && !r.last && spaces > 0) (((width - indent - r.w) / spaces).takeIf { it <= 1.5f * coders[0].spaceEm * size } ?: 0f).coerceAtLeast(0f) else 0f
         val lineW = r.w + gap * maxOf(spaces, 0)
         val x0 = when (align) { Align.CENTER -> left + (width - r.w) / 2; Align.RIGHT -> left + width - r.w; else -> left + indent }
         val y = firstBaseline - i * leading

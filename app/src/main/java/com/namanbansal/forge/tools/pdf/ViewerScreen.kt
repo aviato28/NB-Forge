@@ -43,6 +43,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -325,6 +327,9 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val landscape = maxWidth > maxHeight
+        val bannerShown = origin.let { it != null && it.temporary } && savedTo == null && !bannerDismissed
+        var bannerPx by remember { mutableIntStateOf(0) }
+        val bannerExtra = if (bannerShown) with(LocalDensity.current) { bannerPx.toDp() } else 0.dp
         Row(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 androidx.compose.runtime.key(revision) {
@@ -338,6 +343,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                         modifier = Modifier.fillMaxSize(),
                         input = if (editing) editMode.input else if (filling) fillMode.input else annotMode.input,
                         extraLayer = { page, w, h -> annotMode.PageOverlay(page, w, h, invert); fillMode.PageOverlay(page, w, h, invert); editMode.PageOverlay(page, w, h, invert) },
+                        topExtra = bannerExtra,
                     )
                 }
                 val barsOn = barsVisible || annotating || filling || editing
@@ -362,7 +368,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                             Spacer(Modifier.width(8.dp))
                         }
                         val o = origin
-                        if (o != null && o.temporary && savedTo == null && !bannerDismissed) TemporaryBanner(onSave = { vm.saveToPhone() }, onDismiss = vm::dismissBanner)
+                        if (bannerShown) TemporaryBanner(onSave = { vm.saveToPhone() }, onDismiss = vm::dismissBanner, modifier = Modifier.onSizeChanged { bannerPx = it.height })
                         Fade(searchOpen) {
                             androidx.compose.runtime.key(searchNonce) {
                                 SearchBar(
