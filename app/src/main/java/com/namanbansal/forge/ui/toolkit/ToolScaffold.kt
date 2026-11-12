@@ -390,8 +390,15 @@ fun ResultView(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ForgeButton("Save as", icon = ForgeIcons.Download, secondary = true, modifier = Modifier.weight(1f), onClick = { saveAs.launch(out.displayName) })
                 ForgeButton(
-                    "Open", icon = ForgeIcons.Open, secondary = true, modifier = Modifier.weight(1f),
-                    onClick = { if (!FileActions.open(context, out.uri, out.mime)) snack("No app found to open this file") },
+                    "Open with", icon = ForgeIcons.Open, secondary = true, modifier = Modifier.weight(1f),
+                    onClick = { if (!FileActions.openWith(context, out.uri, out.mime)) snack("No app found to open this file") },
+                )
+            }
+            if (result.kind == FileKind.PDF && result.toolCode != "P40") {
+                Spacer(Modifier.height(8.dp))
+                ForgeButton(
+                    "Open in viewer", icon = ForgeIcons.Eye, secondary = true, modifier = Modifier.fillMaxWidth(),
+                    onClick = { onOpenTool("P40", listOf(PickedFile(out.uri, out.displayName, out.size, out.mime))) },
                 )
             }
         }

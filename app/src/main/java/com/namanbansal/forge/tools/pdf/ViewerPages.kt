@@ -126,6 +126,7 @@ fun ViewerPages(
     modifier: Modifier = Modifier,
     input: PageInput? = null,
     extraLayer: @Composable (page: Int, widthPx: Int, heightPx: Int) -> Unit = { _, _, _ -> },
+    topExtra: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     val c = ForgeTheme.colors
     BoxWithConstraints(modifier.background(if (invert) Color(0xFF050506) else c.surface2)) {
@@ -137,7 +138,7 @@ fun ViewerPages(
         key(twoPage, paged, fitPage) {
             PagesInner(
                 vm, thumbs, tiles, aspects, pageCount, hits, currentHit, invert, vw, vh, twoPage, paged, fitPage,
-                jump, flash, selection, actions, onPage, onTap, onUri, onScrolling, input, extraLayer,
+                jump, flash, selection, actions, onPage, onTap, onUri, onScrolling, input, extraLayer, topExtra,
             )
         }
     }
@@ -149,7 +150,7 @@ private fun PagesInner(
     hits: List<TextHit>, currentHit: Int, invert: Boolean, vw: Int, vh: Int, twoPage: Boolean, paged: Boolean, fitPage: Boolean,
     jump: JumpRequest?, flash: LinkFlash?, selection: TextSelection?, actions: SelectionActions,
     onPage: (Int) -> Unit, onTap: () -> Unit, onUri: (String) -> Unit, onScrolling: () -> Unit,
-    input: PageInput?, extraLayer: @Composable (Int, Int, Int) -> Unit,
+    input: PageInput?, extraLayer: @Composable (Int, Int, Int) -> Unit, topExtra: androidx.compose.ui.unit.Dp,
 ) {
     val density = LocalDensity.current
     val inputRef = rememberUpdatedState(input)
@@ -171,7 +172,9 @@ private fun PagesInner(
 
     val aspectsRef = rememberUpdatedState(aspects)
     // The first page of a continuous document starts below the top bar, so its first lines are readable with the bars shown.
-    val topInsetPx = with(density) { TOP_BAR_GUTTER.roundToPx() }
+    // (plus the height of the "not saved" banner while it shows, animated so dismissing it glides the page up)
+    val topInsetDp by androidx.compose.animation.core.animateDpAsState(TOP_BAR_GUTTER + topExtra, label = "topInset")
+    val topInsetPx = with(density) { topInsetDp.roundToPx() }
     fun geo(slot: Int, z: Float): SlotGeometry =
         SlotLayout.compute(slots[slot], aspectsRef.value, vw, vh, z, fitPage, minHeight = if (paged) vh else 0, topInset = if (!paged && slot == 0) topInsetPx else 0)
 

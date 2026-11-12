@@ -47,6 +47,7 @@ class ForgeApp : Application() {
         appScope.launch {
             // Working copies from a previous run are never reused (first, so it can never race with a file opened right after start).
             File(cacheDir, com.namanbansal.forge.core.pdf.PdfLoader.WORK_DIR).deleteRecursively()
+            com.namanbansal.forge.core.share.ShareStaging.clean(cacheDir)
             recents.load()
             viewerPositions.load()
         }

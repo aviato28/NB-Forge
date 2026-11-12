@@ -31,6 +31,10 @@ data class Settings(
     val betaUpdates: Boolean = false,
     val lastUpdateCheck: Long = 0L,
     val viewer: ViewerPrefs = ViewerPrefs(),
+    /** Keep a private copy of PDFs that arrived from other apps, so they still open from Recent. */
+    val keepCopies: Boolean = true,
+    /** Developer: tint editable / locked glyphs in Edit existing. */
+    val debugOverlay: Boolean = false,
 )
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "forge_settings")
@@ -51,6 +55,8 @@ class SettingsRepository(context: Context) {
         val V_FIT_PAGE = booleanPreferencesKey("viewer_fit_page")
         val V_TWO_PAGE = booleanPreferencesKey("viewer_two_page")
         val V_KEEP_ON = booleanPreferencesKey("viewer_keep_screen_on")
+        val KEEP_COPIES = booleanPreferencesKey("keep_copies")
+        val DEBUG_OVERLAY = booleanPreferencesKey("debug_overlay")
     }
 
     private fun String?.toList(): List<String>? = this?.split('\n')?.filter { it.isNotBlank() }
@@ -69,6 +75,8 @@ class SettingsRepository(context: Context) {
                 twoPageLandscape = p[Keys.V_TWO_PAGE] ?: false,
                 keepScreenOn = p[Keys.V_KEEP_ON] ?: true,
             ),
+            keepCopies = p[Keys.KEEP_COPIES] ?: true,
+            debugOverlay = p[Keys.DEBUG_OVERLAY] ?: false,
         )
     }
 
@@ -121,6 +129,10 @@ class SettingsRepository(context: Context) {
         it[Keys.V_TWO_PAGE] = prefs.twoPageLandscape
         it[Keys.V_KEEP_ON] = prefs.keepScreenOn
     }
+
+    suspend fun setKeepCopies(on: Boolean) = store.edit { it[Keys.KEEP_COPIES] = on }
+
+    suspend fun setDebugOverlay(on: Boolean) = store.edit { it[Keys.DEBUG_OVERLAY] = on }
 
     suspend fun setLastUpdateCheck(time: Long) = store.edit { it[Keys.LAST_CHECK] = time }
 

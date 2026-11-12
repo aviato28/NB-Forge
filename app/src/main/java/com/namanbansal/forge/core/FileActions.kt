@@ -2,6 +2,7 @@ package com.namanbansal.forge.core
 
 import android.content.ActivityNotFoundException
 import android.content.ClipData
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -39,6 +40,18 @@ object FileActions {
         setDataAndType(uri, mime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
     }
+
+    /** "Open with…": always shows the app chooser (never Forge itself), so a file can be handed to another reader. */
+    fun openWithIntent(uri: Uri, mime: String, exclude: ComponentName? = null): Intent {
+        val chooser = Intent.createChooser(viewIntent(uri, mime), "Open with")
+        chooser.clipData = ClipData.newRawUri("file", uri)
+        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (exclude != null) chooser.putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, arrayOf(exclude))
+        return chooser
+    }
+
+    fun openWith(context: Context, uri: Uri, mime: String): Boolean =
+        launch(context, openWithIntent(uri, mime, ComponentName(context, "com.namanbansal.forge.MainActivity")))
 
     fun share(context: Context, uri: Uri, mime: String, name: String): Boolean =
         launch(context, shareIntent(uri, mime, name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

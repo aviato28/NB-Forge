@@ -57,10 +57,11 @@ class EditController(
     private val message: (String) -> Unit,
     loadObjects: suspend (Int) -> com.namanbansal.forge.core.pdf.edit.content.PageObjects? = { null },
     previewOf: suspend (Int, com.namanbansal.forge.core.pdf.edit.content.ExBlock, com.namanbansal.forge.core.pdf.edit.ExistingEdit) -> com.namanbansal.forge.core.pdf.edit.content.TextPreview? = { _, _, _ -> null },
+    loadDebug: suspend (Int) -> List<com.namanbansal.forge.core.pdf.edit.content.DebugBox> = { emptyList() },
 ) : PageInput {
     val session = EditSession()
     /** Edit existing: the PDF's own text, pictures and drawings. */
-    val existing = ExistingController(session, scope, pageAspect, loadObjects, previewOf, message)
+    val existing = ExistingController(session, scope, pageAspect, loadObjects, previewOf, message, loadDebug)
     init { scope.launch { session.state.collect { existing.onSessionChanged() } } }
 
     private val _tool = MutableStateFlow(EditTool.EXISTING)

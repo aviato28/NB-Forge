@@ -7,6 +7,7 @@ import android.net.Uri
 import com.namanbansal.forge.BuildConfig
 import com.namanbansal.forge.core.FileResolver
 import com.namanbansal.forge.core.PickedFile
+import com.namanbansal.forge.core.OutputSaver
 import com.namanbansal.forge.core.RunScope
 import com.namanbansal.forge.core.friendlyMessage
 import com.namanbansal.forge.core.pdf.PageRasterizers
@@ -14,6 +15,15 @@ import com.namanbansal.forge.core.pdf.PdfIntake
 import com.namanbansal.forge.core.pdf.PdfLoader
 import com.namanbansal.forge.core.pdf.annot.Annot
 import com.namanbansal.forge.core.pdf.annot.AnnotSaver
+import com.namanbansal.forge.core.pdf.annot.SaveTarget
+import com.namanbansal.forge.core.pdf.edit.EditState
+import com.namanbansal.forge.core.pdf.fill.FillState
+import com.namanbansal.forge.core.share.FileOrigin
+import com.namanbansal.forge.core.share.FileOrigins
+import com.namanbansal.forge.core.share.KeptCopies
+import com.namanbansal.forge.core.share.PageSharer
+import com.namanbansal.forge.core.share.PdfInfo
+import com.namanbansal.forge.core.share.ShareStaging
 import com.namanbansal.forge.core.pdf.annot.PdfAnnotIo
 import com.namanbansal.forge.core.pdf.annot.PendingStore
 import com.namanbansal.forge.core.pdf.edit.EditImageStore
@@ -52,6 +62,7 @@ import com.namanbansal.forge.core.pdf.viewer.ViewerPosition
 import com.namanbansal.forge.data.ViewerPrefs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import com.namanbansal.forge.core.ToolException
@@ -135,7 +146,8 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         pageAspect = { _aspects.value?.getOrNull(it) ?: 0.707f }, currentPage = { pageState.value }, pageCount = { source.value?.pageCount ?: 0 },
         scope = viewModelScope, pageText = { pageText(it) }, sampleColor = { p, x, y -> sampleColor(p, x, y) }, message = { notify(it) },
         loadObjects = { p -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.page(p) } } },
-        previewOf = { p, b, e -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.preview(p, b, e.text, e.sizePt, e.align, e.bold.takeIf { it >= 0 }?.let { it == 1 }, e.italic.takeIf { it >= 0 }?.let { it == 1 }) } } },
+        loadDebug = { p -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.debugBoxes(p) } }.orEmpty() },
+        previewOf = { p, b, e -> existingIdx()?.let { ix -> withContext(Dispatchers.IO) { ix.preview(p, b, e.text, e.sizePt, e.align, e.bold.takeIf { it >= 0 }?.let { it == 1 }, e.italic.takeIf { it >= 0 }?.let { it == 1 }, e.color.takeIf { e.hasColor }) } } },
     )
     private val fontOpener = FontOpener { app.assets.open(it) }
     private var existingIndex: ExistingIndex? = null
@@ -260,6 +272,16 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         }
     }
 
+    init {
+        edit.existing.formFieldsOf = { p -> fill.form.value.fields.filter { it.page == p } }
+        edit.existing.onRoute = { r ->
+            when (r) {
+                is ExRoute.FillSign -> { setMode(ViewerModeId.FILL_SIGN); fill.focus(r.field) }
+                ExRoute.Annotate -> setMode(ViewerModeId.ANNOTATE)
+            }
+        }
+        viewModelScope.launch { app.settings.settings.map { it.debugOverlay }.distinctUntilChanged().collect { edit.existing.setDebug(it) } }
+    }
     init { keepPendingOnDisk(); keepFillPendingOnDisk(); keepEditPendingOnDisk(); refreshSignatures() }
 
     override suspend fun renderFileFor(source: PdfSource): File {
@@ -280,7 +302,9 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         viewModelScope.launch {
             var ok = false
             try {
-                val saver = AnnotSaver(app.documentWriter, File(app.cacheDir, PdfLoader.WORK_DIR))
+                val saver = AnnotSaver(app.documentWriter, File(app.cacheDir, PdfLoader.WORK_DIR), app.outputSaver)
+                val target = saveTarget
+                saveTarget = SaveTarget.Original
                 val session = annotate.session
                 val fillState = fill.session.current
                 val editState = edit.session.current
@@ -289,12 +313,11 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
                 var report: RedactionReport? = null
                 var existingReport: ExistingReport? = null
                 val extra: ((File) -> Unit)? = if (fillState.isEmpty && editState.isEmpty) null else { f ->
-                    if (!fillState.isEmpty) FillIo.applyInPlace(f, fillState, options) { signatures.png(it) }
-                    if (editState.items.isNotEmpty()) EditIo.applyObjectsInPlace(f, editState) { editImages.bytes(it) }
-                    if (editState.existing.isNotEmpty()) existingReport = ExistingApplier.applyInPlace(f, editState.existing, fontOpener) { editImages.bytes(it) }
+                    existingReport = applyEdits(f, fillState, editState, options)
                     if (editState.marks.isNotEmpty()) report = Redactor.redactInPlace(f, editState.marks, redact ?: RedactOptions())
                 }
-                val out = saver.save(input.uri, input.name, src.file, src.protection, session.baseline, session.current, extra, copyOnly = problem != null, copyReason = problem?.let { "$it Your changes were saved as a copy." }.orEmpty())
+                val out = saver.save(input.uri, input.name, src.file, src.protection, session.baseline, session.current, extra, copyOnly = problem != null, copyReason = problem?.let { "$it Your changes were saved as a copy." }.orEmpty(), target = target)
+                out.copy?.let { _savedTo.value = it.displayName }
                 val savedImages = (editState.items.map { it.imageId } + editState.existing.map { it.replaceImageId }).filter { it.isNotEmpty() }.toSet()
                 val oldKey = docKey
                 reloading = true
@@ -312,6 +335,15 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
                 onDone(ok)
             }
         }
+    }
+
+    /** Fill & Sign, Edit objects and Edit existing, written into [f] in that order (redactions are applied separately, from the Apply dialog). */
+    private fun applyEdits(f: File, fillState: FillState, editState: EditState, options: FillSaveOptions): ExistingReport? {
+        var existingReport: ExistingReport? = null
+        if (!fillState.isEmpty) FillIo.applyInPlace(f, fillState, options) { signatures.png(it) }
+        if (editState.items.isNotEmpty()) EditIo.applyObjectsInPlace(f, editState) { editImages.bytes(it) }
+        if (editState.existing.isNotEmpty()) existingReport = ExistingApplier.applyInPlace(f, editState.existing, fontOpener) { editImages.bytes(it) }
+        return existingReport
     }
 
     /** "Discard": forgets the unsaved annotations (and their copy on disk). */
@@ -353,7 +385,8 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
                 notify("\"${p.name}\" isn't available any more, so it was removed from your recent list.")
                 return@launch
             }
-            onFilesPicked(listOf(FileResolver.resolve(app, uri)))
+            // A kept copy has a file name made of the document key; show the real one.
+            onFilesPicked(listOf(FileResolver.resolve(app, uri).let { if (p.kept) it.copy(name = p.name, mime = "application/pdf") else it }))
         }
     }
 
@@ -371,7 +404,8 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         val key = docKey ?: return
         val f = inputs.value.firstOrNull() ?: return
         val total = source.value?.pageCount ?: return
-        app.viewerPositions.put(ViewerPosition(key, f.uri.toString(), f.name, f.size, total, pageState.value, zoomState.value, System.currentTimeMillis()))
+        val kept = keptUri
+        app.viewerPositions.put(ViewerPosition(key, kept ?: f.uri.toString(), f.name, f.size, total, pageState.value, zoomState.value, System.currentTimeMillis(), kept = kept != null))
     }
 
     private suspend fun afterReload(src: PdfSource) {
@@ -391,6 +425,7 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
         if (key != null) withContext(Dispatchers.IO) { pendingStore.load(key) }?.let { if (it != baselineAnnots) annotate.load(baselineAnnots, it) }
         if (key != null) withContext(Dispatchers.IO) { fillPendingStore.load(key) }?.let { if (!it.isEmpty) fill.reset(it) }
         if (key != null) withContext(Dispatchers.IO) { editPendingStore.load(key) }?.let { if (!it.isEmpty) edit.reset(it) }
+        noteOrigin(src, key)
         _restored.value = true
         if (key != null) {
             persistPosition()
@@ -399,6 +434,138 @@ class ViewerViewModel(application: Application, saved: SavedStateHandle) : PdfTo
                 val bmp = PdfIntake.cover(src.file) ?: return@withContext
                 runCatching { cover.parentFile?.mkdirs(); cover.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, it) } }
             }
+        }
+    }
+
+    // ---- save & share (Round 2E) --------------------------------------------------------------------------------------
+
+    /** Where the open file lives; null until a document is open. */
+    private val _origin = MutableStateFlow<FileOrigin?>(null)
+    val origin: StateFlow<FileOrigin?> = _origin.asStateFlow()
+    private val _savedTo = MutableStateFlow<String?>(null)
+    /** Name of the copy saved on the phone from here (hides the "not saved" banner), or null. */
+    val savedTo: StateFlow<String?> = _savedTo.asStateFlow()
+    private val _bannerDismissed = MutableStateFlow(false)
+    val bannerDismissed: StateFlow<Boolean> = _bannerDismissed.asStateFlow()
+    fun dismissBanner() { _bannerDismissed.value = true }
+    /** Where the next save goes; set by the "where to save?" sheet, consumed (and reset) by [saveAnnotations]. */
+    var saveTarget: SaveTarget = SaveTarget.Original
+    val keptCopies by lazy { KeptCopies(File(app.filesDir, "kept")) }
+    private var keptUri: String? = null
+
+    val fileName: String get() = inputs.value.firstOrNull()?.name?.takeIf { it.isNotBlank() } ?: "document.pdf"
+
+    private fun classify(f: PickedFile): FileOrigin {
+        val persisted = runCatching { app.contentResolver.persistedUriPermissions.any { it.uri == f.uri } }.getOrDefault(false)
+        return FileOrigins.classify(f.uri, hasPersistedPermission = persisted)
+    }
+
+    /** True when an edit can't simply replace the original, so the save sheet must ask where to put it. */
+    suspend fun needsSaveLocation(): Boolean {
+        val f = inputs.value.firstOrNull() ?: return false
+        if (_origin.value?.temporary == true && _savedTo.value == null) return true
+        return !withContext(Dispatchers.IO) { app.documentWriter.canOverwrite(f.uri) }
+    }
+
+    /** What was staged for another app: the file under its real name, behind a share-able uri. */
+    class Staged(val file: File, val name: String, val uri: Uri)
+
+    /**
+     * Copies the document to `cache/share/<n>/<name>`: the original bytes (so a password stays on an encrypted PDF), or with
+     * [withChanges] the file as it would be saved now. Returns null (after telling the user) when that fails.
+     */
+    suspend fun stage(withChanges: Boolean): Staged? {
+        val src = source.value ?: return null
+        val name = fileName
+        return try {
+            withContext(Dispatchers.IO) {
+                val dst = ShareStaging.target(app.cacheDir, name)
+                dst.parentFile?.mkdirs()
+                if (withChanges) {
+                    val fillState = fill.session.current
+                    val editState = edit.session.current
+                    if (editState.marks.isNotEmpty()) throw ToolException("Apply or clear your redaction marks first: sharing before they are applied would send the unredacted text.")
+                    val saver = AnnotSaver(app.documentWriter, File(app.cacheDir, PdfLoader.WORK_DIR))
+                    val extra: ((File) -> Unit)? = if (fillState.isEmpty && editState.isEmpty) null else { f -> applyEdits(f, fillState, editState, FillSaveOptions()) }
+                    val r = saver.render(src.file, src.protection, annotate.session.baseline, annotate.session.current, extra)
+                    try { r.toStore.copyTo(dst, overwrite = true) } finally { r.discard() }
+                } else {
+                    val input = inputs.value.firstOrNull()
+                    val stream = input?.let { runCatching { app.contentResolver.openInputStream(it.uri) }.getOrNull() }
+                    if (stream != null) stream.use { i -> dst.outputStream().use { o -> i.copyTo(o) } } else src.file.copyTo(dst, overwrite = true)
+                }
+                Staged(dst, name, androidx.core.content.FileProvider.getUriForFile(app, "${app.packageName}.files", dst))
+            }
+        } catch (e: CancellationException) { throw e
+        } catch (t: Throwable) { notify(t.friendlyMessage().ifBlank { "Couldn't prepare the file." }); null }
+    }
+
+    /** "Save to phone": the original file, under its own name, into Downloads/Forge (never overwrites; de-duplicated). */
+    fun saveToPhone(onSaved: (String) -> Unit = {}) {
+        val src = source.value ?: return
+        viewModelScope.launch {
+            try {
+                val out = app.outputSaver.saveKeepingName(fileName, "application/pdf") { o ->
+                    val input = inputs.value.firstOrNull()
+                    val stream = input?.let { runCatching { app.contentResolver.openInputStream(it.uri) }.getOrNull() }
+                    (stream ?: src.file.inputStream()).use { it.copyTo(o) }
+                }
+                _savedTo.value = out.displayName
+                onSaved(out.displayName)
+                notify("Saved to ${OutputSaver.FOLDER_LABEL} as ${out.displayName}")
+            } catch (e: CancellationException) { throw e
+            } catch (t: Throwable) { notify("Couldn't save to your phone: ${t.friendlyMessage()}") }
+        }
+    }
+
+    /** "Save as…": copies the original into the place chosen in the system picker. */
+    fun saveAs(dest: Uri) {
+        val src = source.value ?: return
+        viewModelScope.launch {
+            try {
+                app.outputSaver.writeTo(dest) { o ->
+                    val input = inputs.value.firstOrNull()
+                    val stream = input?.let { runCatching { app.contentResolver.openInputStream(it.uri) }.getOrNull() }
+                    (stream ?: src.file.inputStream()).use { it.copyTo(o) }
+                }
+                _savedTo.value = FileResolver.resolve(app, dest).name
+                notify("Saved a copy")
+            } catch (e: CancellationException) { throw e
+            } catch (t: Throwable) { notify("Couldn't save a copy there.") }
+        }
+    }
+
+    private val _info = MutableStateFlow<PdfInfo?>(null)
+    val info: StateFlow<PdfInfo?> = _info.asStateFlow()
+    /** Reads title / author / producer for the file-info sheet. */
+    fun loadInfo() {
+        val src = source.value ?: return
+        viewModelScope.launch { _info.value = withContext(Dispatchers.IO) { PdfInfo.read(src.file, src.wasEncrypted) } }
+    }
+
+    /** Stages [pages] (0-based) as a new PDF, or one page as a PNG, for the share sheet. */
+    suspend fun stagePages(pages: List<Int>, asImage: Boolean): Staged? {
+        val src = source.value ?: return null
+        return try {
+            withContext(Dispatchers.IO) {
+                val name = if (asImage) PageSharer.imageName(fileName, pages.first()) else PageSharer.pdfName(fileName, pages)
+                val dst = ShareStaging.target(app.cacheDir, name)
+                if (asImage) PageSharer.pageImage(src.file, pages.first(), dst) else PageSharer.pagesPdf(src.file, pages, dst, src.protection)
+                Staged(dst, name, androidx.core.content.FileProvider.getUriForFile(app, "${app.packageName}.files", dst))
+            }
+        } catch (e: CancellationException) { throw e
+        } catch (t: Throwable) { notify(t.friendlyMessage().ifBlank { "Couldn't prepare those pages." }); null }
+    }
+
+    /** After a document opens: classify it and, for a temporary file, keep a private copy when the setting is on. */
+    private suspend fun noteOrigin(src: PdfSource, key: String?) {
+        val f = inputs.value.firstOrNull() ?: return
+        val o = classify(f)
+        _origin.value = o; _savedTo.value = null; _bannerDismissed.value = false; _info.value = null
+        keptUri = null
+        if (o.temporary && key != null && src.protection == null && app.settings.current().keepCopies && f.uri.path?.startsWith(File(app.filesDir, "kept").path) != true) {
+            val kept = withContext(Dispatchers.IO) { keptCopies.keep(key, src.file) }
+            if (kept) keptUri = Uri.fromFile(keptCopies.fileFor(key)).toString()
         }
     }
 

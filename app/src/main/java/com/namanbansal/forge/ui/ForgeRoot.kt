@@ -104,6 +104,8 @@ fun ForgeRoot(
     val snackbar = remember { SnackbarHostState() }
     val recentsVm: RecentsViewModel = viewModel()
     val recents by recentsVm.items.collectAsStateWithLifecycle()
+    LaunchedEffect(recentsVm) { recentsVm.messages.collect { snackbar.currentSnackbarData?.dismiss(); snackbar.showSnackbar(it) } }
+    val recentActions = remember(recentsVm) { com.namanbansal.forge.ui.screens.RecentActions(onRename = { e, n -> recentsVm.rename(e, n) }, onDelete = { e -> recentsVm.deleteFile(e) }) }
     val togglePin: (String) -> Unit = { code ->
         scope.launch {
             if (app.settings.togglePin(code) == SettingsRepository.PinResult.LimitReached) {
@@ -130,6 +132,7 @@ fun ForgeRoot(
                         onReorderPins = { order -> scope.launch { app.settings.setPins(order) } },
                         onSeeAllRecents = { nav.navigateTab(Routes.FILES) },
                         onRemoveRecent = recentsVm::remove,
+                        recentActions = recentActions,
                         onSearch = { nav.navigate(Routes.SEARCH) },
                         onSettings = { nav.navigateTab(Routes.SETTINGS) },
                         onTool = { nav.navigate(Routes.tool(it)) },
@@ -137,7 +140,7 @@ fun ForgeRoot(
                         onTogglePin = togglePin,
                     )
                 }
-                composable(Routes.FILES) { FilesScreen(recents, onRefresh = recentsVm::refresh, onRemove = recentsVm::remove) }
+                composable(Routes.FILES) { FilesScreen(recents, onRefresh = recentsVm::refresh, onRemove = recentsVm::remove, actions = recentActions) }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(app = app, settings = settings, onLicenses = { nav.navigate(Routes.LICENSES) })
                 }
@@ -194,6 +197,15 @@ fun ForgeRoot(
         OpenWithSheet(
             files = incoming,
             onDismiss = onIncomingHandled,
+            onSaveToPhone = {
+                val files = incoming
+                onIncomingHandled()
+                scope.launch {
+                    val saved = files.count { f -> runCatching { app.outputSaver.saveFromUri(f.uri, f.name, f.mime ?: "application/octet-stream") }.isSuccess }
+                    snackbar.currentSnackbarData?.dismiss()
+                    snackbar.showSnackbar(if (saved == files.size) "Saved to Downloads/Forge" else if (saved == 0) "Couldn't save to your phone." else "Saved $saved of ${files.size} files to Downloads/Forge")
+                }
+            },
             onPick = { tool ->
                 onIncomingHandled()
                 openToolWith(tool.code, incoming)

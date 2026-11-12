@@ -1,5 +1,7 @@
 package com.namanbansal.forge.tools.pdf
 
+import com.namanbansal.forge.core.pdf.PageSpec
+import com.namanbansal.forge.core.friendlyMessage
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import com.namanbansal.forge.core.RunScope
@@ -82,6 +84,29 @@ class PageManagerViewModel(application: Application, saved: SavedStateHandle) : 
         if (editor.state().selected.isEmpty()) { notify("Select the pages to extract first."); return }
         extractOnly = true
         start()
+    }
+
+    /** What "Share" hands to the share sheet: the selected pages as a PDF, or the one selected page as a PNG (with its turn applied). */
+    class SharePayload(val file: java.io.File, val name: String, val mime: String)
+
+    suspend fun stageSelected(asImage: Boolean): SharePayload? {
+        val src = source.value ?: return null
+        val specs = editor.specs(true)
+        if (specs.isEmpty()) { notify("Select the pages to share first."); return null }
+        if (asImage && specs.size != 1) { notify("Select one page to share it as an image."); return null }
+        val original = inputs.value.firstOrNull()?.name ?: "document.pdf"
+        return try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val pages = specs.map { (it as PageSpec.FromSource).page }
+                val name = if (asImage) com.namanbansal.forge.core.share.PageSharer.imageName(original, pages.first())
+                else com.namanbansal.forge.core.share.PageSharer.pdfName(original, pages)
+                val dst = com.namanbansal.forge.core.share.ShareStaging.target(app.cacheDir, name)
+                if (asImage) com.namanbansal.forge.core.share.PageSharer.pageImage(src.file, pages.first(), dst, rotation = (specs.first() as PageSpec.FromSource).addRotation)
+                else com.namanbansal.forge.core.share.PageSharer.specsPdf(src.file, specs, dst, src.protection)
+                SharePayload(dst, name, if (asImage) "image/png" else "application/pdf")
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (t: Throwable) { notify(t.friendlyMessage()); null }
     }
 
     override fun backToOptions() { extractOnly = false; super.backToOptions() }

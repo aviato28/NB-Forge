@@ -24,7 +24,7 @@ import com.namanbansal.forge.ui.theme.ForgeTheme
 import com.namanbansal.forge.ui.theme.ForgeType
 
 @Composable
-fun FilesScreen(items: List<RecentItem>, onRefresh: () -> Unit, onRemove: (RecentEntry) -> Unit) {
+fun FilesScreen(items: List<RecentItem>, onRefresh: () -> Unit, onRemove: (RecentEntry) -> Unit, actions: RecentActions? = null) {
     val c = ForgeTheme.colors
     LaunchedEffect(Unit) { onRefresh() }
     Column(Modifier.fillMaxSize()) {
@@ -37,14 +37,14 @@ fun FilesScreen(items: List<RecentItem>, onRefresh: () -> Unit, onRemove: (Recen
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 item {
                     Text(
-                        "Saved in ${OutputSaver.FOLDER_LABEL}. Removing a row here never deletes the file.",
+                        "Saved in ${OutputSaver.FOLDER_LABEL}. Removing a row never deletes the file; use Delete file in a row's menu for that.",
                         style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(bottom = 10.dp),
                     )
                 }
                 item {
                     ForgeCard(Modifier.fillMaxWidth()) {
                         items.forEachIndexed { i, item ->
-                            RecentRow(item, showDivider = i < items.lastIndex, onRemove = { onRemove(item.entry) })
+                            RecentRow(item, showDivider = i < items.lastIndex, onRemove = { onRemove(item.entry) }, actions = actions)
                         }
                     }
                 }

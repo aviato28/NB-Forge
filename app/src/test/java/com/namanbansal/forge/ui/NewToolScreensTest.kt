@@ -223,7 +223,10 @@ class NewToolScreensTest {
         pump { vm.source.value != null && vm.aspects.value != null && vm.restored.value }
         compose.onNodeWithText("v.pdf").assertExists()
         compose.onNodeWithContentDescription("of 8", substring = true, useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("Dark pages").performClick()
+        compose.onNodeWithContentDescription("Share").assertExists()
+        compose.onNodeWithContentDescription("Save to phone").assertExists()
+        compose.onNodeWithContentDescription("More actions").performClick()
+        compose.onNodeWithText("Dark pages").performScrollTo().performClick()
         assertTrue(vm.invert.value)
         compose.onNodeWithContentDescription("Search in document").performClick()
         compose.onNode(hasSetTextAction()).performTextInput("needle")
@@ -246,8 +249,8 @@ class NewToolScreensTest {
         vm.onFilesPicked(listOf(pdf("q.pdf", 3)))
         pump { vm.source.value != null && vm.aspects.value != null && vm.restored.value }
         compose.onNodeWithContentDescription("More actions").performClick()
-        compose.onNodeWithText("Open this PDF in…").assertExists()
-        compose.onNodeWithText("Split PDF").performClick()
+        compose.onNodeWithText("Open this PDF in…").performScrollTo().assertExists()
+        compose.onNodeWithText("Split PDF").performScrollTo().performClick()
         assertEquals("P2", opened!!.first)
         assertEquals("q.pdf", opened!!.second.single().name)
     }

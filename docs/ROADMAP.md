@@ -60,6 +60,41 @@ Released: v0.1.121 — foundation, branding, Rotate, Merge, Split, Page manager,
 - [x] Existing vector paths: select + delete
 - [x] Tests (re-extract text, pixel-probe renders), screenshots, full gradle gate + CI green
 
+## Round 2E — Save & share everywhere (owner feedback 2026-11-07)
+Problem: Forge is now the default PDF viewer, and many PDFs arrive from other apps (Amazon, bank apps, email) as temporary files that aren't saved on the phone. There's no share or save button in the viewer.
+
+**Viewer**
+- [x] Share button in the viewer top bar (shares the current file with its real name; with unsaved edits, ask "Share with your changes / original")
+- [x] "Save to phone": one tap → Downloads/Forge; "Save as…" → system picker (choose folder + rename)
+- [x] Detect temporary files (opened from another app's private storage or a link) and show a slim banner: "Not saved on your phone · Save"
+- [x] Print (Android print service; also "Save as PDF" via print)
+- [x] Open with… another app
+- [x] File info sheet: name, size, pages, where it came from, where it's saved, PDF title/author/producer, encrypted yes/no
+- [x] Overflow menu groups these; Share + Save stay visible as icons
+
+**Edits on temporary files**
+- [x] When an edit can't overwrite the original, the save sheet asks where to save (Downloads/Forge default, or Save as…) instead of saving silently
+
+**Everywhere else**
+- [x] Share-to-Forge sheet (files sent from other apps) also offers "Save to phone"
+- [x] Files tab and Recent rows: Share, Save as…, Open with, Rename, Remove from list, Delete file (with confirm)
+- [x] Tool result screens: consistent Share / Save as / Open with / Open in viewer
+- [x] Page manager / viewer page selection: "Share selected pages" (as PDF) and "Share page as image"
+- [x] Recents: offer "Keep a copy" for temporary PDFs so they still open later (app storage, size cap, setting)
+
+**Quality**
+- [x] Tests for temp-file detection, save/rename/dedupe, share intents (grant flags), print adapter, file-info parsing; screenshots of viewer bar, banner, save sheet, file info, Files row menu
+
+## Round 2F — Edit-existing coverage (owner feedback 2026-11-11: "some patches it doesn't recognise")
+Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible (OCR layer), outlined, rotated, and **no-Unicode-mapping** glyphs; TextBlocks splits paragraphs on any font-family/colour/size change; text in form widgets and annotations isn't page content, so it's never scanned.
+- [x] No-Unicode glyphs (common in bank/invoice PDFs): recover text from the embedded font's cmap / glyph names (AGL); if still unknown, allow "Replace text" (remove the exact glyphs, type the new text) instead of locking the block
+- [x] Mixed-style paragraphs: merge bold/italic/colour runs into one block, keeping per-run styles on rewrite where the text is unchanged
+- [x] Slightly rotated text (scanner skew, <~2°): treat as upright and keep the rotation on rewrite
+- [x] Text in form fields / FreeText annotations: show the outline too; tapping routes to Fill & Sign / the annotation editor
+- [x] "Why can't I edit this?": tapping an uneditable area shows the specific reason (Type 3 / outlines / scanned → OCR later)
+- [x] Debug overlay (Settings → Developer): tints editable vs locked glyphs, to diagnose owner-supplied PDFs
+- [ ] Regression fixtures from owner-supplied sample PDFs (non-sensitive) — generated stand-ins for every case are in `CoverageFixtures`; swap in the owner's real samples when they arrive
+
 ## Round 3 — Remaining PDF tools
 - [ ] Compress (P9), Protect / Unlock (P29/P30), Watermark (P20), Page numbers (P21), PDF→images (P31), Images→PDF (P32) — each with a live preview
 
