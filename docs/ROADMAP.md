@@ -95,8 +95,27 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] Debug overlay (Settings → Developer): tints editable vs locked glyphs, to diagnose owner-supplied PDFs
 - [ ] Regression fixtures from owner-supplied sample PDFs (non-sensitive) — generated stand-ins for every case are in `CoverageFixtures`; swap in the owner's real samples when they arrive
 
-## Round 3 — Remaining PDF tools
-- [ ] Compress (P9), Protect / Unlock (P29/P30), Watermark (P20), Page numbers (P21), PDF→images (P31), Images→PDF (P32) — each with a live preview
+## Chunk B — Remaining PDF tools
+- [ ] P9 Compress (presets, size estimate, before/after, never grows)
+- [ ] P10 Grayscale (+ first-page preview)
+- [ ] P20 Watermark (text/image, live preview)
+- [ ] P21 Page numbers / headers / footers / Bates (live preview)
+- [ ] P29 Protect (AES-256, strength meter)
+- [ ] P30 Unlock
+- [ ] P31 PDF to images (PNG/JPG/WebP, ZIP)
+- [ ] P32 Images to PDF (reorder, EXIF, HEIC)
+- [ ] P7 Crop / trim (box, auto-detect)
+- [ ] P8 N-up / booklet (preview)
+- [ ] P11 Flatten
+- [ ] P12 Repair
+- [ ] P13 Sanitise (checklist)
+- [ ] P14 Optimise (object streams + compression; honest label)
+- [ ] P22 Bookmarks editor (+ auto from headings)
+- [ ] P23 Metadata (Info + XMP)
+- [ ] P24 Hyperlinks
+- [ ] Shared: grid + viewer More menu + share-in for every tool, encrypted input prompt, output keeps protection (except Unlock)
+- [ ] Unit tests per tool, Robolectric smoke tests, screenshots light + dark (looked at)
+- [ ] Final gradle gate (test, assemble, lint, R8) + CI green
 
 ## Chunk D — Device tools & utilities (track 2)
 - [x] Deps (CameraX, ML Kit barcode bundled, ZXing core), manifest permissions, shared device toolkit (permission gate, sensor interface, lifecycle sensors)
