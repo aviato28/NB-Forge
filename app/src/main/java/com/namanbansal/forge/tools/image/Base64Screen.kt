@@ -116,7 +116,7 @@ class Base64ViewModel(application: Application, private val saved: SavedStateHan
         _text.value = t; _savedOut.value = null
         viewModelScope.launch(Dispatchers.IO) { runCatching { if (t.isEmpty()) draft.delete() else draft.writeText(t) } }
         decodeJob?.cancel()
-        decodeJob = viewModelScope.launch { delay(250); decodeNow() }
+        decodeJob = viewModelScope.launch(Dispatchers.Default) { delay(250); decodeNow() }
     }
 
     private fun decodeNow() {
