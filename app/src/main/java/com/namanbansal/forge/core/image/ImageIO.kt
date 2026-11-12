@@ -171,3 +171,43 @@ object ImageIO {
         return renderSvg(svg, max(1, (w * s).roundToInt()), max(1, (h * s).roundToInt()))
     }
 }
+
+/** Plain bitmap helpers shared by the image tools. */
+object BitmapOps {
+    /** Mirror then rotate clockwise, as [ViewTransform] describes. Returns [src] itself when nothing changes. */
+    fun transform(src: Bitmap, t: ViewTransform): Bitmap {
+        if (t.normalizedRotation == 0 && !t.flipH) return src
+        val m = android.graphics.Matrix()
+        if (t.flipH) m.postScale(-1f, 1f)
+        m.postRotate(t.normalizedRotation.toFloat())
+        return Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+    }
+
+    fun crop(src: Bitmap, rect: IntArray): Bitmap {
+        if (rect[0] == 0 && rect[1] == 0 && rect[2] == src.width && rect[3] == src.height) return src
+        return Bitmap.createBitmap(src, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1])
+    }
+
+    /** Smooth resize: big reductions go in halving steps so thin details do not alias. */
+    fun resize(src: Bitmap, w: Int, h: Int): Bitmap {
+        if (src.width == w && src.height == h) return src
+        var cur = src
+        while (cur.width / 2 >= w && cur.height / 2 >= h) {
+            val next = Bitmap.createScaledBitmap(cur, cur.width / 2, cur.height / 2, true)
+            if (cur !== src) cur.recycle()
+            cur = next
+        }
+        val out = Bitmap.createScaledBitmap(cur, w, h, true)
+        if (cur !== src && cur !== out) cur.recycle()
+        return out
+    }
+
+    fun argbPixels(bmp: Bitmap, maxSide: Int = 160): IntArray {
+        val s = minOf(1.0, maxSide.toDouble() / maxOf(bmp.width, bmp.height))
+        val small = if (s < 1.0) Bitmap.createScaledBitmap(bmp, maxOf(1, (bmp.width * s).toInt()), maxOf(1, (bmp.height * s).toInt()), true) else bmp
+        val px = IntArray(small.width * small.height)
+        small.getPixels(px, 0, small.width, 0, 0, small.width, small.height)
+        if (small !== bmp) small.recycle()
+        return px
+    }
+}

@@ -48,6 +48,7 @@ object ToolScreens {
         "D8" to { host -> com.namanbansal.forge.tools.device.ScannerScreen(host) },
         "D9" to { host -> com.namanbansal.forge.tools.device.LightScreen(host) },
         "D10" to { host -> com.namanbansal.forge.tools.device.VibrationScreen(host) },
+        "I1" to { host -> com.namanbansal.forge.tools.image.ResizeScreen(host) },
         "P1" to { host -> MergeScreen(host) },
         "P2" to { host -> SplitScreen(host) },
         "P3" to { host -> PageManagerScreen(host) },
