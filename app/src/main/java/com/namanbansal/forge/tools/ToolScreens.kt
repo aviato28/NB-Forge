@@ -54,6 +54,7 @@ object ToolScreens {
         "I7" to { host -> com.namanbansal.forge.tools.image.UpscaleScreen(host) },
         "I6" to { host -> com.namanbansal.forge.tools.image.PaletteScreen(host) },
         "I11" to { host -> com.namanbansal.forge.tools.image.Base64Screen(host) },
+        "F1" to { host -> com.namanbansal.forge.tools.image.ZipScreen(host) },
         "I1" to { host -> com.namanbansal.forge.tools.image.ResizeScreen(host) },
         "P1" to { host -> MergeScreen(host) },
         "P2" to { host -> SplitScreen(host) },

@@ -113,4 +113,22 @@ object ZipTools {
         }
         return done to skipped
     }
+
+    /** Streams the entry named [path] into [out]; returns the bytes written. Throws once [budget] (remaining bytes allowed) is exceeded. */
+    fun copyEntry(file: File, path: String, out: OutputStream, budget: Long = 8L shl 30): Long {
+        ZipFile(file).use { z ->
+            val e = z.getEntry(path) ?: throw ToolException("$path is missing from the zip.")
+            var n = 0L
+            z.getInputStream(e).use { input ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val r = input.read(buf); if (r < 0) break
+                    n += r
+                    if (n > budget) throw ToolException("This archive expands to more than ${(8L shl 30) shr 30} GB. Forge stopped to protect your storage.")
+                    out.write(buf, 0, r)
+                }
+            }
+            return n
+        }
+    }
 }
