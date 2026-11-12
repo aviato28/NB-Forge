@@ -114,7 +114,7 @@ object TextFonts {
     fun seen(scan: PageScan): Map<Int, Map<String, ByteArray>> {
         val out = HashMap<Int, HashMap<String, ByteArray>>()
         for (g in scan.glyphs) {
-            if (g.text.isEmpty() || !g.editable) continue
+            if (g.text.isEmpty() || !g.editable || g.unmapped) continue
             val m = out.getOrPut(g.fontId) { HashMap() }
             if (g.text !in m) m[g.text] = when (g.codeLen) { 2 -> byteArrayOf((g.code shr 8).toByte(), g.code.toByte()); 3 -> byteArrayOf((g.code shr 16).toByte(), (g.code shr 8).toByte(), g.code.toByte()); 4 -> byteArrayOf((g.code shr 24).toByte(), (g.code shr 16).toByte(), (g.code shr 8).toByte(), g.code.toByte()); else -> byteArrayOf(g.code.toByte()) }
         }
@@ -126,21 +126,24 @@ object TextFonts {
      * subset that lacks a letter doesn't count), a standard-14 relative for bold / italic of a standard font, else the closest
      * bundled Noto face (loaded into [doc], subset when the document is saved). [bold] / [italic] are the requested style or null to keep.
      */
-    fun choose(doc: PDDocument, fonts: FontOpener, block: TextBlock, seen: Map<String, ByteArray>, text: String, bold: Boolean?, italic: Boolean?, cache: MutableMap<String, PDType0Font>? = null): FontChoice {
-        val t = block.traits
+    fun choose(doc: PDDocument, fonts: FontOpener, block: TextBlock, seen: Map<String, ByteArray>, text: String, bold: Boolean?, italic: Boolean?, cache: MutableMap<String, PDType0Font>? = null): FontChoice =
+        chooseFor(doc, fonts, block.font, block.traits, block.fontName, seen, text, bold, italic, cache)
+
+    /** [choose] for any font (a run inside a mixed-style block), not just the block's dominant one. */
+    fun chooseFor(doc: PDDocument, fonts: FontOpener, font: PDFont, t: FontTraits, fontName: String, seen: Map<String, ByteArray>, text: String, bold: Boolean?, italic: Boolean?, cache: MutableMap<String, PDType0Font>? = null): FontChoice {
         val wantBold = bold ?: t.bold; val wantItalic = italic ?: t.italic
         val need = needed(text)
-        val own = ExistingCoder(block.font, seen)
+        val own = ExistingCoder(font, seen)
         val glyphsOk = need.all { own.canEncode(it) }
         val unboldable = !wantBold && t.bold; val unitalicable = !wantItalic && t.italic
         val styleOk = !unboldable && !unitalicable
-        val name = TextBlockInfo.displayName(block.fontName)
-        if (glyphsOk && wantBold == t.bold && wantItalic == t.italic) return FontChoice(block.font, own, name, null, false, false, false, false)
-        if (block.font.isStandard14 && (wantBold != t.bold || wantItalic != t.italic)) {
+        val name = TextBlockInfo.displayName(fontName)
+        if (glyphsOk && wantBold == t.bold && wantItalic == t.italic) return FontChoice(font, own, name, null, false, false, false, false)
+        if (font.isStandard14 && (wantBold != t.bold || wantItalic != t.italic)) {
             val v = std14(t, wantBold, wantItalic); val c = ExistingCoder(v, emptyMap())
             if (need.all { c.canEncode(it) }) return FontChoice(v, c, TextBlockInfo.displayName(v.name), null, false, false, false, false)
         }
-        if (glyphsOk && styleOk) return FontChoice(block.font, own, name, null, wantBold && !t.bold, wantItalic && !t.italic, false, false)
+        if (glyphsOk && styleOk) return FontChoice(font, own, name, null, wantBold && !t.bold, wantItalic && !t.italic, false, false)
         val face = faceFor(t)
         val key = face.file(wantBold)
         val f = cache?.get(key) ?: fonts.open(key).use { PDType0Font.load(doc, it, true) }.also { cache?.put(key, it) }
@@ -157,7 +160,10 @@ object TextBlockInfo {
 }
 
 /** One line of the new text, placed in user space. [gap] is the extra space added at each blank (justified lines). */
-class LaidLine(val text: String, val x: Float, val baseline: Float, val width: Float, val gap: Float)
+/** A piece of a styled line: [text] in style number [style], starting [x] points from the page's working-frame origin. */
+class LaidSeg(val text: String, val style: Int, val x: Float)
+
+class LaidLine(val text: String, val x: Float, val baseline: Float, val width: Float, val gap: Float, val segs: List<LaidSeg>? = null)
 
 class Layout(val lines: List<LaidLine>, val size: Float, val leading: Float, val box: Box, val replaced: Boolean)
 
@@ -215,7 +221,7 @@ object TextLayout {
         raws.forEachIndexed { i, r ->
             val indent = if (i == 0) firstIndent else 0f
             val natural = r.w
-            val gap = if (align == Align.JUSTIFY && !r.last && r.spaces > 0) ((width - indent - natural) / r.spaces).coerceIn(0f, size * 1.5f) else 0f
+            val gap = if (align == Align.JUSTIFY && !r.last && r.spaces > 0) (((width - indent - natural) / r.spaces).takeIf { it <= 1.5f * spaceW } ?: 0f).coerceAtLeast(0f) else 0f
             val lineW = natural + gap * r.spaces
             val x = when (align) { Align.CENTER -> left + (width - natural) / 2; Align.RIGHT -> left + width - natural; else -> left + indent }
             val y = firstBaseline - i * leading

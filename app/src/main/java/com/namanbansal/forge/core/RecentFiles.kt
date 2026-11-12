@@ -49,6 +49,9 @@ class RecentFilesStore(private val file: File, private val max: Int = MAX_ENTRIE
     /** Adds [entry] at the top; an older entry for the same uri is replaced. */
     suspend fun add(entry: RecentEntry) = update { list -> (listOf(entry) + list.filterNot { it.uri == entry.uri }).take(max) }
 
+    /** Gives the entry for [uri] a new display name (the file was renamed). */
+    suspend fun rename(uri: String, newName: String) = update { list -> list.map { if (it.uri == uri) it.copy(name = newName) else it } }
+
     suspend fun remove(uri: String) = update { list -> list.filterNot { it.uri == uri } }
 
     suspend fun clear() = update { emptyList() }

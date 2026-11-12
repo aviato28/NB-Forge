@@ -23,6 +23,8 @@ data class ViewerPosition(
     val page: Int,
     val zoom: Float,
     val lastOpened: Long,
+    /** The uri points at a private copy Forge kept of a temporary file. */
+    val kept: Boolean = false,
 )
 
 @Serializable

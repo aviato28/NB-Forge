@@ -29,4 +29,29 @@ object OutputNaming {
         }
         return candidate
     }
+
+    /** The file's own name made safe, de-duplicated as `name (1).pdf` (no action suffix). */
+    fun keep(original: String, taken: (String) -> Boolean): String {
+        val ext = original.substringAfterLast('.', "").takeIf { it.length in 1..5 && it.all(Char::isLetterOrDigit) } ?: ""
+        val base = baseName(original)
+        val dot = if (ext.isEmpty()) "" else ".$ext"
+        var candidate = base + dot
+        var n = 1
+        while (taken(candidate)) {
+            candidate = "$base ($n)$dot"
+            n++
+            if (n > 10_000) return "$base ${System.currentTimeMillis()}$dot"
+        }
+        return candidate
+    }
+
+    /** What the user typed in the Rename box, made safe; ".pdf" is added when they left the extension off. Null for an empty name. */
+    fun renamed(typed: String, defaultExt: String = "pdf"): String? {
+        val t = typed.trim()
+        if (t.isEmpty()) return null
+        val hasExt = t.substringAfterLast('.', "").let { it.length in 1..5 && it.all(Char::isLetterOrDigit) } && t.contains('.')
+        val base = baseName(if (hasExt) t else "$t.$defaultExt")
+        val ext = if (hasExt) t.substringAfterLast('.') else defaultExt
+        return "$base.$ext"
+    }
 }

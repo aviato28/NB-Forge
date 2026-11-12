@@ -13,10 +13,13 @@ import com.namanbansal.forge.core.pdf.edit.content.TextBlock
 import com.namanbansal.forge.core.pdf.edit.content.TextBlocks
 import com.namanbansal.forge.core.pdf.edit.content.TextFonts
 import com.namanbansal.forge.core.pdf.edit.content.TextLayout
+import com.namanbansal.forge.core.pdf.edit.content.TextPlan
+import com.namanbansal.forge.core.pdf.edit.content.TextPlanner
 import com.namanbansal.forge.core.pdf.edit.content.FontChoice
 import com.namanbansal.forge.core.pdf.edit.content.Layout
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
+import com.tom_roush.pdfbox.cos.COSBase
 import com.tom_roush.pdfbox.cos.COSFloat
 import com.tom_roush.pdfbox.cos.COSInteger
 import com.tom_roush.pdfbox.cos.COSName
@@ -71,7 +74,7 @@ object ExistingApplier {
         } finally { tmp.delete() }
     }
 
-    private class Pending(val block: TextBlock, val edit: ExistingEdit, val choice: FontChoice, val layout: Layout, val size: Float, val color: Int)
+    private class Pending(val block: TextBlock, val plan: TextPlan, val skew: Float)
 
     fun apply(doc: PDDocument, edits: List<ExistingEdit>, fonts: FontOpener, images: (String) -> ByteArray?, report: ExistingReport = ExistingReport()) {
         val notoCache = HashMap<String, PDType0Font>()
@@ -94,12 +97,9 @@ object ExistingApplier {
                     report.texts++
                     if (!e.delete && e.text.isNotBlank()) {
                         val bold = e.bold.takeIf { it >= 0 }?.let { it == 1 }; val italic = e.italic.takeIf { it >= 0 }?.let { it == 1 }
-                        val choice = TextFonts.choose(doc, fonts, b, seen[b.fontId].orEmpty(), e.text, bold, italic, notoCache)
-                        val size = if (e.sizePt > 0f) e.sizePt else b.size
-                        val align = if (e.align >= 0) e.align else b.align
-                        val layout = TextLayout.layout(e.text, choice.coder, size, b.leading * size / b.size, align, b.left, b.maxWidth, b.firstBaseline, b.firstIndent)
-                        choice.notice?.let { report.notices += it }
-                        pending += Pending(b, e, choice, layout, size, if (e.hasColor) e.color else b.color)
+                        val plan = TextPlanner.plan(doc, fonts, b, seen, e.text, e.sizePt, e.align, bold, italic, if (e.hasColor) e.color else null, notoCache)
+                        plan.notices.forEach { report.notices += it }
+                        pending += Pending(b, plan, scan.skew)
                     }
                 }
                 ExistingKind.PATH -> { if (e.key !in scan.paths.indices) throw ToolException("A drawing you removed on page ${p + 1} is no longer in this PDF. Nothing was saved."); removePaths += e.key; report.paths++ }
@@ -155,24 +155,39 @@ object ExistingApplier {
             val res = page.resources ?: PDResources().also { page.resources = it }
             val tokens = ArrayList<Any>()
             fun op(n: String) = Operator.getOperator(n)
-            for (p in items) {
-                val name = res.add(p.choice.font)
-                val c = p.color
+            /** One run of text: font, size, fill colour, and a text matrix that puts ([x], [y]) of the working frame on the page, turned by [skew]. */
+            fun emit(choice: FontChoice, size: Float, c: Int, x: Float, y: Float, skew: Float, tj: List<COSBase>) {
+                val name = res.add(choice.font)
                 val r = ((c shr 16) and 0xFF) / 255f; val g = ((c shr 8) and 0xFF) / 255f; val b = (c and 0xFF) / 255f
-                for (line in p.layout.lines) {
+                tokens += op("q"); tokens += op("BT")
+                tokens += name; tokens += COSFloat(size); tokens += op("Tf")
+                tokens += COSFloat(r); tokens += COSFloat(g); tokens += COSFloat(b); tokens += op("rg")
+                if (choice.syntheticBold) {
+                    tokens += COSInteger.get(2); tokens += op("Tr")
+                    tokens += COSFloat(r); tokens += COSFloat(g); tokens += COSFloat(b); tokens += op("RG")
+                    tokens += COSFloat(size * 0.03f); tokens += op("w")
+                }
+                val shear = if (choice.syntheticItalic) 0.2f else 0f
+                val m = if (skew == 0f) Aff(1f, 0f, shear, 1f, x, y)
+                else Aff(1f, 0f, shear, 1f, 0f, 0f).then(Aff.rotate(skew)).let { t -> val px = Aff.rotate(skew).x(x, y); val py = Aff.rotate(skew).y(x, y); Aff(t.a, t.b, t.c, t.d, px, py) }
+                listOf(m.a, m.b, m.c, m.d, m.e, m.f).forEach { tokens += COSFloat(it) }; tokens += op("Tm")
+                tokens.add(COSArray().also { a -> tj.forEach { a.add(it) } }); tokens += op("TJ")
+                tokens += op("ET"); tokens += op("Q")
+            }
+            for (p in items) {
+                val plan = p.plan
+                for (line in p.plan.layout.lines) {
                     if (line.text.isEmpty()) continue
-                    tokens += op("q"); tokens += op("BT")
-                    tokens += name; tokens += COSFloat(p.size); tokens += op("Tf")
-                    tokens += COSFloat(r); tokens += COSFloat(g); tokens += COSFloat(b); tokens += op("rg")
-                    if (p.choice.syntheticBold) {
-                        tokens += COSInteger.get(2); tokens += op("Tr")
-                        tokens += COSFloat(r); tokens += COSFloat(g); tokens += COSFloat(b); tokens += op("RG")
-                        tokens += COSFloat(p.size * 0.03f); tokens += op("w")
+                    val segs = line.segs
+                    if (plan.styled && segs != null) {
+                        for (sg in segs) {
+                            val ch = plan.choices[sg.style]
+                            emit(ch, plan.size, plan.colors[sg.style], sg.x, line.baseline, p.skew, ch.coder.wordItems(sg.text) ?: ch.coder.wordItems(sg.text.map { if (ch.coder.canEncode(it.toString())) it else '?' }.joinToString("")).orEmpty())
+                        }
+                    } else {
+                        val ch = plan.choices[0]
+                        emit(ch, plan.size, plan.colors[0], line.x, line.baseline, p.skew, TextLayout.items(line, ch.coder, plan.size))
                     }
-                    val shear = if (p.choice.syntheticItalic) 0.2f else 0f
-                    listOf(1f, 0f, shear, 1f, line.x, line.baseline).forEach { tokens += COSFloat(it) }; tokens += op("Tm")
-                    tokens.add(COSArray().also { a -> TextLayout.items(line, p.choice.coder, p.size).forEach { a.add(it) } }); tokens += op("TJ")
-                    tokens += op("ET"); tokens += op("Q")
                 }
             }
             val bytes = ByteArrayOutputStream().also { ContentStreamWriter(it).writeTokens(tokens) }.toByteArray()

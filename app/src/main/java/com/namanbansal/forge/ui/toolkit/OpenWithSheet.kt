@@ -38,6 +38,7 @@ fun OpenWithSheet(
     files: List<PickedFile>,
     onPick: (ToolDef) -> Unit,
     onDismiss: () -> Unit,
+    onSaveToPhone: (() -> Unit)? = null,
     tools: List<ToolDef> = ToolRegistry.availableFor(files.map { it.kind }.toSet())
         .filter { files.size == 1 || it.code in com.namanbansal.forge.core.NextSuggestions.MULTI_INPUT }, // several files: only tools that take several
 ) {
@@ -48,6 +49,21 @@ fun OpenWithSheet(
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
             Text("What do you want to do with $subject?", style = ForgeType.Title, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(12.dp))
+            if (onSaveToPhone != null) {
+                Row(
+                    Modifier.fillMaxWidth().clickable(onClick = onSaveToPhone).padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    IconBox(ForgeIcons.Download)
+                    Column(Modifier.weight(1f)) {
+                        Text("Save to phone", style = ForgeType.BodyMedium, color = c.text)
+                        Text("Keep ${if (files.size == 1) "it" else "them"} in Downloads/Forge", style = ForgeType.Small, color = c.text2, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Icon(ForgeIcons.Chevron, null, tint = c.text2, modifier = Modifier.size(16.dp))
+                }
+                Spacer(Modifier.height(4.dp))
+            }
             if (tools.isEmpty()) {
                 Text("Forge doesn't have a tool for this kind of file yet.", style = ForgeType.Body, color = c.text2)
             } else {

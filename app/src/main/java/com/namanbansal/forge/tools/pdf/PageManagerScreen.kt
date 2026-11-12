@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -80,6 +82,10 @@ private fun ColumnScope.PageManagerOptions(vm: PageManagerViewModel, state: Edit
     val c = ForgeTheme.colors
     val selectedCount = state.selected.size
     var peek by rememberSaveable { mutableIntStateOf(-1) }
+    var shareChoice by rememberSaveable { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val snack = com.namanbansal.forge.ui.toolkit.rememberSnack()
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(pagesLabel(state.pages.size), style = ForgeType.Small, color = c.text2, modifier = Modifier.weight(1f))
         IconAction(ForgeIcons.Undo, "Undo", state.canUndo, vm::undo)
@@ -106,9 +112,32 @@ private fun ColumnScope.PageManagerOptions(vm: PageManagerViewModel, state: Edit
         ToolbarAction(ForgeIcons.Trash, "Delete", "Delete selected pages", has && selectedCount < state.pages.size, Modifier.weight(1f), danger = true, onClick = vm::deleteSelected)
         ToolbarAction(ForgeIcons.Copy, "Duplicate", "Duplicate selected pages", has, Modifier.weight(1f), onClick = vm::duplicateSelected)
         ToolbarAction(ForgeIcons.Extract, "Extract", "Save selected pages as a new PDF", has, Modifier.weight(1f), onClick = vm::extractSelected)
+        ToolbarAction(ForgeIcons.Share, "Share", "Share the selected pages", has, Modifier.weight(1f), onClick = { shareChoice = true })
         ToolbarAction(ForgeIcons.Eye, "Preview", "Preview the selected pages full screen", has, Modifier.weight(1f), onClick = {
             peek = state.pages.indexOfFirst { it.id in state.selected }.coerceAtLeast(0)
         })
+    }
+    if (shareChoice) {
+        fun share(asImage: Boolean) {
+            shareChoice = false
+            scope.launch {
+                val p = vm.stageSelected(asImage) ?: return@launch
+                val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", p.file)
+                if (!com.namanbansal.forge.core.FileActions.share(context, uri, p.mime, p.name)) snack("No app available to share this.")
+            }
+        }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { shareChoice = false }, containerColor = c.surface,
+            title = { Text("Share ${if (selectedCount == 1) "this page" else "$selectedCount pages"}", style = ForgeType.Section, color = c.text) },
+            text = { Text("Pages are shared as they look here, with your turns and order.", style = ForgeType.Body, color = c.text2) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { share(false) }) { Text("As PDF", color = c.accent) } },
+            dismissButton = {
+                Row {
+                    androidx.compose.material3.TextButton(onClick = { shareChoice = false }) { Text("Cancel", color = c.text2) }
+                    if (selectedCount == 1) androidx.compose.material3.TextButton(onClick = { share(true) }) { Text("As image", color = c.text2) }
+                }
+            },
+        )
     }
     if (peek in state.pages.indices) {
         val pages = remember(state.pages, thumbs) {

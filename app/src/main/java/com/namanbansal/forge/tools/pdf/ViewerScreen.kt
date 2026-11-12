@@ -43,6 +43,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -75,6 +77,8 @@ import com.namanbansal.forge.core.FileKind
 import com.namanbansal.forge.core.ToolPhase
 import com.namanbansal.forge.core.pagesLabel
 import com.namanbansal.forge.core.pdf.PdfThumbnails
+import com.namanbansal.forge.core.FileActions
+import com.namanbansal.forge.core.share.PdfPrintAdapter
 import com.namanbansal.forge.core.pdf.TextHit
 import com.namanbansal.forge.data.ViewerPrefs
 import com.namanbansal.forge.tools.ToolHost
@@ -162,6 +166,11 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     val fillSelected by vm.fill.selectedId.collectAsStateWithLifecycle()
     val fillJump by vm.fill.jump.collectAsStateWithLifecycle()
     val permissionProblem by vm.permissionProblem.collectAsStateWithLifecycle()
+    val origin by vm.origin.collectAsStateWithLifecycle()
+    val why by vm.edit.existing.why.collectAsStateWithLifecycle()
+    val savedTo by vm.savedTo.collectAsStateWithLifecycle()
+    val bannerDismissed by vm.bannerDismissed.collectAsStateWithLifecycle()
+    val pdfInfo by vm.info.collectAsStateWithLifecycle()
     val editCanUndo by vm.edit.session.canUndo.collectAsStateWithLifecycle()
     val editCanRedo by vm.edit.session.canRedo.collectAsStateWithLifecycle()
     val editState by vm.edit.session.state.collectAsStateWithLifecycle()
@@ -206,12 +215,55 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
     var applyDone by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
     var saveOptions by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
     var saveOptionsOpen by rememberSaveable { mutableStateOf(false) }
-    /** Save, asking first about flattening when there is a filled form or a signature (or the PDF only allows a copy). */
-    fun requestSave(done: (Boolean) -> Unit = {}) {
+    /** Save, asking first where to put it when the original can't be replaced, then about flattening (a filled form or a signature). */
+    fun proceedSave(done: (Boolean) -> Unit) {
         if (editState.marks.isNotEmpty()) { applyDone = done; vm.edit.askApply(); return }
         val formEdits = fillState.overrides.isNotEmpty() && fillForm.hasAcroForm
         val needsAsk = fillDirty && (formEdits || fillState.hasSignatures || permissionProblem != null)
         if (needsAsk) { saveOptions = done; saveOptionsOpen = true } else vm.saveAnnotations(onDone = done)
+    }
+    var whereDone by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
+    var whereOpen by rememberSaveable { mutableStateOf(false) }
+    var pickPurposeEdits by remember { mutableStateOf(false) }
+    val savePicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/pdf")) { dest ->
+        val edits = pickPurposeEdits; pickPurposeEdits = false
+        val done = whereDone; whereDone = null
+        if (dest == null) { if (edits) done?.invoke(false); return@rememberLauncherForActivityResult }
+        if (edits) {
+            vm.saveTarget = com.namanbansal.forge.core.pdf.annot.SaveTarget.Chosen(dest, dest.lastPathSegment?.substringAfterLast('/') ?: "your file")
+            proceedSave(done ?: {})
+        } else vm.saveAs(dest)
+    }
+    fun requestSave(done: (Boolean) -> Unit = {}) {
+        vm.saveTarget = com.namanbansal.forge.core.pdf.annot.SaveTarget.Original
+        scope.launch { if (vm.needsSaveLocation()) { whereDone = done; whereOpen = true } else proceedSave(done) }
+    }
+    var fileAction by remember { mutableStateOf<FileAction?>(null) }
+    var infoOpen by remember { mutableStateOf(false) }
+    var sharePagesOpen by remember { mutableStateOf(false) }
+    fun runFileAction(action: FileAction, withChanges: Boolean) {
+        scope.launch {
+            val st = vm.stage(withChanges) ?: return@launch
+            val ok = when (action) {
+                FileAction.SHARE -> FileActions.share(context, st.uri, "application/pdf", st.name)
+                FileAction.PRINT -> PdfPrintAdapter.print(context, st.file, st.name, pageCount)
+                FileAction.OPEN_WITH -> FileActions.openWith(context, st.uri, "application/pdf")
+            }
+            if (!ok) snack(when (action) { FileAction.SHARE -> "No app available to share this file."; FileAction.PRINT -> "Printing isn't available on this phone."; FileAction.OPEN_WITH -> "No other app on this phone can open PDFs." })
+        }
+    }
+    fun startFileAction(action: FileAction) { if (dirty) fileAction = action else runFileAction(action, false) }
+    fun shareStaged(st: ViewerViewModel.Staged?, mime: String) { if (st != null && !FileActions.share(context, st.uri, mime, st.name)) snack("No app available to share this.") }
+    val fileMenu = remember(vm, pageCount) {
+        FileMenuActions(
+            onShare = { startFileAction(FileAction.SHARE) },
+            onSaveToPhone = { vm.saveToPhone() },
+            onSaveAs = { pickPurposeEdits = false; savePicker.launch(vm.fileName) },
+            onPrint = { startFileAction(FileAction.PRINT) },
+            onOpenWith = { startFileAction(FileAction.OPEN_WITH) },
+            onSharePages = { sharePagesOpen = true },
+            onInfo = { vm.loadInfo(); infoOpen = true },
+        )
     }
     var moreSheet by remember { mutableStateOf(false) }
     // What to do once the unsaved-changes question is answered (leave, open another tool...).
@@ -275,6 +327,9 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val landscape = maxWidth > maxHeight
+        val bannerShown = origin.let { it != null && it.temporary } && savedTo == null && !bannerDismissed
+        var bannerPx by remember { mutableIntStateOf(0) }
+        val bannerExtra = if (bannerShown) with(LocalDensity.current) { bannerPx.toDp() } else 0.dp
         Row(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 androidx.compose.runtime.key(revision) {
@@ -288,6 +343,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                         modifier = Modifier.fillMaxSize(),
                         input = if (editing) editMode.input else if (filling) fillMode.input else annotMode.input,
                         extraLayer = { page, w, h -> annotMode.PageOverlay(page, w, h, invert); fillMode.PageOverlay(page, w, h, invert); editMode.PageOverlay(page, w, h, invert) },
+                        topExtra = bannerExtra,
                     )
                 }
                 val barsOn = barsVisible || annotating || filling || editing
@@ -300,16 +356,19 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
                             } else {
                                 RoundIconButton(ForgeIcons.Search, "Search in document", { searchOpen = !searchOpen; if (!searchOpen) vm.clearSearch() }, active = searchOpen)
                                 Spacer(Modifier.width(8.dp))
-                                RoundIconButton(ForgeIcons.Moon, if (invert) "Show pages normally" else "Dark pages", vm::toggleInvert, active = invert)
+                                RoundIconButton(ForgeIcons.Share, "Share", { fileMenu.onShare() })
                                 Spacer(Modifier.width(8.dp))
+                                if (!dirty) { RoundIconButton(ForgeIcons.Download, "Save to phone", { fileMenu.onSaveToPhone() }); Spacer(Modifier.width(8.dp)) }
                             }
                             if (dirty || saving) { SaveButton(dirty, saving) { requestSave() }; Spacer(Modifier.width(8.dp)) }
                             Box {
                                 RoundIconButton(ForgeIcons.More, "More actions", { menu = true })
-                                ViewerMenu(menu, prefs, onDismiss = { menu = false }, onPrefs = vm::updatePrefs) { code -> menu = false; host.onOpenTool(code, inputs) }
+                                ViewerMenu(menu, prefs, onDismiss = { menu = false }, onPrefs = vm::updatePrefs, files = fileMenu, invert = invert, onToggleInvert = vm::toggleInvert) { code -> menu = false; host.onOpenTool(code, inputs) }
                             }
                             Spacer(Modifier.width(8.dp))
                         }
+                        val o = origin
+                        if (bannerShown) TemporaryBanner(onSave = { vm.saveToPhone() }, onDismiss = vm::dismissBanner, modifier = Modifier.onSizeChanged { bannerPx = it.height })
                         Fade(searchOpen) {
                             androidx.compose.runtime.key(searchNonce) {
                                 SearchBar(
@@ -391,6 +450,32 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
             onCancel = { saveOptionsOpen = false; saveOptions = null },
         )
     }
+    if (whereOpen) SaveWhereSheet(
+        fileName = vm.fileName, temporary = origin?.temporary == true,
+        onDownloads = {
+            whereOpen = false; val d = whereDone; whereDone = null
+            vm.saveTarget = com.namanbansal.forge.core.pdf.annot.SaveTarget.Downloads("Saved to Downloads/Forge; the original was left as it was.")
+            proceedSave(d ?: {})
+        },
+        onSaveAs = { whereOpen = false; pickPurposeEdits = true; savePicker.launch(vm.fileName.substringBeforeLast('.') + "_edited.pdf") },
+        onCancel = { whereOpen = false; whereDone?.invoke(false); whereDone = null },
+    )
+    fileAction?.let { a -> ChangesChoiceDialog(a, onWithChanges = { fileAction = null; runFileAction(a, true) }, onOriginal = { fileAction = null; runFileAction(a, false) }, onCancel = { fileAction = null }) }
+    if (infoOpen) {
+        val f = inputs.firstOrNull()
+        val org = origin ?: com.namanbansal.forge.core.share.FileOrigin(false, "This phone", "On this phone")
+        val rows = com.namanbansal.forge.core.share.FileInfoRows.build(
+            f?.name ?: title, f?.size ?: -1L, org, savedTo?.let { "In ${com.namanbansal.forge.core.OutputSaver.FOLDER_LABEL} as $it" } ?: com.namanbansal.forge.core.share.FileInfoRows.savedWhere(org), pdfInfo,
+        )
+        FileInfoSheet(rows, onDismiss = { infoOpen = false })
+    }
+    if (sharePagesOpen) SharePagesSheet(
+        thumbs, pageCount, currentPage,
+        onSharePdf = { pages -> sharePagesOpen = false; scope.launch { shareStaged(vm.stagePages(pages, false), "application/pdf") } },
+        onShareImage = { page -> sharePagesOpen = false; scope.launch { shareStaged(vm.stagePages(listOf(page), true), "image/png") } },
+        onDismiss = { sharePagesOpen = false },
+    )
+    why?.let { w -> WhyLockedSheet(w, onRoute = { r -> vm.edit.existing.dismissWhy(); vm.edit.existing.onRoute(r) }, onDismiss = vm.edit.existing::dismissWhy) }
     FillSignHost(vm)
     editingId?.let { id ->
         val item = editState.items.firstOrNull { it.id == id }
@@ -443,14 +528,20 @@ private fun LinkConfirmDialog(url: String, onDismiss: () -> Unit, onOpen: () -> 
 
 /** Overflow menu: layout settings first (they persist for every document), then the tools this PDF can be sent to. */
 @Composable
-private fun ViewerMenu(expanded: Boolean, prefs: ViewerPrefs, onDismiss: () -> Unit, onPrefs: ((ViewerPrefs) -> ViewerPrefs) -> Unit, onPickTool: (String) -> Unit) {
+private fun ViewerMenu(
+    expanded: Boolean, prefs: ViewerPrefs, onDismiss: () -> Unit, onPrefs: ((ViewerPrefs) -> ViewerPrefs) -> Unit,
+    files: FileMenuActions, invert: Boolean, onToggleInvert: () -> Unit, onPickTool: (String) -> Unit,
+) {
     val c = ForgeTheme.colors
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, containerColor = c.surface) { ViewerMenuItems(prefs, onPrefs, onPickTool) }
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, containerColor = c.surface) { ViewerMenuItems(prefs, onPrefs, onPickTool, files, onDismiss, invert, onToggleInvert) }
 }
 
 /** The menu rows, separate from the popup so they can be shown (and screenshotted) on their own. */
 @Composable
-fun ViewerMenuItems(prefs: ViewerPrefs, onPrefs: ((ViewerPrefs) -> ViewerPrefs) -> Unit, onPickTool: (String) -> Unit) {
+fun ViewerMenuItems(
+    prefs: ViewerPrefs, onPrefs: ((ViewerPrefs) -> ViewerPrefs) -> Unit, onPickTool: (String) -> Unit,
+    files: FileMenuActions? = null, onDone: () -> Unit = {}, invert: Boolean? = null, onToggleInvert: () -> Unit = {},
+) {
     val c = ForgeTheme.colors
     val tools = remember { ToolRegistry.availableFor(setOf(FileKind.PDF)).filter { it.code != "P40" } }
     @Composable
@@ -460,6 +551,7 @@ fun ViewerMenuItems(prefs: ViewerPrefs, onPrefs: ((ViewerPrefs) -> ViewerPrefs) 
         modifier = Modifier.semantics { stateDescription = if (on) "On" else "Off" },
         onClick = { onPrefs(change) },
     )
+    if (files != null) FileMenuItems(files, onDone)
     Text("Scrolling", style = ForgeType.Tiny, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
     Choice("Continuous scroll", !prefs.pageByPage) { it.copy(pageByPage = false) }
     Choice("Page by page", prefs.pageByPage) { it.copy(pageByPage = true) }
@@ -469,6 +561,12 @@ fun ViewerMenuItems(prefs: ViewerPrefs, onPrefs: ((ViewerPrefs) -> ViewerPrefs) 
     Text("Reading", style = ForgeType.Tiny, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
     Choice("Two pages side by side (landscape)", prefs.twoPageLandscape) { it.copy(twoPageLandscape = !it.twoPageLandscape) }
     Choice("Keep screen on", prefs.keepScreenOn) { it.copy(keepScreenOn = !it.keepScreenOn) }
+    if (invert != null) DropdownMenuItem(
+        text = { Text("Dark pages") },
+        leadingIcon = { if (invert) Icon(ForgeIcons.Check, null, tint = c.accent, modifier = Modifier.size(18.dp)) else Icon(ForgeIcons.Moon, null, Modifier.size(18.dp)) },
+        modifier = Modifier.semantics { stateDescription = if (invert) "On" else "Off" },
+        onClick = onToggleInvert,
+    )
     HorizontalDivider(color = c.border)
     Text("Open this PDF in…", style = ForgeType.Tiny, color = c.text2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
     tools.forEach { t ->

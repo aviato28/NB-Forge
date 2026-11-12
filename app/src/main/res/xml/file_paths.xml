@@ -4,4 +4,6 @@
     <cache-path name="sample" path="shared/" />
     <!-- Photos taken for Edit > Image land here before Forge reads them. -->
     <cache-path name="camera" path="camera/" />
+    <!-- Files staged for Share / Open with, under their real names. -->
+    <cache-path name="share" path="share/" />
 </paths>
