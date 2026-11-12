@@ -75,7 +75,7 @@ fun TimersScreen(host: ToolHost, vm: TimersViewModel = viewModel()) {
 @Composable
 private fun ticker(intervalMs: Long = 30): Long {
     val owner = LocalLifecycleOwner.current
-    var now by mutableLongStateOf(SystemClock.elapsedRealtime())
+    var now by androidx.compose.runtime.remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(owner) { owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { while (true) { now = SystemClock.elapsedRealtime(); delay(intervalMs) } } }
     return now
 }

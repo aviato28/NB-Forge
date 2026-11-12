@@ -131,7 +131,8 @@ class DeviceToolsScreenshotTest {
     }
 
     @Test fun scannerLive() {
-        compose.shootBoth("device-scanner", content = env { ScannerScreen(host("D8"), ScannerViewModel(app)) })
+        val vm = ScannerViewModel(app)
+        compose.shootBoth("device-scanner", content = env { ScannerScreen(host("D8"), vm) })
         compose.onNodeWithText("Point at a QR code or barcode").assertIsDisplayed()
     }
 

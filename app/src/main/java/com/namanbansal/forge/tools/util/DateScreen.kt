@@ -30,17 +30,17 @@ import java.time.format.FormatStyle
 private val FULL = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
 private fun plural(n: Number, one: String, many: String = one + "s") = "$n " + if (n.toLong() == 1L) one else many
 
-/** Saves a LocalDate across rotation as epoch days. */
+/** A date that survives rotation (stored as epoch days). */
+private class DateState(private val epoch: androidx.compose.runtime.MutableState<Long>) {
+    var value: LocalDate
+        get() = LocalDate.ofEpochDay(epoch.value)
+        set(v) { epoch.value = v.toEpochDay() }
+}
+
 @Composable
-private fun rememberDate(initial: LocalDate): androidx.compose.runtime.MutableState<LocalDate> {
-    var epoch by rememberSaveable { mutableStateOf(initial.toEpochDay()) }
-    return object : androidx.compose.runtime.MutableState<LocalDate> {
-        override var value: LocalDate
-            get() = LocalDate.ofEpochDay(epoch)
-            set(v) { epoch = v.toEpochDay() }
-        override fun component1() = value
-        override fun component2(): (LocalDate) -> Unit = { value = it }
-    }
+private fun rememberDate(initial: LocalDate): DateState {
+    val epoch = rememberSaveable { mutableStateOf(initial.toEpochDay()) }
+    return androidx.compose.runtime.remember(epoch) { DateState(epoch) }
 }
 
 /** U5: difference between dates, add / subtract and age. */
