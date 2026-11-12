@@ -271,7 +271,7 @@ class ViewerRound1bTest {
         var keep = true
         compose.setContent { ForgeTheme { PdfViewerSettings(DefaultViewer.Forge, keep, { keep = it }, {}, {}) } }
         compose.onNodeWithText("Keep screen on while reading").performClick()
-        compose.onNode(androidx.compose.ui.test.isToggleable()).performClick()
+        compose.onAllNodes(androidx.compose.ui.test.isToggleable())[0].performClick()
         assertFalse(keep)
     }
 
