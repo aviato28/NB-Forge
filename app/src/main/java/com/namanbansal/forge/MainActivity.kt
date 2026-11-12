@@ -52,6 +52,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun isVolume(code: Int) = code == android.view.KeyEvent.KEYCODE_VOLUME_UP || code == android.view.KeyEvent.KEYCODE_VOLUME_DOWN
+
+    /** Volume keys count for the Tally screen while it is open (it registers [VolumeKeys.handler]). */
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        val handler = com.namanbansal.forge.tools.util.VolumeKeys.handler
+        if (isVolume(keyCode) && handler != null) {
+            if (event.repeatCount == 0) handler(keyCode)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (isVolume(keyCode) && com.namanbansal.forge.tools.util.VolumeKeys.handler != null) return true
+        return super.onKeyUp(keyCode, event)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

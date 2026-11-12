@@ -13,3 +13,8 @@
 -keep class com.tom_roush.pdfbox.** { *; }
 -keep class com.tom_roush.fontbox.** { *; }
 -keep class com.tom_roush.harmony.** { *; }
+
+# ZXing core (QR generation) is plain Java, no reflection; ML Kit and CameraX ship their own consumer rules.
+-dontwarn com.google.zxing.**
+-keep class com.namanbansal.forge.tools.device.TorchTileService { *; }
+-keep class com.namanbansal.forge.tools.util.TimerService { *; }
