@@ -13,7 +13,7 @@ import kotlin.math.sin
 
 /** Lanczos-3 resampling plus an optional unsharp mask. This is classic signal processing, not machine learning. */
 object Lanczos {
-    const val MAX_OUTPUT_PIXELS = 48_000_000L
+    const val MAX_OUTPUT_PIXELS = 30_000_000L
 
     private fun kernel(x: Double, a: Int = 3): Double {
         val ax = abs(x)
@@ -89,27 +89,41 @@ object Lanczos {
     private fun c(v: Float) = min(255, max(0, v.roundToInt()))
     private fun pack(a: Float, r: Float, g: Float, b: Float) = (c(a) shl 24) or (c(r) shl 16) or (c(g) shl 8) or c(b)
 
-    /** Unsharp mask: out = src + amount * (src - blur(src)) where blur is a [radius] px box blur (x3 ~ gaussian). */
+    /**
+     * Unsharp mask in place: out = src + amount * (src - blur(src)), blur = [radius] px box blur x3 (close to a gaussian).
+     * Works in horizontal bands with a halo, so memory stays small even on 30 MP results.
+     */
     fun unsharp(bmp: Bitmap, amount: Float, radius: Int, checkCancelled: () -> Unit = {}) {
-        if (amount <= 0f) return
+        if (amount <= 0f || radius < 1) return
         val w = bmp.width
         val h = bmp.height
-        val blurred = Blur.box(bmp, radius, passes = 3, checkCancelled = checkCancelled)
-        val a = IntArray(w); val b = IntArray(w)
-        for (y in 0 until h) {
-            if (y % 64 == 0) checkCancelled()
-            bmp.getPixels(a, 0, w, 0, y, w, 1)
-            blurred.getPixels(b, 0, w, 0, y, w, 1)
-            for (x in 0 until w) {
-                val p = a[x]; val q = b[x]
-                val r = ((p shr 16) and 0xFF) + amount * (((p shr 16) and 0xFF) - ((q shr 16) and 0xFF))
-                val g = ((p shr 8) and 0xFF) + amount * (((p shr 8) and 0xFF) - ((q shr 8) and 0xFF))
-                val bl = (p and 0xFF) + amount * ((p and 0xFF) - (q and 0xFF))
-                a[x] = (p and 0xFF000000.toInt()) or (c(r.toFloat()) shl 16) or (c(g.toFloat()) shl 8) or c(bl.toFloat())
+        val band = 192
+        val halo = radius * 3 + 2
+        var y0 = 0
+        while (y0 < h) {
+            checkCancelled()
+            val y1 = min(h, y0 + band)
+            val top = max(0, y0 - halo)
+            val bottom = min(h, y1 + halo)
+            val rows = bottom - top
+            val orig = IntArray(w * rows)
+            bmp.getPixels(orig, 0, w, 0, top, w, rows)
+            val blur = orig.copyOf()
+            Blur.blurInPlace(blur, w, rows, radius, passes = 3)
+            val out = IntArray(w * (y1 - y0))
+            for (y in y0 until y1) {
+                val o = (y - top) * w
+                for (x in 0 until w) {
+                    val p = orig[o + x]; val q = blur[o + x]
+                    val r = ((p shr 16) and 0xFF) + amount * (((p shr 16) and 0xFF) - ((q shr 16) and 0xFF))
+                    val g = ((p shr 8) and 0xFF) + amount * (((p shr 8) and 0xFF) - ((q shr 8) and 0xFF))
+                    val b = (p and 0xFF) + amount * ((p and 0xFF) - (q and 0xFF))
+                    out[(y - y0) * w + x] = (p and 0xFF000000.toInt()) or (c(r) shl 16) or (c(g) shl 8) or c(b)
+                }
             }
-            bmp.setPixels(a, 0, w, 0, y, w, 1)
+            bmp.setPixels(out, 0, w, 0, y0, w, y1 - y0)
+            y0 = y1
         }
-        blurred.recycle()
     }
 }
 
