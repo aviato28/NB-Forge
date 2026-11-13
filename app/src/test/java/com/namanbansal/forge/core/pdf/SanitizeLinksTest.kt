@@ -34,39 +34,7 @@ class SanitizeLinksTest {
     @get:Rule val tmp = TemporaryFolder()
     @Before fun init() { PDFBoxResourceLoader.init(ApplicationProvider.getApplicationContext()) }
 
-    /** A PDF carrying every kind of baggage the sanitiser looks for. */
-    private fun dirty(): File {
-        val f = File(tmp.root, "dirty.pdf")
-        PDDocument().use { doc ->
-            val page = com.tom_roush.pdfbox.pdmodel.PDPage(PDRectangle.A4); doc.addPage(page)
-            val ocg = PDOptionalContentGroup("Secret")
-            val props = PDOptionalContentProperties(); props.addGroup(ocg); props.setGroupEnabled(ocg, false)
-            doc.documentCatalog.ocProperties = props
-            PDPageContentStream(doc, page).use { cs ->
-                cs.beginText(); cs.setFont(PDType1Font.HELVETICA, 14f); cs.newLineAtOffset(50f, 700f); cs.showText("PUBLIC TEXT"); cs.endText()
-                cs.beginMarkedContent(COSName.OC, ocg)
-                cs.beginText(); cs.setFont(PDType1Font.HELVETICA, 14f); cs.newLineAtOffset(50f, 650f); cs.showText("SECRET TEXT"); cs.endText()
-                cs.endMarkedContent()
-            }
-            doc.documentCatalog.openAction = PDActionJavaScript("app.alert('open')")
-            val names = PDDocumentNameDictionary(doc.documentCatalog)
-            val jsTree = PDJavascriptNameTreeNode(); jsTree.names = mapOf("init" to PDActionJavaScript("app.alert('names')"))
-            names.setJavascript(jsTree)
-            val spec = PDComplexFileSpecification(); spec.file = "note.txt"
-            spec.embeddedFile = PDEmbeddedFile(doc, "hello".byteInputStream())
-            val ef = PDEmbeddedFilesNameTreeNode(); ef.names = mapOf("note.txt" to spec)
-            names.setEmbeddedFiles(ef)
-            doc.documentCatalog.names = names
-            val link = PDAnnotationLink(); link.rectangle = PDRectangle(50f, 50f, 100f, 20f); link.action = PDActionJavaScript("app.alert('link')")
-            page.annotations = mutableListOf(link)
-            page.cosObject.setItem(COSName.getPDFName("Thumb"), doc.document.createCOSStream())
-            page.cosObject.setItem(COSName.getPDFName("PieceInfo"), com.tom_roush.pdfbox.cos.COSDictionary())
-            doc.documentInformation.title = "Secret plan"; doc.documentInformation.author = "Ana"
-            PdfMetadataEditor.write(doc, PdfMeta(title = "Secret plan", author = "Ana"))
-            doc.save(f)
-        }
-        return f
-    }
+    private fun dirty(): File = com.namanbansal.forge.core.SanitizeFixtures.dirty(File(tmp.root, "dirty.pdf"))
 
     @Test fun scanFindsEverythingAndCleanRemovesIt() {
         val src = dirty()
