@@ -40,6 +40,7 @@ class ForgeApp : Application() {
     }
     /** Replaceable in tests (fake exporter / probe). */
     var mediaExporter: com.namanbansal.forge.core.video.MediaExporter = com.namanbansal.forge.core.video.TransformerExporter(this)
+    var frameSourceFactory: (Context, android.net.Uri) -> com.namanbansal.forge.core.video.FrameSource = { c, u -> com.namanbansal.forge.core.video.RetrieverFrameSource(c, u) }
     val encoderCaps: com.namanbansal.forge.core.video.EncoderCapabilities by lazy { com.namanbansal.forge.core.video.EncoderCapabilities() }
     var mediaProbe: com.namanbansal.forge.core.video.MediaProbe = com.namanbansal.forge.core.video.ExtractorProbe(this)
     val recents: RecentFilesStore by lazy { RecentFilesStore(File(filesDir, "recent_files.json")) }
