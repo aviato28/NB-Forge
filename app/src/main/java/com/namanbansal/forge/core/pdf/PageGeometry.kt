@@ -65,3 +65,15 @@ object TextSafe {
         return if (upper) sb.toString().uppercase() else sb.toString()
     }
 }
+
+/** Bounding box (minX, minY, width, height) of a Form XObject's BBox after its own /Matrix. */
+fun formBounds(form: com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject): FloatArray {
+    val bb = form.bBox
+    val m = form.matrix
+    val xs = ArrayList<Float>(); val ys = ArrayList<Float>()
+    for ((x, y) in listOf(bb.lowerLeftX to bb.lowerLeftY, bb.upperRightX to bb.lowerLeftY, bb.lowerLeftX to bb.upperRightY, bb.upperRightX to bb.upperRightY)) {
+        xs += m.getValue(0, 0) * x + m.getValue(1, 0) * y + m.getValue(2, 0)
+        ys += m.getValue(0, 1) * x + m.getValue(1, 1) * y + m.getValue(2, 1)
+    }
+    return floatArrayOf(xs.min(), ys.min(), xs.max() - xs.min(), ys.max() - ys.min())
+}
