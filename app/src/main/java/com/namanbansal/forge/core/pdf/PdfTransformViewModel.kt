@@ -62,12 +62,6 @@ abstract class PdfTransformViewModel(application: Application, saved: SavedState
         }
         return ToolOutcome(saved, headline = headline, detail = detail)
     }
-
-    /** Page [page] of the source as it would look after [edit] (live preview); null if it cannot be made. */
-    suspend fun previewPage(page: Int, widthPx: Int, edit: (PDDocument) -> Unit): Bitmap? {
-        val src = source.value ?: return null
-        return PdfPreview.render(src.file, page, widthPx, java.io.File(app.cacheDir, PdfLoader.WORK_DIR), edit)
-    }
 }
 
 object PdfOps {
