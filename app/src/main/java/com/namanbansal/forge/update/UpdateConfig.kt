@@ -7,11 +7,15 @@ object UpdateConfig {
     const val FORGE_SITE_URL = "https://forge.nbansal28.com/update/latest.json"
 
     /**
-     * The single switch between update sources. false = GitHub Releases API (used now);
-     * true = forge.nbansal28.com endpoint (once the site is live). Ships to users via a normal update.
+     * The single switch between update sources. true = forge.nbansal28.com (live since 2026-11-13),
+     * falling back to the GitHub Releases API if the site fails; false = GitHub Releases only.
      */
-    const val USE_FORGE_SITE = false
+    const val USE_FORGE_SITE = true
 
     fun source(client: OkHttpClient): UpdateSource =
-        if (USE_FORGE_SITE) ForgeSiteSource(client, FORGE_SITE_URL) else GitHubReleasesSource(client, GITHUB_OWNER_REPO)
+        if (USE_FORGE_SITE) {
+            FallbackSource(ForgeSiteSource(client, FORGE_SITE_URL), GitHubReleasesSource(client, GITHUB_OWNER_REPO))
+        } else {
+            GitHubReleasesSource(client, GITHUB_OWNER_REPO)
+        }
 }
