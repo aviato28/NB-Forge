@@ -116,7 +116,7 @@ fun LivePreview(
     ) {
         val img = image
         if (img != null) {
-            Image(img, description, Modifier.fillMaxWidth().padding(8.dp), contentScale = ContentScale.FillWidth)
+            Image(img, description, Modifier.fillMaxWidth().heightIn(max = 340.dp).padding(8.dp), contentScale = ContentScale.Fit)
             if (!done) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = c.accent)
         } else if (!done) CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.dp, color = c.accent)
         else Text(emptyText, style = ForgeType.Small, color = c.text2, modifier = Modifier.padding(24.dp))

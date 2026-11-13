@@ -81,7 +81,13 @@ class ChunkBScreenshotTest {
     private fun picked(f: File, size: Long = f.length(), mime: String = "application/pdf") = PickedFile(Uri.fromFile(f), f.name, size, mime)
     private fun text(name: String, pages: Int = 8, size: Long = 2_400_000, pw: String? = null, body: (Int) -> List<String> = { listOf("Quarterly report line one", "Totals and figures", "Signed and approved") }) =
         picked(PdfFixtures.withText(File(tmp.root, name), pages, uniqueHeights = false, userPassword = pw, body = body), size)
-    private fun settle() { repeat(8) { Thread.sleep(250); compose.waitForIdle() } }
+    private fun settle() {
+        repeat(10) {
+            compose.mainClock.advanceTimeBy(300)
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300))
+            Thread.sleep(150); compose.waitForIdle()
+        }
+    }
 
     private fun <V : com.namanbansal.forge.core.pdf.PdfToolViewModel> ready(vm: V, f: PickedFile): V {
         vm.onFilesPicked(listOf(f))
@@ -92,7 +98,8 @@ class ChunkBScreenshotTest {
     @Test fun compress() {
         val vm = ready(CompressViewModel(app, SavedStateHandle()), picked(ImageFixtures.imagePdf(File(tmp.root, "scan_pack.pdf"), pages = 4, px = 1100)))
         vm.setPreset(1)
-        compose.pumpUntil { vm.estimate.value is CompressViewModel.Est.Ready }
+        val end = System.currentTimeMillis() + 60_000
+        while (vm.estimate.value !is CompressViewModel.Est.Ready && System.currentTimeMillis() < end) { org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200)); Thread.sleep(30) }
         compose.shootBoth("p9-compress", settle = ::settle) { CompressScreen(host("P9"), vm) }
     }
 
