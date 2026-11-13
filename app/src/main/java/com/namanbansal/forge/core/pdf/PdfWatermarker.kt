@@ -84,11 +84,12 @@ object PdfWatermarker {
                 cs.restoreGraphicsState()
             }
             if (spec.position == WatermarkPosition.TILED) {
-                val stepX = w * 1.5f + 30f; val stepY = h * 2.5f + 30f
+                val stepX = w * 1.4f + 48f; val stepY = h * 3f + 24f
                 val diag = Math.hypot(vw.toDouble(), vh.toDouble()).toFloat()
                 // Tile in a plane rotated about the page centre so rows follow the watermark's own angle.
                 cs.saveGraphicsState()
                 cs.transform(Matrix.getTranslateInstance(vw / 2, vh / 2))
+                cs.transform(Matrix.getRotateInstance(Math.toRadians(spec.rotation.toDouble()), 0f, 0f))
                 var y = -diag
                 var row = 0
                 while (y <= diag) {
@@ -96,7 +97,6 @@ object PdfWatermarker {
                     while (x <= diag) {
                         cs.saveGraphicsState()
                         cs.transform(Matrix.getTranslateInstance(x, y))
-                        cs.transform(Matrix.getRotateInstance(Math.toRadians(spec.rotation.toDouble()), 0f, 0f))
                         if (img != null) cs.drawImage(img, -w / 2, -h / 2, w, h)
                         else { cs.beginText(); cs.setFont(font, spec.size); cs.setNonStrokingColor(r, g, b); cs.newLineAtOffset(-w / 2, -h * 0.35f); cs.showText(text); cs.endText() }
                         cs.restoreGraphicsState()
