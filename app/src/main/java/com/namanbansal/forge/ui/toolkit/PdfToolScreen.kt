@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.selected
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -128,5 +131,78 @@ fun PreviewPageRow(page: Int, pageCount: Int, onChange: (Int) -> Unit, modifier:
         Text("Preview page", style = ForgeType.Small, color = c.text2, modifier = Modifier.weight(1f))
         Stepper(page + 1, 1..pageCount.coerceAtLeast(1), { onChange(it - 1) }, "Preview page")
         Text("of $pageCount", style = ForgeType.Small, color = c.text2)
+    }
+}
+
+/** One-line "All pages / 3 of 10 pages" row that opens the thumbnail [PagePicker] in a sheet. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun PagesChooser(
+    pageCount: Int, thumbnails: PdfThumbnails, selected: Set<Int>, rangeText: String,
+    onSelection: (Set<Int>) -> Unit, onText: (String) -> Unit, modifier: Modifier = Modifier,
+) {
+    val c = ForgeTheme.colors
+    var open by remember { mutableStateOf(false) }
+    val all = selected.size == pageCount
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Pages", style = ForgeType.Label, color = c.text2)
+            Text(if (all) "All $pageCount pages" else "${selected.size} of $pageCount pages", style = ForgeType.BodyMedium, color = c.text)
+        }
+        com.namanbansal.forge.ui.components.TextAction("Choose pages", { open = true })
+    }
+    if (open) {
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { open = false },
+            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = c.surface,
+        ) {
+            Column(Modifier.fillMaxWidth().heightIn(max = 640.dp).padding(horizontal = 16.dp)) {
+                PagePicker(pageCount, thumbnails, selected, onSelection, Modifier.weight(1f, fill = false), rangeText = rangeText, onRangeTextChange = onText)
+                com.namanbansal.forge.ui.components.ForgeButton("Done", { open = false }, Modifier.fillMaxWidth().padding(vertical = 12.dp), enabled = selected.isNotEmpty())
+            }
+        }
+    }
+}
+
+/** A row of colour dots; [colors] are ARGB ints. */
+@Composable
+fun ColorDots(colors: List<Int>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val c = ForgeTheme.colors
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        colors.forEachIndexed { i, col ->
+            Box(
+                Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(androidx.compose.ui.graphics.Color(col))
+                    .border(if (i == selected) 3.dp else 1.dp, if (i == selected) c.accent else c.border, androidx.compose.foundation.shape.CircleShape)
+                    .clickable { onSelect(i) }.semantics { contentDescription = "Colour ${i + 1}"; this.selected = i == selected },
+            )
+        }
+    }
+}
+
+/** 3 x 3 position picker (0 = top-left ... 8 = bottom-right), optionally with a "Tiled" choice (index [tiled]). */
+@Composable
+fun PositionGrid(selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, tiled: Int? = null, rows: Int = 3) {
+    val c = ForgeTheme.colors
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (r in 0 until rows) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (col in 0 until 3) {
+                val idx = r * 3 + col
+                val on = idx == selected
+                Box(
+                    Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(10.dp)).background(if (on) c.accent else c.surface2)
+                        .border(1.dp, if (on) c.accent else c.border, RoundedCornerShape(10.dp)).clickable { onSelect(idx) }
+                        .semantics { contentDescription = "Position ${idx + 1}"; this.selected = on },
+                )
+            }
+        }
+        if (tiled != null) {
+            val on = selected == tiled
+            Box(
+                Modifier.fillMaxWidth().height(36.dp).clip(RoundedCornerShape(10.dp)).background(if (on) c.accent else c.surface2)
+                    .border(1.dp, if (on) c.accent else c.border, RoundedCornerShape(10.dp)).clickable { onSelect(tiled) },
+                contentAlignment = Alignment.Center,
+            ) { Text("Tiled across the page", style = ForgeType.Label, color = if (on) androidx.compose.ui.graphics.Color.White else c.text) }
+        }
     }
 }
