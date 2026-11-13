@@ -34,6 +34,12 @@ class ForgeApp : Application() {
 
     val outputSaver: OutputSaver by lazy { OutputSaver(this) }
     val pendingFiles = PendingFiles()
+    /** Video / audio jobs run here (and in [com.namanbansal.forge.core.video.VideoJobService]) so they outlive the screen. */
+    val videoJobs: com.namanbansal.forge.core.video.VideoJobs by lazy {
+        com.namanbansal.forge.core.video.VideoJobs(outputSaver, CoroutineScope(SupervisorJob() + Dispatchers.Default), com.namanbansal.forge.core.video.VideoJobService.launcher(this))
+    }
+    val encoderCaps: com.namanbansal.forge.core.video.EncoderCapabilities by lazy { com.namanbansal.forge.core.video.EncoderCapabilities() }
+    val mediaProbe: com.namanbansal.forge.core.video.MediaProbe by lazy { com.namanbansal.forge.core.video.ExtractorProbe(this) }
     val recents: RecentFilesStore by lazy { RecentFilesStore(File(filesDir, "recent_files.json")) }
 
     val viewerPositions: com.namanbansal.forge.core.pdf.viewer.ViewerPositionStore by lazy {

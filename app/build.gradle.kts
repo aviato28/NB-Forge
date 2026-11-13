@@ -91,6 +91,11 @@ dependencies {
     implementation(libs.mlkit.selfie)
     implementation(libs.mlkit.face)
     implementation(libs.androidsvg)
+    implementation(libs.media3.transformer)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.effect)
+    implementation(libs.media3.common)
     debugImplementation(libs.compose.ui.tooling)
 
     debugImplementation(libs.compose.ui.test.manifest)

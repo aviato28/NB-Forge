@@ -37,6 +37,7 @@ object ToolRegistry {
     /** File kinds a tool can take as input (drives "Open with" and "Next" suggestions). Defaults by category. */
     private val ACCEPTS_OVERRIDES: Map<String, Set<FileKind>> = mapOf(
         "P32" to setOf(FileKind.IMAGE), "F1" to setOf(FileKind.ARCHIVE, FileKind.PDF, FileKind.IMAGE), "P35" to emptySet(), "P43" to emptySet(),
+        "V5" to setOf(FileKind.VIDEO, FileKind.AUDIO),
     )
 
     private fun acceptsFor(code: String, category: Category): Set<FileKind> = ACCEPTS_OVERRIDES[code] ?: when (category) {
