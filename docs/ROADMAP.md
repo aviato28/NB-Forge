@@ -142,3 +142,17 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] F1 Zip / unzip (+ open .zip via share)
 - [x] Unit tests, Compose smoke tests, screenshots (light + dark)
 - [ ] Final gradle gate (test, assemble, lint, R8) + CI green
+
+## Chunk F — Video tools (track 2)
+- [x] Deps (Media3 Transformer / ExoPlayer / UI / Effect), OutputSaver media targets (Movies/Forge, Music/Forge), share-in for video/* and audio/*
+- [x] Job core: foreground service + job runner, notification state machine (progress, Cancel), survives leaving the app
+- [x] Transformer wrapper (trim, compress, convert, speed, mute, audio) behind an interface; encoder-capability query
+- [x] V9 Mute
+- [x] V1 Trim / cut (preview, frame-thumbnail timeline, handles, remove-middle mode)
+- [x] V2 Compress (presets, target size, estimate, HEVC option)
+- [x] V3 Convert (MP4 H.264/HEVC, WebM if encoder exists, remux)
+- [x] V5 Extract audio (M4A remux/encode, WAV decode)
+- [x] V8 Speed (0.25x-4x, pitch-corrected or muted)
+- [x] V4 Video to GIF (own LZW + median cut + dithering, preview, size estimate)
+- [x] Unit tests, Compose smoke tests, screenshots (light + dark)
+- [x] Final gradle gate (test, assemble, lint, R8)

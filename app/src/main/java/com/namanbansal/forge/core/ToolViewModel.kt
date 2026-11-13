@@ -38,6 +38,9 @@ class ToolOutcome(
     val archive: SavedOutput? = null,
 )
 
+/** A run that is already under way (or finished) elsewhere, to be re-attached to by a new screen. See [ToolViewModel.resumedRun]. */
+class ResumedRun(val inputs: List<PickedFile>, val await: suspend (RunScope) -> ToolOutcome)
+
 /** Everything the result screen shows. */
 data class ToolResult(
     val output: SavedOutput,
@@ -71,8 +74,9 @@ class RunScope internal constructor(private val vm: ToolViewModel) {
     suspend fun saveAs(
         original: String, action: String, ext: String, mime: String,
         images: Boolean = false, subDir: String = "", rawName: String? = null,
+        target: MediaTarget = if (images) MediaTarget.IMAGES else MediaTarget.DOWNLOADS,
         write: suspend (OutputStream) -> Unit,
-    ): SavedOutput = vm.saver.save(original, action, ext, mime, onSaved = { vm.noteSaved(it) }, subDir = subDir, images = images, rawName = rawName, write = write)
+    ): SavedOutput = vm.saver.save(original, action, ext, mime, onSaved = { vm.noteSaved(it) }, subDir = subDir, rawName = rawName, target = target, write = write)
 }
 
 /**
@@ -137,8 +141,13 @@ abstract class ToolViewModel(application: Application, protected val saved: Save
         // subclass's own state must exist before onInputsReady runs.
         // Order: files handed over by another screen/app > files restored after process death.
         inputJob = viewModelScope.launch(Dispatchers.Main) {
-            val handed = app.pendingFiles.take(toolCode)
-            if (handed != null) {
+            val resumed = resumedRun()
+            val handed = if (resumed == null) app.pendingFiles.take(toolCode) else null
+            if (resumed != null) {
+                _inputs.value = resumed.inputs
+                saved[KEY_INPUTS] = ArrayList(resumed.inputs.map { it.uri.toString() })
+                launchRun(resumed.inputs) { resumed.await(it) }
+            } else if (handed != null) {
                 applyFiles(handed)
             } else {
                 val restored = saved.get<ArrayList<String>>(KEY_INPUTS)?.takeIf { it.isNotEmpty() }
@@ -149,6 +158,16 @@ abstract class ToolViewModel(application: Application, protected val saved: Save
             }
         }
     }
+
+    /**
+     * A tool whose work outlives its screen (video jobs run in a foreground service) returns the still-running or just-finished
+     * job here; the screen then re-attaches to it (progress, or straight to the result) instead of starting at Pick.
+     */
+    protected open fun resumedRun(): ResumedRun? = null
+
+    /** True once the user pressed Cancel for the current run (as opposed to the screen simply being left). */
+    protected var cancelRequested: Boolean = false
+        private set
 
     protected fun notify(message: String) { _messages.tryEmit(message) }
 
@@ -232,13 +251,18 @@ abstract class ToolViewModel(application: Application, protected val saved: Save
         if (runJob?.isActive == true || _phase.value == ToolPhase.Running) return
         val files = _inputs.value
         if (files.isEmpty()) return
+        launchRun(files) { execute(it) }
+    }
+
+    private fun launchRun(files: List<PickedFile>, work: suspend (RunScope) -> ToolOutcome) {
         _error.value = null
         _progress.value = null
+        cancelRequested = false
         savedThisRun.clear()
         _phase.value = ToolPhase.Running
         runJob = viewModelScope.launch(Dispatchers.Default, start = CoroutineStart.DEFAULT) {
             try {
-                val outcome = execute(RunScope(this@ToolViewModel))
+                val outcome = work(RunScope(this@ToolViewModel))
                 val first = files.first()
                 val result = ToolResult(
                     output = outcome.output,
@@ -289,7 +313,7 @@ abstract class ToolViewModel(application: Application, protected val saved: Save
     }
 
     /** Cooperative cancel: the running coroutine stops at its next [RunScope.checkCancelled]. */
-    fun cancel() { runJob?.cancel() }
+    fun cancel() { cancelRequested = true; runJob?.cancel() }
 
     /** Failed -> run again with the same inputs and options. */
     fun retry() = start()

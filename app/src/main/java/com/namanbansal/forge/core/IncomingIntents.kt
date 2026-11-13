@@ -31,6 +31,6 @@ object IncomingIntents {
         return found.filter { it.scheme == "content" || it.scheme == "file" }
     }
 
-    /** Only PDFs, images and zip archives are accepted from other apps for now. */
-    fun accept(files: List<PickedFile>): List<PickedFile> = files.filter { it.kind == FileKind.PDF || it.kind == FileKind.IMAGE || it.kind == FileKind.ARCHIVE }
+    /** PDFs, images, video, audio and zip archives are accepted from other apps. */
+    fun accept(files: List<PickedFile>): List<PickedFile> = files.filter { it.kind == FileKind.PDF || it.kind == FileKind.IMAGE || it.kind == FileKind.VIDEO || it.kind == FileKind.AUDIO || it.kind == FileKind.ARCHIVE }
 }

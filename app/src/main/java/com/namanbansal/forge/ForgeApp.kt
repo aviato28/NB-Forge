@@ -34,6 +34,15 @@ class ForgeApp : Application() {
 
     val outputSaver: OutputSaver by lazy { OutputSaver(this) }
     val pendingFiles = PendingFiles()
+    /** Video / audio jobs run here (and in [com.namanbansal.forge.core.video.VideoJobService]) so they outlive the screen. */
+    val videoJobs: com.namanbansal.forge.core.video.VideoJobs by lazy {
+        com.namanbansal.forge.core.video.VideoJobs(outputSaver, CoroutineScope(SupervisorJob() + Dispatchers.Default), com.namanbansal.forge.core.video.VideoJobService.launcher(this))
+    }
+    /** Replaceable in tests (fake exporter / probe). */
+    var mediaExporter: com.namanbansal.forge.core.video.MediaExporter = com.namanbansal.forge.core.video.TransformerExporter(this)
+    var frameSourceFactory: (Context, android.net.Uri) -> com.namanbansal.forge.core.video.FrameSource = { c, u -> com.namanbansal.forge.core.video.RetrieverFrameSource(c, u) }
+    val encoderCaps: com.namanbansal.forge.core.video.EncoderCapabilities by lazy { com.namanbansal.forge.core.video.EncoderCapabilities() }
+    var mediaProbe: com.namanbansal.forge.core.video.MediaProbe = com.namanbansal.forge.core.video.ExtractorProbe(this)
     val recents: RecentFilesStore by lazy { RecentFilesStore(File(filesDir, "recent_files.json")) }
 
     val viewerPositions: com.namanbansal.forge.core.pdf.viewer.ViewerPositionStore by lazy {
@@ -48,6 +57,7 @@ class ForgeApp : Application() {
             // Working copies from a previous run are never reused (first, so it can never race with a file opened right after start).
             File(cacheDir, com.namanbansal.forge.core.pdf.PdfLoader.WORK_DIR).deleteRecursively()
             com.namanbansal.forge.core.share.ShareStaging.clean(cacheDir)
+            com.namanbansal.forge.core.video.VideoOps.cleanWorkDir(this@ForgeApp)
             recents.load()
             viewerPositions.load()
         }

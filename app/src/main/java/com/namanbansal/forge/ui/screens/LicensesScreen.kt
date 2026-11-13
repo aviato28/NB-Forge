@@ -40,6 +40,7 @@ private val libs = listOf(
     Lib("Google ML Kit (subject / selfie segmentation, face detection)", "Google", "ML Kit terms (free, no copyleft)", "licenses/Apache-2.0.txt"),
     Lib("Jetpack Compose & AndroidX", "The Android Open Source Project", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("Kotlin & kotlinx.serialization / coroutines", "JetBrains s.r.o.", "Apache License 2.0", "licenses/Apache-2.0.txt"),
+    Lib("AndroidX Media3 (Transformer, ExoPlayer, Effect, UI)", "The Android Open Source Project", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("CameraX", "The Android Open Source Project", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("ZXing (QR generation)", "ZXing authors", "Apache License 2.0", "licenses/Apache-2.0.txt"),
     Lib("Google ML Kit barcode scanning (bundled model)", "Google LLC", "ML Kit terms (free, proprietary SDK)", "licenses/Apache-2.0.txt"),

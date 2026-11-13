@@ -3,5 +3,7 @@
     <string name="app_name">Forge</string>
     <string name="torch_tile_label">Torch</string>
     <string name="timer_channel">Timers</string>
+    <string name="video_channel">Video and audio jobs</string>
+    <string name="video_cancel">Cancel</string>
     <string name="timer_channel_alarm">Timer finished</string>
 </resources>
