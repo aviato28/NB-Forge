@@ -6,7 +6,7 @@ import okhttp3.OkHttpClient
 
 /**
  * Reads `https://forge.nbansal28.com/update/latest.json?channel=stable|beta` (same contract as Penumbra).
- * Not used yet; enable via [UpdateConfig.USE_FORGE_SITE].
+ * Primary source (see [UpdateConfig]); GitHub Releases is the fallback.
  */
 class ForgeSiteSource(
     private val client: OkHttpClient,
