@@ -115,7 +115,7 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] P24 Hyperlinks
 - [x] Shared: grid + viewer More menu + share-in for every tool (driven by the registry), encrypted input prompt, output keeps protection (except Unlock)
 - [x] Unit tests per tool + end-to-end runs (`ChunkBEndToEndTest`), screenshots light + dark (`ChunkBScreenshotTest`)
-- [ ] Final gradle gate (test, assemble, lint, R8) + CI green
+- [x] Final gradle gate (test, assemble, lint, R8) passed locally (CI runs on the PR)
 
 ## Chunk D — Device tools & utilities (track 2)
 - [x] Deps (CameraX, ML Kit barcode bundled, ZXing core), manifest permissions, shared device toolkit (permission gate, sensor interface, lifecycle sensors)
@@ -124,7 +124,7 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] U1 Unit converter · U2 Currency · U3 Calculator · U4 Percent / tip / split · U5 Date calculator · U6 Timezone / world clock
 - [x] U7 Timers (foreground service) · U8 Randomiser · U9 Tally · U10 Loan / EMI (+CSV) · U11 BMI / BMR · U12 QR generator
 - [x] Unit tests for pure logic, Robolectric smoke tests per screen, screenshots (light + dark)
-- [ ] Final gradle gate (test, assemble, lint, R8) + CI green
+- [x] Final gradle gate (test, assemble, lint, R8) passed locally (CI runs on the PR)
 
 ## Chunk E — Image tools & zip (track 2)
 - [x] Shared image core: loader (EXIF, sampled decode), codecs, Pictures/Forge saver, batch results, image ViewModel base
@@ -141,4 +141,4 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] I12 Annotate / blur (+ face detection)
 - [x] F1 Zip / unzip (+ open .zip via share)
 - [x] Unit tests, Compose smoke tests, screenshots (light + dark)
-- [ ] Final gradle gate (test, assemble, lint, R8) + CI green
+- [x] Final gradle gate (test, assemble, lint, R8) passed locally (CI runs on the PR)
