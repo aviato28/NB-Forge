@@ -87,6 +87,18 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 - **Licences added**: Anton (OFL 1.1), AndroidSVG 1.4 (Apache-2.0), ML Kit face detection / segmentation (free SDK terms, same rule as the other ML Kit use).
 - **Metadata stripping** never re-encodes: JPEG segments, PNG chunks and WebP chunks are rewritten; "location only" on PNG/WebP removes all EXIF/XMP (it cannot be edited safely).
 
+## Chunk B: remaining PDF tools (2026-11-13)
+- **P14 is "Optimise", not "Linearise".** PDFBox 2.0.27 (the only Apache-licensed engine we ship) can neither write linearised files nor object streams (that arrived in PDFBox 3). A real "fast web view" would need its own writer, so the tool is honestly named *Optimise (compress streams + clean up)*: it Flate-compresses raw streams, drops unreferenced objects and rewrites the xref. The screen says plainly that it is not fast web view. Code `P14` is unchanged (pins).
+- **Compress** downsamples to the painted size (placement found by running the content stream through PDFBox's engine), re-encodes to JPEG only when that is smaller, merges identical pictures (soft masks included in the comparison), Flate-compresses raw streams and lets PDFBox's save drop unreferenced objects. The size estimate really re-encodes up to 8 sampled pictures and extrapolates; text-only files estimate close to their current size. If the result is not smaller than the input the original is saved unchanged and the result says so.
+- **Grayscale** pictures are converted with a Rec.601 colour matrix and stored as JPEG (3-component with neutral chroma: R=G=B on decode); colour operators rg/RG/k/K and sc/scn under RGB/CMYK colour spaces are rewritten. Patterns, shadings and inline images keep their colour (stated in the UI).
+- **Protect** uses AES-256 and keeps passwords in memory only (never in saved state): after process death the person types them again. Inputs that were encrypted are re-saved with AES-128 and the same password, as before (`PdfProtection.keyLength`).
+- **Unlock** works only with the password the person can already supply (or an empty user password with owner restrictions). No cracking.
+- **Crop** sets the CropBox only (lossless), optionally the MediaBox too. **N-up / booklet** use LayerUtility form XObjects, so pages stay vector. Booklet is saddle-stitch, padded to a multiple of 4.
+- **Watermark / page numbers** draw in the *displayed* page space (rotation and crop box mapped back via `PageGeometry`), with Standard-14 fonts only (characters outside WinAnsi show as "?").
+- **Sanitise** scans first and shows a checklist. Hidden-layer removal deletes the marked content in page and form streams.
+- **Live previews** render the real operation on one page into a temp one-page PDF (`PdfPreview`), so what is shown is what is saved.
+- Repair has no password prompt: a password-protected file must be unlocked first.
+
 ## Chunk F: video tools (2026-11-13)
 - **Engine**: AndroidX Media3 Transformer + ExoPlayer (Apache-2.0) for all processing and preview. No FFmpeg (licensing, size).
 - **Foreground job**: one video/audio job at a time runs on an app-wide scope (`VideoJobs`) with `VideoJobService` (foreground type mediaProcessing) showing progress + Cancel. A screen that returns re-attaches to the running or finished job. Inputs are read through the original content uri (no private copy), so a one-time share grant that Android revokes after the task ends can stop a job; picked files are fine.

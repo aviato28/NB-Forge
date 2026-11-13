@@ -95,8 +95,27 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] Debug overlay (Settings → Developer): tints editable vs locked glyphs, to diagnose owner-supplied PDFs
 - [ ] Regression fixtures from owner-supplied sample PDFs (non-sensitive) — generated stand-ins for every case are in `CoverageFixtures`; swap in the owner's real samples when they arrive
 
-## Round 3 — Remaining PDF tools
-- [ ] Compress (P9), Protect / Unlock (P29/P30), Watermark (P20), Page numbers (P21), PDF→images (P31), Images→PDF (P32) — each with a live preview
+## Chunk B — Remaining PDF tools
+- [x] P9 Compress (presets, size estimate, before/after, never grows)
+- [x] P10 Grayscale (+ first-page preview)
+- [x] P20 Watermark (text/image, live preview)
+- [x] P21 Page numbers / headers / footers / Bates (live preview)
+- [x] P29 Protect (AES-256, strength meter)
+- [x] P30 Unlock
+- [x] P31 PDF to images (PNG/JPG/WebP, ZIP)
+- [x] P32 Images to PDF (reorder, EXIF, HEIC)
+- [x] P7 Crop / trim (box, auto-detect)
+- [x] P8 N-up / booklet (preview)
+- [x] P11 Flatten
+- [x] P12 Repair
+- [x] P13 Sanitise (checklist)
+- [x] P14 Optimise (object streams + compression; honest label)
+- [x] P22 Bookmarks editor (+ auto from headings)
+- [x] P23 Metadata (Info + XMP)
+- [x] P24 Hyperlinks
+- [x] Shared: grid + viewer More menu + share-in for every tool (driven by the registry), encrypted input prompt, output keeps protection (except Unlock)
+- [x] Unit tests per tool + end-to-end runs (`ChunkBEndToEndTest`), screenshots light + dark (`ChunkBScreenshotTest`)
+- [x] Final gradle gate (test, assemble, lint, R8) passed locally (CI runs on the PR)
 
 ## Chunk D — Device tools & utilities (track 2)
 - [x] Deps (CameraX, ML Kit barcode bundled, ZXing core), manifest permissions, shared device toolkit (permission gate, sensor interface, lifecycle sensors)

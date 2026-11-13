@@ -10,7 +10,7 @@ import com.namanbansal.forge.ui.icons.ForgeIcons
 object ToolRegistry {
 
     /** Codes of tools that have a real implementation. Everything else shows the "Coming soon" screen. */
-    private val AVAILABLE: Set<String> = setOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P25", "P27", "P40",
+    private val AVAILABLE: Set<String> = setOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P7", "P8", "P20", "P21", "P9", "P10", "P11", "P12", "P13", "P14", "P22", "P23", "P24", "P29", "P30", "P31", "P32", "P25", "P27", "P40",
         "I1", "I2", "I3", "I4", "I5", "I6", "I7", "I9", "I10", "I11", "I12", "F1", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10",
         "V1", "V2", "V3", "V4", "V5", "V8", "V9", "U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "U10", "U11", "U12")
 
@@ -22,7 +22,7 @@ object ToolRegistry {
     private val SHORT_LABELS: Map<String, String> = mapOf(
         "P1" to "Merge PDF", "P2" to "Split PDF", "P4" to "Rotate PDF", "P7" to "Crop PDF", "P8" to "Booklet",
         "P9" to "Compress PDF", "P10" to "PDF grayscale", "P11" to "Flatten PDF", "P12" to "Repair PDF",
-        "P13" to "Sanitise PDF", "P14" to "Linearise PDF", "P15" to "Edit PDF text", "P16" to "Add to PDF",
+        "P13" to "Sanitise PDF", "P14" to "Optimise PDF", "P15" to "Edit PDF text", "P16" to "Add to PDF",
         "P17" to "Annotate PDF", "P18" to "Whiteout", "P19" to "Redact PDF", "P20" to "Watermark PDF",
         "P21" to "Page numbers", "P22" to "PDF bookmarks", "P23" to "PDF metadata", "P24" to "PDF links",
         "P27" to "Sign PDF", "P28" to "Digital sign", "P29" to "Protect PDF", "P30" to "Unlock PDF",
@@ -83,7 +83,7 @@ object ToolRegistry {
         tool("P11", "Flatten", Category.PDF, PdfGroup.OPTIMISE, "Bake forms, annotations and layers into the page.", listOf("forms", "annotations", "layers"), ForgeIcons.Layers),
         tool("P12", "Repair", Category.PDF, PdfGroup.OPTIMISE, "Attempt to fix corrupted or broken PDFs.", listOf("fix", "corrupt", "broken", "recover"), ForgeIcons.Shield),
         tool("P13", "Sanitise", Category.PDF, PdfGroup.OPTIMISE, "Strip metadata, embedded files, JavaScript, hidden content.", listOf("sanitize", "clean", "privacy", "metadata", "javascript"), ForgeIcons.Eraser),
-        tool("P14", "Linearise", Category.PDF, PdfGroup.OPTIMISE, "Optimise for fast web view (page 1 loads first).", listOf("linearize", "web", "fast view", "optimize"), ForgeIcons.Flash),
+        tool("P14", "Optimise", Category.PDF, PdfGroup.OPTIMISE, "Optimise (compress streams + clean up). Not fast web view.", listOf("linearize", "linearise", "web", "fast view", "optimize", "object streams"), ForgeIcons.Flash),
         tool("P15", "Edit existing text", Category.PDF, PdfGroup.EDIT, "Edit the PDF's own text, pictures and drawings in place.", listOf("edit", "text", "modify"), ForgeIcons.Type),
         tool("P16", "Add content", Category.PDF, PdfGroup.EDIT, "Text boxes, shapes, images, lines, arrows.", listOf("text box", "shapes", "insert", "image"), ForgeIcons.Plus),
         tool("P17", "Annotate", Category.PDF, PdfGroup.EDIT, "Highlight, underline, strike through, draw with a pen and add sticky notes.", listOf("highlight", "markup", "notes", "comment"), ForgeIcons.Pen),
