@@ -136,4 +136,4 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] V8 Speed (0.25x-4x, pitch-corrected or muted)
 - [x] V4 Video to GIF (own LZW + median cut + dithering, preview, size estimate)
 - [x] Unit tests, Compose smoke tests, screenshots (light + dark)
-- [ ] Final gradle gate (test, assemble, lint, R8)
+- [x] Final gradle gate (test, assemble, lint, R8)
