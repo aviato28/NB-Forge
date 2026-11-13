@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -42,6 +43,7 @@ import com.namanbansal.forge.ui.components.ForgeCard
 import com.namanbansal.forge.ui.components.ForgeSwitch
 import com.namanbansal.forge.ui.components.GroupLabel
 import com.namanbansal.forge.ui.components.ListRow
+import com.namanbansal.forge.ui.components.NbMark
 import com.namanbansal.forge.ui.components.Segmented
 import com.namanbansal.forge.ui.icons.ForgeIcons
 import com.namanbansal.forge.ui.theme.ForgeTheme
@@ -125,7 +127,18 @@ fun SettingsScreen(app: ForgeApp, settings: Settings, onLicenses: () -> Unit) {
             item {
                 GroupLabel("About")
                 ForgeCard(Modifier.fillMaxWidth()) {
-                    ListRow("Forge by Naman Bansal", subtitle = "Every tool. One app.", icon = ForgeIcons.Info, trailing = {})
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        NbMark(44.dp)
+                        Column {
+                            Text("Forge by Naman Bansal", style = ForgeType.Item.copy(fontWeight = FontWeight.Medium), color = c.text)
+                            Text("Every tool. One app.", style = ForgeType.Small, color = c.text2)
+                        }
+                    }
+                    HorizontalDivider(Modifier.padding(horizontal = 12.dp), thickness = 1.dp, color = c.border)
                     ListRow("Website", subtitle = "nbansal28.com", icon = ForgeIcons.Globe, onClick = { uri.openUri(WEBSITE_URL) }, trailing = {
                         Icon(ForgeIcons.Open, null, tint = c.text2, modifier = Modifier.size(16.dp))
                     })

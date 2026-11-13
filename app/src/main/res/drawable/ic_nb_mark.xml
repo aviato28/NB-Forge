@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NB monogram on the anvil-icon charcoal tile. Source: docs/brand/icons/nb-mark.svg -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#18181B"
+        android:pathData="M24,0H84A24,24 0 0 1 108,24V84A24,24 0 0 1 84,108H24A24,24 0 0 1 0,84V24A24,24 0 0 1 24,0Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF6A1A"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M25,68V34L49,68V34" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF6A1A"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M62,34V68H72Q81,68 81,60.5Q81,53 72,53H62M62,53H71Q79,53 79,44.5Q79,34 71,34H62" />
+    <path
+        android:fillColor="#FF6A1A"
+        android:pathData="M28,78H78A3,3 0 0 1 81,81A3,3 0 0 1 78,84H28A3,3 0 0 1 25,81A3,3 0 0 1 28,78Z" />
+</vector>
