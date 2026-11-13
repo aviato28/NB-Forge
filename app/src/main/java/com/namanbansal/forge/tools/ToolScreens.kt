@@ -80,6 +80,7 @@ object ToolScreens {
         "P8" to { host -> com.namanbansal.forge.tools.pdf.ImposeScreen(host) },
         "P31" to { host -> com.namanbansal.forge.tools.pdf.PdfToImagesScreen(host) },
         "P32" to { host -> com.namanbansal.forge.tools.pdf.ImagesToPdfScreen(host) },
+        "P13" to { host -> com.namanbansal.forge.tools.pdf.SanitizeScreen(host) },
         "P40" to { host -> ViewerScreen(host) },
         "P25" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.FILL_SIGN) },
         "P27" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.FILL_SIGN) },

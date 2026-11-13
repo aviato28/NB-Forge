@@ -10,7 +10,7 @@ import com.namanbansal.forge.ui.icons.ForgeIcons
 object ToolRegistry {
 
     /** Codes of tools that have a real implementation. Everything else shows the "Coming soon" screen. */
-    private val AVAILABLE: Set<String> = setOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P7", "P8", "P20", "P21", "P9", "P10", "P11", "P12", "P14", "P23", "P29", "P30", "P31", "P32", "P25", "P27", "P40",
+    private val AVAILABLE: Set<String> = setOf("P1", "P2", "P3", "P4", "P5", "P6", "P15", "P16", "P17", "P18", "P19", "P7", "P8", "P20", "P21", "P9", "P10", "P11", "P12", "P13", "P14", "P23", "P29", "P30", "P31", "P32", "P25", "P27", "P40",
         "I1", "I2", "I3", "I4", "I5", "I6", "I7", "I9", "I10", "I11", "I12", "F1", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10",
         "U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "U10", "U11", "U12")
 
