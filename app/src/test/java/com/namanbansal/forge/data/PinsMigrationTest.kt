@@ -32,9 +32,9 @@ class PinsMigrationTest {
     }
 
     @Test fun comingSoonPinsStillResolveSoTheirTilesStayTappable() {
-        // Old pins such as P9 (Compress) are not built yet; the registry still knows them and shows "Coming soon" when opened.
-        val old = ToolRegistry.get("P9")!!
+        // Pins for tools that are not built yet (here P26 Create forms) still resolve; the registry shows "Coming soon" when opened.
+        val old = ToolRegistry.get("P26")!!
         assertEquals(ToolStatus.ComingSoon, old.status)
-        assertEquals(listOf("P9"), Pins.toggle(emptyList(), "P9"))
+        assertEquals(listOf("P26"), Pins.toggle(emptyList(), "P26"))
     }
 }
