@@ -13,13 +13,21 @@ import java.util.UUID
  * (AES-128). The owner password is random and not kept: only the user password the person typed is meaningful.
  * Tools that mix several sources use [forAll].
  */
-class PdfProtection(val userPassword: String, val permissionBytes: Int) {
+class PdfProtection(
+    val userPassword: String,
+    val permissionBytes: Int,
+    /** Null = a random owner password (kept secret). */
+    val ownerPassword: String? = null,
+    /** 128 (AES-128, what inputs keep) or 256 (AES-256, the Protect tool). */
+    val keyLength: Int = 128,
+) {
 
     /** Encrypts [doc] on its next save. Call after the document is complete, before `save`. */
     fun applyTo(doc: PDDocument) {
         try {
-            val policy = StandardProtectionPolicy(UUID.randomUUID().toString(), userPassword, AccessPermission(permissionBytes))
-            policy.encryptionKeyLength = 128
+            val policy = StandardProtectionPolicy(ownerPassword ?: UUID.randomUUID().toString(), userPassword, AccessPermission(permissionBytes))
+            policy.encryptionKeyLength = keyLength
+            if (keyLength < 256) policy.isPreferAES = true
             doc.protect(policy)
         } catch (e: IOException) {
             throw ToolException("Could not keep the password on the saved copy: ${e.message ?: "encryption failed"}.", e)
