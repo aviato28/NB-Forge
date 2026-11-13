@@ -68,13 +68,14 @@ class FileActionsTest {
         assertTrue(IncomingIntents.uris(null).isEmpty())
     }
 
-    @Test fun incomingFilterKeepsOnlyPdfAndImages() {
+    @Test fun incomingFilterKeepsPdfImagesVideoAndAudio() {
         val files = listOf(
             PickedFile(uri, "a.pdf", 1, "application/pdf"),
             PickedFile(uri, "b.png", 1, "image/png"),
             PickedFile(uri, "c.mp4", 1, "video/mp4"),
             PickedFile(uri, "d.bin", 1, null),
+            PickedFile(uri, "e.m4a", 1, "audio/mp4"),
         )
-        assertEquals(listOf("a.pdf", "b.png"), IncomingIntents.accept(files).map { it.name })
+        assertEquals(listOf("a.pdf", "b.png", "c.mp4", "e.m4a"), IncomingIntents.accept(files).map { it.name })
     }
 }

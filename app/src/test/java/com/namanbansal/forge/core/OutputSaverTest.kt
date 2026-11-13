@@ -115,4 +115,36 @@ class OutputSaverTest {
         provider.rows.clear()
         assertFalse(saver.isReadable(out.uri))
     }
+
+    @Test fun videoGoesToMoviesForge() = runTest {
+        val out = saver.save("clip.mp4", "trimmed", "mp4", "video/mp4", target = MediaTarget.VIDEO) { it.write(byteArrayOf(1, 2, 3)) }
+        assertEquals("clip_trimmed.mp4", out.displayName)
+        assertEquals("Movies/Forge", out.folder)
+        val row = provider.rows.values.single().values
+        assertEquals("Movies/Forge/", row.getAsString(MediaStore.MediaColumns.RELATIVE_PATH))
+        assertEquals("video/mp4", row.getAsString(MediaStore.MediaColumns.MIME_TYPE))
+    }
+
+    @Test fun audioGoesToMusicForgeAndDedupesPerFolder() = runTest {
+        val a = saver.save("song.mp4", "audio", "m4a", "audio/mp4", target = MediaTarget.AUDIO) { it.write(1) }
+        val b = saver.save("song.mp4", "audio", "m4a", "audio/mp4", target = MediaTarget.AUDIO) { it.write(1) }
+        // Same name in another folder is not a clash.
+        val c = saver.save("song.mp4", "audio", "m4a", "audio/mp4") { it.write(1) }
+        assertEquals(listOf("song_audio.m4a", "song_audio (1).m4a", "song_audio.m4a"), listOf(a, b, c).map { it.displayName })
+        assertEquals("Music/Forge", a.folder)
+        assertEquals("Downloads/Forge", c.folder)
+    }
+
+    @Test fun imagesFlagStillMapsToPictures() = runTest {
+        val out = saver.save("a.png", "x", "png", "image/png", images = true) { it.write(1) }
+        assertEquals("Pictures/Forge", out.folder)
+        assertEquals("Pictures/Forge/", provider.rows.values.single().values.getAsString(MediaStore.MediaColumns.RELATIVE_PATH))
+    }
+
+    @Test fun mediaTargetCollections() {
+        assertEquals(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, MediaTarget.VIDEO.collection)
+        assertEquals(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, MediaTarget.AUDIO.collection)
+        assertEquals(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, MediaTarget.IMAGES.collection)
+        assertEquals(MediaStore.Downloads.EXTERNAL_CONTENT_URI, MediaTarget.DOWNLOADS.collection)
+    }
 }

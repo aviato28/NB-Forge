@@ -11,6 +11,23 @@ import java.io.IOException
 import java.io.FilterOutputStream
 import java.io.OutputStream
 
+/** Which MediaStore collection / folder an output goes to. */
+enum class MediaTarget(val relativePath: String, val label: String) {
+    DOWNLOADS("Download/Forge/", "Downloads/Forge"),
+    IMAGES("Pictures/Forge/", "Pictures/Forge"),
+    VIDEO("Movies/Forge/", "Movies/Forge"),
+    AUDIO("Music/Forge/", "Music/Forge"),
+    ;
+
+    val collection: Uri
+        get() = when (this) {
+            DOWNLOADS -> MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            IMAGES -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            VIDEO -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            AUDIO -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        }
+}
+
 /** A file written to `Downloads/Forge/`. */
 data class SavedOutput(val uri: Uri, val displayName: String, val size: Long, val mime: String, val folder: String = OutputSaver.FOLDER_LABEL)
 
@@ -36,10 +53,12 @@ class OutputSaver(context: Context) {
         images: Boolean = false,
         /** Use this exact file name (de-duplicated) instead of `<original>_<action>.<ext>` (unzip keeps entry names). */
         rawName: String? = null,
+        /** Overrides [images]: video -> `Movies/Forge/`, audio -> `Music/Forge/`. */
+        target: MediaTarget = if (images) MediaTarget.IMAGES else MediaTarget.DOWNLOADS,
         write: suspend (OutputStream) -> Unit,
     ): SavedOutput = create(mime, subDir, onSaved, { path, coll ->
         if (rawName != null) OutputNaming.unique(rawName) { exists(it, path, coll) } else OutputNaming.build(originalName, action, ext) { exists(it, path, coll) }
-    }, write, images)
+    }, write, target)
 
     /**
      * Saves a file under its own name (`invoice.pdf`, de-duplicated as `invoice (1).pdf`), for "Save to phone".
@@ -58,11 +77,10 @@ class OutputSaver(context: Context) {
         onSaved: (SavedOutput) -> Unit,
         nameFor: (String, Uri) -> String,
         write: suspend (OutputStream) -> Unit,
-        images: Boolean = false,
+        target: MediaTarget = MediaTarget.DOWNLOADS,
     ): SavedOutput = withContext(Dispatchers.IO) {
-        val base = if (images) PICTURES_PATH else RELATIVE_PATH
-        val path = base + subDir
-        val collection = if (images) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        val path = target.relativePath + subDir
+        val collection = target.collection
         val name = nameFor(path, collection)
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
@@ -71,7 +89,7 @@ class OutputSaver(context: Context) {
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val uri = resolver.insert(collection, values)
-            ?: throw IOException("Could not create a file in Downloads/Forge")
+            ?: throw IOException("Could not create a file in ${target.label}")
         try {
             val out = resolver.openOutputStream(uri, "w") ?: throw IOException("Could not open the output file")
             val counting = CountingOutputStream(out)
@@ -79,7 +97,7 @@ class OutputSaver(context: Context) {
             resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
             // Reported from inside the IO block: a cancellation arriving right now would otherwise drop the result
             // and leave a finished file nobody knows about.
-            SavedOutput(uri, name, counting.count, mime, if (images) PICTURES_LABEL + subDir.trimEnd('/').let { if (it.isEmpty()) "" else "/$it" } else FOLDER_LABEL + subDir.trimEnd('/').let { if (it.isEmpty()) "" else "/$it" }).also(onSaved)
+            SavedOutput(uri, name, counting.count, mime, target.label + subDir.trimEnd('/').let { if (it.isEmpty()) "" else "/$it" }).also(onSaved)
         } catch (t: Throwable) {
             runCatching { resolver.delete(uri, null, null) }
             throw t
