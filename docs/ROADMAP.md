@@ -125,10 +125,10 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [ ] Final gradle gate (test, assemble, lint, R8) + CI green
 
 ## Chunk F — Video tools (track 2)
-- [ ] Deps (Media3 Transformer / ExoPlayer / UI / Effect), OutputSaver media targets (Movies/Forge, Music/Forge), share-in for video/* and audio/*
-- [ ] Job core: foreground service + job runner, notification state machine (progress, Cancel), survives leaving the app
-- [ ] Transformer wrapper (trim, compress, convert, speed, mute, audio) behind an interface; encoder-capability query
-- [ ] V9 Mute
+- [x] Deps (Media3 Transformer / ExoPlayer / UI / Effect), OutputSaver media targets (Movies/Forge, Music/Forge), share-in for video/* and audio/*
+- [x] Job core: foreground service + job runner, notification state machine (progress, Cancel), survives leaving the app
+- [x] Transformer wrapper (trim, compress, convert, speed, mute, audio) behind an interface; encoder-capability query
+- [x] V9 Mute
 - [ ] V1 Trim / cut (preview, frame-thumbnail timeline, handles, remove-middle mode)
 - [ ] V2 Compress (presets, target size, estimate, HEVC option)
 - [ ] V3 Convert (MP4 H.264/HEVC, WebM if encoder exists, remux)
