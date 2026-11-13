@@ -58,7 +58,7 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 
 ## Hosting & updates — aligned with nbansal28.com (2026-11-02)
 - Main site repo `aviato28/nbansal28-site` (Cloudflare Worker + static assets). Products live on subdomains (penumbra., crewbrew., afterglow., lifeos.nbansal28.com), each a folder in that repo, plus an F-PLN card on the home page.
-- Forge will be **forge.nbansal28.com** (site work = later phase, not now).
+- Forge is live at **forge.nbansal28.com** (2026-11-13). The app updater reads its `/update/latest.json` first and falls back to GitHub Releases if the site fails.
 - Follow Penumbra's update contract: `GET /update/latest.json?channel=stable|beta` →
   `{version, versionCode, channel, notes, publishedAt, apk, size, sha256}`; `/download/apk` for the website button.
   Tag format `v0.1.{N}` where N = versionCode. Stable = GitHub "latest" release, beta = newest incl. prereleases.
