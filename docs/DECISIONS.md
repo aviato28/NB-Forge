@@ -86,3 +86,13 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 - **AVIF**: decoded everywhere the platform can, but written only if `Bitmap.CompressFormat` has an AVIF entry (none as of API 37), so the option is hidden today.
 - **Licences added**: Anton (OFL 1.1), AndroidSVG 1.4 (Apache-2.0), ML Kit face detection / segmentation (free SDK terms, same rule as the other ML Kit use).
 - **Metadata stripping** never re-encodes: JPEG segments, PNG chunks and WebP chunks are rewritten; "location only" on PNG/WebP removes all EXIF/XMP (it cannot be edited safely).
+
+## Chunk F: video tools (2026-11-13)
+- **Engine**: AndroidX Media3 Transformer + ExoPlayer (Apache-2.0) for all processing and preview. No FFmpeg (licensing, size).
+- **Foreground job**: one video/audio job at a time runs on an app-wide scope (`VideoJobs`) with `VideoJobService` (foreground type mediaProcessing) showing progress + Cancel. A screen that returns re-attaches to the running or finished job. Inputs are read through the original content uri (no private copy), so a one-time share grant that Android revokes after the task ends can stop a job; picked files are fine.
+- **Outputs**: video to `Movies/Forge`, audio to `Music/Forge`, GIF to `Pictures/Forge` (MediaStore, via `OutputSaver` + `MediaTarget`). Transformer writes a temp file in the cache first; it is streamed into the media store, so a half-written video never appears in the gallery.
+- **WebM**: Transformer's bundled muxers only write MP4, so `WebmMuxer` (framework `MediaMuxer`, WEBM mode) is plugged in as the muxer factory. Offered only if the device has a VP8/VP9 encoder and an Opus encoder. Untested on a physical device (no encoder under Robolectric).
+- **Remux**: Trim/Mute/Convert/Extract set only what changes, so Transformer copies streams it can; Trim uses frame-accurate re-cut (no experimental trim optimisation).
+- **HDR**: HDR input exported as H.264 is tone-mapped to SDR (OpenGL); exported as HEVC the HDR is kept. Result notes say which happened.
+- **GIF**: own median-cut quantiser (15-bit histogram, per-frame palette), Floyd-Steinberg dithering (serpentine) and an LZW writer; frames via `MediaMetadataRetriever` (exact seek). The first second is encoded for real to preview and to extrapolate the file size.
+- **Speed**: pitch-corrected audio (Media3 speed provider) up to 2x, audio removed above that.
