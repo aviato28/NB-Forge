@@ -125,11 +125,11 @@ fun LivePreview(
 
 /** "Preview page [- 3 +] of N" row for choosing which page a live preview shows. */
 @Composable
-fun PreviewPageRow(page: Int, pageCount: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun PreviewPageRow(page: Int, pageCount: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier, label: String = "Preview page") {
     val c = ForgeTheme.colors
     Row(modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Preview page", style = ForgeType.Small, color = c.text2, modifier = Modifier.weight(1f))
-        Stepper(page + 1, 1..pageCount.coerceAtLeast(1), { onChange(it - 1) }, "Preview page")
+        Text(label, style = ForgeType.Small, color = c.text2, modifier = Modifier.weight(1f))
+        Stepper(page + 1, 1..pageCount.coerceAtLeast(1), { onChange(it - 1) }, label)
         Text("of $pageCount", style = ForgeType.Small, color = c.text2)
     }
 }

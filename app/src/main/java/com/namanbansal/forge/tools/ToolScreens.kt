@@ -76,6 +76,8 @@ object ToolScreens {
         "P14" to { host -> com.namanbansal.forge.tools.pdf.OptimiseScreen(host) },
         "P20" to { host -> com.namanbansal.forge.tools.pdf.WatermarkScreen(host) },
         "P21" to { host -> com.namanbansal.forge.tools.pdf.StampScreen(host) },
+        "P7" to { host -> com.namanbansal.forge.tools.pdf.CropScreen(host) },
+        "P8" to { host -> com.namanbansal.forge.tools.pdf.ImposeScreen(host) },
         "P40" to { host -> ViewerScreen(host) },
         "P25" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.FILL_SIGN) },
         "P27" to { host -> ViewerScreen(host, startMode = com.namanbansal.forge.tools.pdf.ViewerModeId.FILL_SIGN) },
