@@ -152,7 +152,7 @@ private enum class Grab { NONE, MOVE, L, R, T, B, TL, TR, BL, BR }
 
 /** The page with a draggable crop rectangle: corners and edges resize it, dragging inside moves it. */
 @Composable
-fun CropCanvas(bitmap: Bitmap, box: List<Int>, onChange: (Int, Int, Int, Int) -> Unit, modifier: Modifier = Modifier) {
+fun CropCanvas(bitmap: Bitmap, box: List<Int>, onChange: (Int, Int, Int, Int) -> Unit, modifier: Modifier = Modifier, dim: Boolean = true) {
     val c = ForgeTheme.colors
     val accent = c.accent
     val current = rememberUpdatedState(box)
@@ -198,11 +198,11 @@ fun CropCanvas(bitmap: Bitmap, box: List<Int>, onChange: (Int, Int, Int, Int) ->
         ) {
             val b = box
             val l = b[0] / 1000f * size.width; val t = b[1] / 1000f * size.height; val r = b[2] / 1000f * size.width; val bt = b[3] / 1000f * size.height
-            val dim = Color.Black.copy(alpha = 0.45f)
-            drawRect(dim, Offset.Zero, Size(size.width, t))
-            drawRect(dim, Offset(0f, bt), Size(size.width, size.height - bt))
-            drawRect(dim, Offset(0f, t), Size(l, bt - t))
-            drawRect(dim, Offset(r, t), Size(size.width - r, bt - t))
+            val dimColor = Color.Black.copy(alpha = if (dim) 0.45f else 0f)
+            drawRect(dimColor, Offset.Zero, Size(size.width, t))
+            drawRect(dimColor, Offset(0f, bt), Size(size.width, size.height - bt))
+            drawRect(dimColor, Offset(0f, t), Size(l, bt - t))
+            drawRect(dimColor, Offset(r, t), Size(size.width - r, bt - t))
             drawRect(accent, Offset(l, t), Size(r - l, bt - t), style = Stroke(width = 3f))
             for ((hx, hy) in listOf(l to t, r to t, l to bt, r to bt, (l + r) / 2 to t, (l + r) / 2 to bt, l to (t + bt) / 2, r to (t + bt) / 2)) {
                 drawCircle(Color.White, 11f, Offset(hx, hy)); drawCircle(accent, 8f, Offset(hx, hy))
