@@ -91,6 +91,7 @@ fun AskNotificationPermission() {
 }
 
 /** An ExoPlayer for [uri] tied to the composition; released when it leaves. Null when previews are switched off. */
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun rememberPreviewPlayer(uri: Uri?, exact: Boolean = true): ExoPlayer? {
     val enabled = LocalVideoPreview.current
