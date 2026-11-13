@@ -101,6 +101,8 @@ class VideoJobs(
                 record.set(JobState.Failed(friendly(t)))
             }
         }
+        // Cancelled before the body ever ran: the catch block above never executes, so settle the state here.
+        record.job?.invokeOnCompletion { if (!record.state.value.terminal) record.set(JobState.Cancelled) }
         launcher.ensureRunning()
         return record
     }

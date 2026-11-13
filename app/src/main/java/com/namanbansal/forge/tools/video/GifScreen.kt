@@ -206,9 +206,10 @@ fun GifPreviewView(preview: GifPreview?, poster: Bitmap?, busy: Boolean, error: 
     val c = ForgeTheme.colors
     val bitmaps = remember(preview) { preview?.frames?.map { f -> Bitmap.createBitmap(f.toArgb(), f.width, f.height, Bitmap.Config.ARGB_8888) } }
     var index by remember(preview) { mutableIntStateOf(0) }
-    LaunchedEffect(preview) {
+    val animate = LocalVideoPreview.current // switched off in tests: an endless loop would keep Compose from going idle
+    LaunchedEffect(preview, animate) {
         val p = preview ?: return@LaunchedEffect
-        if (p.frames.size < 2) return@LaunchedEffect
+        if (p.frames.size < 2 || !animate) return@LaunchedEffect
         while (true) { delay(p.delayCs * 10L); index = (index + 1) % p.frames.size }
     }
     Box(

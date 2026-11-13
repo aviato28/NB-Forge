@@ -176,8 +176,15 @@ fun VideoPreviewBox(
 
 /** Frame thumbnails of the video for timelines and static previews (via MediaMetadataRetriever; streams, never loads the whole file). */
 object FrameThumbs {
+    /** Tests plug synthetic frames in here (MediaMetadataRetriever can't decode under Robolectric). */
+    @Volatile var provider: ((android.content.Context, Uri, Long, Int) -> Bitmap?)? = null
+
     /** [count] evenly spaced frames, [width] px wide; entries are null where a frame couldn't be decoded. */
     fun load(context: android.content.Context, uri: Uri, durationMs: Long, count: Int, width: Int, onFrame: (Int, Bitmap?) -> Unit) {
+        provider?.let { p ->
+            for (i in 0 until count) onFrame(i, p(context, uri, if (count == 1) 0L else (durationMs * 1000L * (2 * i + 1) / (2 * count)), width))
+            return
+        }
         val r = android.media.MediaMetadataRetriever()
         try {
             r.setDataSource(context, uri)

@@ -53,6 +53,7 @@ abstract class VideoToolViewModel(application: Application, saved: SavedStateHan
     }
 
     private fun loadPoster(file: PickedFile, info: VideoInfo): android.graphics.Bitmap? {
+        FrameThumbs.provider?.let { return it(app, file.uri, info.durationMs * 100, 720) }
         val r = android.media.MediaMetadataRetriever()
         return try {
             r.setDataSource(app, file.uri)

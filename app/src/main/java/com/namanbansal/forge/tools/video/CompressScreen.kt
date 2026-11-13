@@ -79,12 +79,7 @@ class CompressVideoViewModel(application: Application, saved: SavedStateHandle) 
         val ex = exporter; val dir = workDir
         return {
             val out = exportAndSave(ex, dir, request, "compressed", "mp4", "video/mp4")
-            val saved = info.sizeBytes.takeIf { it > 0 }?.let { it - out.size }
-            val detail = buildString {
-                append("${plan.width} × ${plan.height} · ${if (plan.hevc) "HEVC" else "H.264"} · ${"%.1f".format(plan.videoBps / 1_000_000f)} Mbps")
-                if (saved != null && saved > 0) append(" · ${(saved * 100f / info.sizeBytes).roundToInt()}% smaller")
-            }
-            ToolOutcome(out, "Video compressed", detail)
+            ToolOutcome(out, "Video compressed", "${plan.width} × ${plan.height} · ${if (plan.hevc) "HEVC" else "H.264"} · ${"%.1f".format(plan.videoBps / 1_000_000f)} Mbps")
         }
     }
 }
