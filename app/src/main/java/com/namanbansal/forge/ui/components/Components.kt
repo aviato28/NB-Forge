@@ -217,6 +217,16 @@ fun AnvilMark(size: Dp = 26.dp) {
     }
 }
 
+/** The NB monogram on the anvil-icon tile (res/drawable/ic_nb_mark.xml, source docs/brand/icons/nb-mark.svg). */
+@Composable
+fun NbMark(size: Dp = 20.dp, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(com.namanbansal.forge.R.drawable.ic_nb_mark),
+        contentDescription = "NB",
+        modifier = modifier.size(size),
+    )
+}
+
 @Composable
 fun EmptyState(icon: ImageVector, title: String, body: String, modifier: Modifier = Modifier) {
     val c = ForgeTheme.colors

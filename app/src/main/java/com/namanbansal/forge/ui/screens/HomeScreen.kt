@@ -73,6 +73,7 @@ import com.namanbansal.forge.ui.components.AnvilMark
 import com.namanbansal.forge.ui.components.EmptyState
 import com.namanbansal.forge.ui.components.ForgeCard
 import com.namanbansal.forge.ui.components.IconBox
+import com.namanbansal.forge.ui.components.NbMark
 import com.namanbansal.forge.ui.components.SectionHeader
 import com.namanbansal.forge.ui.icons.ForgeIcons
 import com.namanbansal.forge.ui.theme.ForgeShapes
@@ -131,7 +132,10 @@ fun HomeScreen(
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text("FORGE", style = ForgeType.Brand, color = c.text)
-                    Text("by Naman Bansal", style = ForgeType.Tiny.copy(fontWeight = FontWeight.Medium), color = c.text2)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        NbMark(13.dp)
+                        Text("by Naman Bansal", style = ForgeType.Tiny.copy(fontWeight = FontWeight.Medium), color = c.text2)
+                    }
                 }
                 RoundIconButton(ForgeIcons.Settings, "Settings", onSettings)
             }

@@ -96,3 +96,9 @@ Source: annotated `Forge-Longlist.pdf` (returned by owner, 2026-11-02).
 - **HDR**: HDR input exported as H.264 is tone-mapped to SDR (OpenGL); exported as HEVC the HDR is kept. Result notes say which happened.
 - **GIF**: own median-cut quantiser (15-bit histogram, per-frame palette), Floyd-Steinberg dithering (serpentine) and an LZW writer; frames via `MediaMetadataRetriever` (exact seek). The first second is encoded for real to preview and to extrapolate the file size.
 - **Speed**: pitch-corrected audio (Media3 speed provider) up to 2x, audio removed above that.
+
+## Chunk G: NB mark and website (2026-11-13)
+- **NB monogram**: geometric N and B drawn as 8-unit rounded strokes in Ember Orange on the anvil icon's charcoal tile, with a short rounded bar underneath that echoes the anvil's foot. Files: `docs/brand/icons/nb-mark.svg` (tile), `nb-mark-mono.svg` (single colour), `res/drawable/ic_nb_mark.xml` (tile, used by `NbMark`).
+- Used in Settings → About (replaces the info icon on "Forge by Naman Bansal") and next to "by Naman Bansal" in the home header. The system splash stays the anvil icon alone.
+- **Site**: forge.nbansal28.com (branch `forge-site` in aviato28/nbansal28-site, not merged or deployed) serves `/update/latest.json?channel=stable|beta` and `/download/apk` from GitHub Releases of this repo, with the same field rules as `GitHubReleasesSource` (version from tag, versionCode = last tag segment, sha256 from the asset `digest`).
+- **`ForgeSiteSource` is NOT switched on yet.** `UpdateConfig.USE_FORGE_SITE` stays `false` until forge.nbansal28.com is live and serving `/update/latest.json`; then flip it in a normal release (the site's `apk` URL is a 302 to the GitHub asset, which the app's downloader follows).
