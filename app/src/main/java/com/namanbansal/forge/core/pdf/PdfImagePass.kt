@@ -200,9 +200,11 @@ object PdfImagePass {
                     result = fresh; stats.recompressed++
                 } else stats.skipped++
             } else stats.skipped++
-            // Merge identical pictures (not those with their own masks: the mask is part of what makes them equal).
-            if (!result.cosObject.containsKey(COSName.SMASK) && !result.cosObject.containsKey(COSName.MASK)) {
-                val key = sha1(result.cosObject, "${result.width}x${result.height}/${result.bitsPerComponent}/${runCatching { result.colorSpace.name }.getOrNull()}/${result.cosObject.filters}/${result.cosObject.getDictionaryObject(COSName.DECODE)}")
+            // Merge identical pictures (soft masks are compared too; pictures with explicit /Mask are never merged).
+            if (!result.cosObject.containsKey(COSName.MASK)) {
+                val smask = result.cosObject.getDictionaryObject(COSName.SMASK) as? COSStream
+                val smaskTag = smask?.let { sha1(it, "sm") } ?: ""
+                val key = sha1(result.cosObject, "$smaskTag/${result.width}x${result.height}/${result.bitsPerComponent}/${runCatching { result.colorSpace.name }.getOrNull()}/${result.cosObject.filters}/${result.cosObject.getDictionaryObject(COSName.DECODE)}")
                 val canonical = byHash[key]
                 if (canonical != null && canonical !== result) { result = canonical; stats.deduped++ } else byHash[key] = result
             }

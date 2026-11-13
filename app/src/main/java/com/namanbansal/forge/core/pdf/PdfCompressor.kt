@@ -56,8 +56,19 @@ object PdfCompressor {
      */
     fun estimate(file: File, originalBytes: Long, o: CompressOptions, maxSamples: Int = 8): Estimate = PdfOps.load(file).use { doc ->
         val all = PdfImagePass.allImages(doc, null, withPlacement = true)
-        val total = all.sumOf { it.first.cosObject.length }
-        val sample = all.sortedByDescending { it.first.cosObject.length }.take(maxSamples)
+        // Identical pictures (same size and same first 4 KB) will be merged, so only the first of each group counts as work.
+        val seen = HashSet<String>()
+        val unique = ArrayList<Pair<com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject, Pair<Float, Float>?>>()
+        var dupBytes = 0L
+        for (e in all) {
+            val img = e.first
+            val head = runCatching { img.cosObject.createRawInputStream().use { i -> val b = ByteArray(4096); val n = i.read(b); java.util.Arrays.hashCode(b.copyOf(maxOf(n, 0))) } }.getOrDefault(0)
+            val key = "${img.cosObject.length}/${img.width}x${img.height}/$head"
+            if (seen.add(key)) unique += e
+            else dupBytes += img.cosObject.length + ((img.cosObject.getDictionaryObject(COSName.SMASK) as? COSStream)?.length ?: 0L)
+        }
+        val total = unique.sumOf { it.first.cosObject.length }
+        val sample = unique.sortedByDescending { it.first.cosObject.length }.take(maxSamples)
         var before = 0L; var after = 0L
         for ((img, placed) in sample) {
             val len = img.cosObject.length
@@ -68,11 +79,11 @@ object PdfCompressor {
                 val dpi = minOf(img.width / (pw / 72f), img.height / (ph / 72f))
                 if (dpi <= o.dpi * 1.15f) 1f else (o.dpi / dpi).coerceIn(0.05f, 1f)
             }
-            val enc = PdfImagePass.encode(img, scale, o.gray && true, o.quality)
+            val enc = PdfImagePass.encode(img, scale, o.gray, o.quality)
             after += if (enc != null && enc.bytes.size < len) enc.bytes.size.toLong() else len
         }
         val ratio = if (before > 0) after.toDouble() / before else 1.0
-        val saved = (total * (1 - ratio)).toLong()
-        Estimate(originalBytes, (originalBytes - saved).coerceAtLeast(originalBytes / 50), total, sample.size, all.size)
+        val saved = (total * (1 - ratio)).toLong() + dupBytes
+        Estimate(originalBytes, (originalBytes - saved).coerceAtLeast((originalBytes - total - dupBytes).coerceAtLeast(1024L)), total + dupBytes, sample.size, all.size)
     }
 }
