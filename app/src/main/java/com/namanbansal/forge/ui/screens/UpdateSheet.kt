@@ -99,7 +99,7 @@ fun UpdateSheet(manager: UpdateManager) {
                         style = ForgeType.Small, color = c.text2,
                     )
                     Spacer(Modifier.height(16.dp))
-                    ForgeButton("Open settings", onClick = { context.startActivity(manager.unknownSourcesIntent()) }, modifier = Modifier.fillMaxWidth())
+                    ForgeButton("Open settings", onClick = { runCatching { context.startActivity(manager.unknownSourcesIntent()) } }, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
                     ForgeButton("Later", onClick = { manager.dismiss() }, secondary = true, modifier = Modifier.fillMaxWidth())
                 }

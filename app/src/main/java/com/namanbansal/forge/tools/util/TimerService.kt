@@ -38,10 +38,10 @@ object TimerEngine {
     fun start(context: Context, phases: List<Phase>) {
         val i = Intent(context, TimerService::class.java).setAction(TimerService.ACTION_START)
             .putExtra("labels", phases.map { it.label }.toTypedArray()).putExtra("seconds", phases.map { it.seconds }.toIntArray())
-        ContextCompat.startForegroundService(context, i)
+        runCatching { ContextCompat.startForegroundService(context, i) } // can be refused when the app is not in the foreground
     }
 
-    fun stop(context: Context) { context.startService(Intent(context, TimerService::class.java).setAction(TimerService.ACTION_STOP)) }
+    fun stop(context: Context) { runCatching { context.startService(Intent(context, TimerService::class.java).setAction(TimerService.ACTION_STOP)) } }
 }
 
 /** Foreground service that keeps the countdown alive in the background and rings (alarm sound + vibration) when it ends. */

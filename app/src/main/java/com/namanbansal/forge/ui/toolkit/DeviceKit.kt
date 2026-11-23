@@ -120,7 +120,7 @@ fun rememberPermission(permission: String): PermissionState {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { granted = check() }
     return PermissionState(
         permission, granted, { launcher.launch(permission) }, permanent && asked,
-        { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
+        { runCatching { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
     )
 }
 
