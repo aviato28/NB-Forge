@@ -156,3 +156,7 @@ Investigation: ContentScan marks text uneditable for Type 3, vertical, invisible
 - [x] V4 Video to GIF (own LZW + median cut + dithering, preview, size estimate)
 - [x] Unit tests, Compose smoke tests, screenshots (light + dark)
 - [x] Final gradle gate (test, assemble, lint, R8)
+
+## Next build: CI hardening (owner-approved)
+- [ ] Run EveryToolSmokeTest only on PRs, not on the main release build.
+- [ ] Cache the Robolectric android-all jars in CI (actions/cache on ~/.m2 robolectric), so a download blip cannot fail a release.
