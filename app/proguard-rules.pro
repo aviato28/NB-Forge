@@ -27,3 +27,11 @@
 -keep class com.namanbansal.forge.core.image.Mark$* { *; }
 -keep class com.namanbansal.forge.core.image.TextBox { *; }
 -keep class com.namanbansal.forge.core.image.TextAnchor { *; }
+
+# ViewModels are created reflectively by the default ViewModel factory: keep the constructors it looks for.
+-keepclassmembers class * extends androidx.lifecycle.ViewModel {
+    <init>();
+    <init>(android.app.Application);
+    <init>(android.app.Application, androidx.lifecycle.SavedStateHandle);
+    <init>(androidx.lifecycle.SavedStateHandle);
+}
