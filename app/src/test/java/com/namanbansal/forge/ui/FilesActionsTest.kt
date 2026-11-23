@@ -142,8 +142,8 @@ class FilesActionsTest {
         pump { a.recents.entries.value.any { it.uri == saved.uri.toString() && it.name == "fresh.pdf" } }
         assertEquals("fresh.pdf", media.rows.values.single().values.getAsString(MediaStore.MediaColumns.DISPLAY_NAME))
         vm.deleteFile(a.recents.entries.value.first { it.uri == saved.uri.toString() })
-        pump { media.rows.isEmpty() }
-        assertTrue(a.recents.entries.value.none { it.uri == saved.uri.toString() })
+        pump { media.rows.isEmpty() && a.recents.entries.value.none { it.uri == saved.uri.toString() } }
+        assertTrue(media.rows.isEmpty())
     }
 
     @Test fun shareToForgeSheetOffersSaveToPhone() {
