@@ -73,6 +73,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val SEARCH = "search"
     const val LICENSES = "licenses"
+    const val CRASH = "crash"
     const val CATEGORY = "category/{name}"
     const val TOOL = "tool/{code}"
     fun category(c: Category) = "category/${c.name}"
@@ -142,8 +143,9 @@ fun ForgeRoot(
                 }
                 composable(Routes.FILES) { FilesScreen(recents, onRefresh = recentsVm::refresh, onRemove = recentsVm::remove, actions = recentActions) }
                 composable(Routes.SETTINGS) {
-                    SettingsScreen(app = app, settings = settings, onLicenses = { nav.navigate(Routes.LICENSES) })
+                    SettingsScreen(app = app, settings = settings, onLicenses = { nav.navigate(Routes.LICENSES) }, onCrashReport = { nav.navigate(Routes.CRASH) })
                 }
+                composable(Routes.CRASH) { com.namanbansal.forge.ui.screens.CrashReportScreen(app.crashReporter, onBack = { nav.popBackStack() }) }
                 composable(Routes.LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }
                 composable(Routes.SEARCH) {
                     SearchScreen(
@@ -169,17 +171,11 @@ fun ForgeRoot(
                     )
                 }
                 composable(Routes.TOOL, arguments = listOf(navArgument("code") { type = NavType.StringType })) { e ->
-                    val tool = ToolRegistry.get(e.arguments?.getString("code").orEmpty())
-                    val onBack: () -> Unit = { nav.popBackStack() }
-                    val screen = tool?.takeIf { it.status == ToolStatus.Available }?.let { ToolScreens.screens[it.code] }
-                    when {
-                        tool == null -> ComingSoonScreen(tool = null, pinned = false, onBack = onBack, onTogglePin = {})
-                        screen != null -> screen(ToolHost(tool, onBack, openToolWith))
-                        else -> ComingSoonScreen(tool, pinned = tool.code in settings.pins, onBack = onBack, onTogglePin = { togglePin(tool.code) })
-                    }
+                    ToolDestination(e.arguments?.getString("code").orEmpty(), settings.pins, { nav.popBackStack() }, openToolWith, togglePin)
                 }
             }
         }
+        if (route == Routes.HOME) com.namanbansal.forge.ui.screens.CrashNotice(app.crashReporter)
         ForgeSnackbarHost(snackbar)
         if (showBottomBar) BottomBar(currentRoute = route, onSelect = { nav.navigateTab(it) })
     }
@@ -214,6 +210,24 @@ fun ForgeRoot(
     }
 
     UpdateSheet(app.updates)
+}
+
+/** The body of the `tool/{code}` route: the tool's screen, or "Coming soon". Shared with the every-tool smoke test. */
+@Composable
+internal fun ToolDestination(
+    code: String,
+    pins: List<String>,
+    onBack: () -> Unit,
+    openToolWith: (String, List<PickedFile>) -> Unit,
+    togglePin: (String) -> Unit,
+) {
+    val tool = ToolRegistry.get(code)
+    val screen = tool?.takeIf { it.status == ToolStatus.Available }?.let { ToolScreens.screens[it.code] }
+    when {
+        tool == null -> ComingSoonScreen(tool = null, pinned = false, onBack = onBack, onTogglePin = {})
+        screen != null -> screen(ToolHost(tool, onBack, openToolWith))
+        else -> ComingSoonScreen(tool, pinned = tool.code in pins, onBack = onBack, onTogglePin = { togglePin(tool.code) })
+    }
 }
 
 private fun NavHostController.navigateTab(route: String) {

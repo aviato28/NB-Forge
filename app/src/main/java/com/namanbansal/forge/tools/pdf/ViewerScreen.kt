@@ -319,7 +319,7 @@ private fun ViewerContent(host: ToolHost, vm: ViewerViewModel, thumbs: PdfThumbn
             share = {
                 scope.launch {
                     val t = vm.selectedText()
-                    if (t.isNotBlank()) context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, t), "Share text").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    if (t.isNotBlank()) runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, t), "Share text").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }
             },
         )

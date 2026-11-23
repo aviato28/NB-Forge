@@ -113,7 +113,9 @@ dependencies {
 
 // A hung test must fail the build with a clear culprit instead of burning CI hours.
 tasks.withType<Test>().configureEach {
-    timeout.set(Duration.ofMinutes(25))
+    timeout.set(Duration.ofMinutes(50))
+    // CI runners have 4 cores; two forks halve the Robolectric suite time. Local agents keep one.
+    maxParallelForks = if (System.getenv("CI") == "true") 2 else 1
     testLogging { events("failed", "skipped"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT }
     maxHeapSize = "3g"
 }

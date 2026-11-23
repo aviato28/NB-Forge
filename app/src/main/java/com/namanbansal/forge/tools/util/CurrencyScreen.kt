@@ -53,7 +53,10 @@ sealed interface RatesUi {
 }
 
 /** Loads ECB rates (cache first, network when stale) and survives rotation. */
-class CurrencyViewModel(app: Application, repo: CurrencyRepository? = null) : AndroidViewModel(app) {
+class CurrencyViewModel(app: Application, repo: CurrencyRepository?) : AndroidViewModel(app) {
+    /** The constructor the default ViewModel factory reflects for. A Kotlin default argument does not generate it (this crashed the released app). */
+    constructor(app: Application) : this(app, null)
+
     private val repository = repo ?: CurrencyRepository(File(app.filesDir, "currency_rates.json"), { url ->
         withContext(Dispatchers.IO) {
             val req = Request.Builder().url(url).build()
