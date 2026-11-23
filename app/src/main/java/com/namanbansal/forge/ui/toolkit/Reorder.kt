@@ -170,14 +170,15 @@ fun <T : Any> ReorderableGrid(
     }
     AutoScroll(state) { gridState.scrollBy(it) }
     val step = { from: Int, to: Int -> currentStart.value(); currentOnMove.value(from, to); currentEnd.value() } // one undo step
+    val ukeys = uniqueKeys(items, key)
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns), state = gridState,
         modifier = modifier.onSizeChanged { state.viewport = it },
         horizontalArrangement = Arrangement.spacedBy(spacing), verticalArrangement = Arrangement.spacedBy(spacing),
         contentPadding = contentPadding,
     ) {
-        itemsIndexed(items, key = { _, it -> key(it) }) { index, item ->
-            val k = key(item)
+        itemsIndexed(items, key = { i, _ -> ukeys[i] }) { index, item ->
+            val k = ukeys[index]
             val dragging = state.draggingKey == k
             Box(
                 Modifier
@@ -230,12 +231,13 @@ fun <T : Any> ReorderableColumn(
     }
     AutoScroll(state) { listState.scrollBy(it) }
     val step = { from: Int, to: Int -> currentStart.value(); currentOnMove.value(from, to); currentEnd.value() } // one undo step
+    val ukeys = uniqueKeys(items, key)
     LazyColumn(
         state = listState, modifier = modifier.onSizeChanged { state.viewport = it },
         verticalArrangement = Arrangement.spacedBy(spacing), contentPadding = contentPadding,
     ) {
-        itemsIndexed(items, key = { _, it -> key(it) }) { index, item ->
-            val k = key(item)
+        itemsIndexed(items, key = { i, _ -> ukeys[i] }) { index, item ->
+            val k = ukeys[index]
             val dragging = state.draggingKey == k
             val handle = Modifier.pointerInput(k) {
                 detectDragGestures(
@@ -257,4 +259,10 @@ fun <T : Any> ReorderableColumn(
             ) { content(item, index, dragging, handle) }
         }
     }
+}
+
+/** Lazy lists crash on a repeated key; the same file can legitimately be picked twice, so repeats get a suffix. */
+private fun <T> uniqueKeys(items: List<T>, key: (T) -> Any): List<Any> {
+    val seen = HashMap<Any, Int>()
+    return items.map { val k = key(it); val n = seen.merge(k, 1, Int::plus)!!; if (n == 1) k else "$k#dup$n" }
 }

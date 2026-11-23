@@ -50,8 +50,11 @@ class ForgeApp : Application() {
     }
     val documentWriter: com.namanbansal.forge.core.DocumentWriter by lazy { com.namanbansal.forge.core.DocumentWriter.create(this, outputSaver) }
 
+    val crashReporter: com.namanbansal.forge.core.CrashReporter by lazy { com.namanbansal.forge.core.CrashReporter(filesDir) }
+
     override fun onCreate() {
         super.onCreate()
+        crashReporter.install()
         PDFBoxResourceLoader.init(applicationContext) // once; PDFBox needs it for its bundled resources
         appScope.launch {
             // Working copies from a previous run are never reused (first, so it can never race with a file opened right after start).

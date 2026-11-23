@@ -73,6 +73,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val SEARCH = "search"
     const val LICENSES = "licenses"
+    const val CRASH = "crash"
     const val CATEGORY = "category/{name}"
     const val TOOL = "tool/{code}"
     fun category(c: Category) = "category/${c.name}"
@@ -142,8 +143,9 @@ fun ForgeRoot(
                 }
                 composable(Routes.FILES) { FilesScreen(recents, onRefresh = recentsVm::refresh, onRemove = recentsVm::remove, actions = recentActions) }
                 composable(Routes.SETTINGS) {
-                    SettingsScreen(app = app, settings = settings, onLicenses = { nav.navigate(Routes.LICENSES) })
+                    SettingsScreen(app = app, settings = settings, onLicenses = { nav.navigate(Routes.LICENSES) }, onCrashReport = { nav.navigate(Routes.CRASH) })
                 }
+                composable(Routes.CRASH) { com.namanbansal.forge.ui.screens.CrashReportScreen(app.crashReporter, onBack = { nav.popBackStack() }) }
                 composable(Routes.LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }
                 composable(Routes.SEARCH) {
                     SearchScreen(
@@ -173,6 +175,7 @@ fun ForgeRoot(
                 }
             }
         }
+        if (route == Routes.HOME) com.namanbansal.forge.ui.screens.CrashNotice(app.crashReporter)
         ForgeSnackbarHost(snackbar)
         if (showBottomBar) BottomBar(currentRoute = route, onSelect = { nav.navigateTab(it) })
     }

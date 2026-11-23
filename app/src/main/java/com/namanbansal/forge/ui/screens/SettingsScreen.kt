@@ -55,7 +55,7 @@ const val WEBSITE_URL = "https://nbansal28.com"
 const val SOURCE_URL = "https://github.com/aviato28/NB-Forge"
 
 @Composable
-fun SettingsScreen(app: ForgeApp, settings: Settings, onLicenses: () -> Unit) {
+fun SettingsScreen(app: ForgeApp, settings: Settings, onLicenses: () -> Unit, onCrashReport: () -> Unit = {}) {
     val c = ForgeTheme.colors
     val scope = rememberCoroutineScope()
     val uri = LocalUriHandler.current
@@ -145,7 +145,8 @@ fun SettingsScreen(app: ForgeApp, settings: Settings, onLicenses: () -> Unit) {
                     ListRow("Source code", subtitle = "github.com/aviato28/NB-Forge", icon = ForgeIcons.Code, onClick = { uri.openUri(SOURCE_URL) }, trailing = {
                         Icon(ForgeIcons.Open, null, tint = c.text2, modifier = Modifier.size(16.dp))
                     })
-                    ListRow("Open-source licences", icon = ForgeIcons.FileText, showDivider = false, onClick = onLicenses)
+                    ListRow("Open-source licences", icon = ForgeIcons.FileText, onClick = onLicenses)
+                    ListRow("Last crash report", icon = ForgeIcons.Info, showDivider = false, onClick = onCrashReport)
                 }
                 Text(
                     "Forge checks GitHub Releases for updates. No account, no tracking.",

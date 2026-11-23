@@ -62,6 +62,12 @@ class VideoJobService : Service() {
         return START_NOT_STICKY
     }
 
+    /** Android 15 ends a mediaProcessing foreground service after its time budget; it must stop itself or the app is killed. */
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        ForgeApp.from(this).videoJobs.cancel()
+        stopSelf()
+    }
+
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()

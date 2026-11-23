@@ -34,7 +34,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.Shadows
 import org.robolectric.annotation.GraphicsMode
@@ -57,7 +56,7 @@ class EveryToolSmokeTest(private val code: String) {
     private var previousHandler: Thread.UncaughtExceptionHandler? = null
 
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}")
+        @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun codes(): List<String> = ToolRegistry.all.filter { it.status == ToolStatus.Available }.map { it.code }
     }
 
